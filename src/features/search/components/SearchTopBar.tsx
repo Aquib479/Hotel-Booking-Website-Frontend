@@ -14,14 +14,20 @@ export function SearchTopBar({ query, onSearch }: SearchTopBarProps) {
           variant="page"
           submitLabel="Update Search"
           initialLocation={query.location}
+          initialMode={query.mode}
           initialCheckIn={query.checkIn}
           initialCheckOut={query.checkOut}
+          initialRestDate={query.restDate}
+          initialSlot={query.slot}
           initialGuests={query.guests}
           onSubmit={(values) =>
             onSearch({
               location: values.location.city,
+              mode: values.mode,
               checkIn: values.checkIn,
               checkOut: values.checkOut,
+              restDate: values.restDate,
+              slot: values.slot,
               guests: values.guests,
             })
           }

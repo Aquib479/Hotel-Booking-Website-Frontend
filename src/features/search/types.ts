@@ -1,8 +1,23 @@
-export type PlaceType = "entire" | "shared" | "room";
-export type PropertyType = "house" | "apartment" | "cabin" | "villa" | "camping";
-export type SortOption = "latest" | "price-asc" | "price-desc" | "rating";
+import type {
+  AmenityFilter,
+  BookingLane,
+  BookingMode,
+  RestSlot,
+  RoomType,
+  SlotDuration,
+} from "@/lib/booking/types";
+import type { WholesaleQuote } from "@/lib/currency/format";
+
+export type SortOption =
+  | "latest"
+  | "price-asc"
+  | "price-desc"
+  | "rating"
+  | "soonest-slot";
+
 export type ViewMode = "card" | "map";
 export type CountFilter = number | "any";
+export type LaneFilter = BookingLane | "all";
 
 export interface Property {
   id: string;
@@ -12,31 +27,48 @@ export interface Property {
   country: string;
   image: string;
   rating: number;
-  bedrooms: number;
-  beds: number;
-  bathrooms: number;
-  pricePerNight: number;
+  starRating: number;
+  lane: BookingLane;
+  /** Cached guest USD rate; wholesale values are derived from supplier quote + markup */
+  priceUsd: number;
+  /** Direct slot rate in IDR (12h base) */
+  priceIdr: number;
+  /** Supplier quote used to derive wholesale guest price (FX → markup → display) */
+  wholesalePricing?: WholesaleQuote;
+  roomType: RoomType;
+  maxOccupancy: number;
+  amenities: AmenityFilter[];
   category: string;
-  placeType: PlaceType;
-  propertyType: PropertyType;
+  distanceFromAirportKm: number;
+  slotDuration: SlotDuration;
+  /** IANA timezone for slot cutoffs and checkout hold countdowns */
+  timezone: string;
+  supplierName?: string;
+  nextAvailableSlot?: string;
+  ringFencedRooms?: number;
   createdAt: string;
 }
 
 export interface SearchQuery {
   location: string;
+  mode: BookingMode;
   checkIn?: Date;
   checkOut?: Date;
+  restDate?: Date;
+  slot?: RestSlot;
   guests: string;
 }
 
 export interface FilterState {
   priceMin: number;
   priceMax: number;
-  placeTypes: PlaceType[];
-  bedrooms: CountFilter;
-  beds: CountFilter;
-  bathrooms: CountFilter;
-  propertyType: PropertyType | "any";
+  lane: LaneFilter;
+  starRating: CountFilter;
+  roomType: RoomType | "any";
+  maxOccupancy: CountFilter;
+  amenities: AmenityFilter[];
+  slotDuration: SlotDuration | "any";
+  maxAirportDistance: number | "any";
   category: string;
 }
 

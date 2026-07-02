@@ -12,8 +12,16 @@ export default function SearchResults() {
 
   const detailSearchParams = new URLSearchParams({
     guests: search.query.guests,
-    ...(search.query.checkIn && { checkIn: search.query.checkIn.toISOString() }),
-    ...(search.query.checkOut && { checkOut: search.query.checkOut.toISOString() }),
+    mode: search.query.mode,
+    ...(search.query.mode === "stay"
+      ? {
+          ...(search.query.checkIn && { checkIn: search.query.checkIn.toISOString() }),
+          ...(search.query.checkOut && { checkOut: search.query.checkOut.toISOString() }),
+        }
+      : {
+          ...(search.query.restDate && { restDate: search.query.restDate.toISOString() }),
+          ...(search.query.slot && { slot: search.query.slot }),
+        }),
   }).toString();
 
   return (
@@ -24,6 +32,7 @@ export default function SearchResults() {
         <ResultsToolbar
           location={search.query.location}
           totalResults={search.totalResults}
+          mode={search.query.mode}
           sort={search.sort}
           view={search.view}
           onSortChange={search.setSort}
@@ -45,6 +54,7 @@ export default function SearchResults() {
                     <PropertyCard
                       key={property.id}
                       property={property}
+                      mode={search.query.mode}
                       nights={search.nights}
                       isFavorite={search.favorites.has(property.id)}
                       onToggleFavorite={search.toggleFavorite}
@@ -54,7 +64,7 @@ export default function SearchResults() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-white py-20 text-center">
-                  <p className="text-lg font-semibold text-foreground">No properties found</p>
+                  <p className="text-lg font-semibold text-foreground">No hotels found</p>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Try adjusting your filters or search location.
                   </p>
@@ -67,7 +77,7 @@ export default function SearchResults() {
                 </div>
                 <p className="text-lg font-semibold text-foreground">Map View</p>
                 <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                  Showing {search.totalResults} properties near {search.query.location}. Map
+                  Showing {search.totalResults} hotels near {search.query.location}. Map
                   integration can be added here.
                 </p>
               </div>
@@ -87,11 +97,10 @@ export default function SearchResults() {
           <FilterPanel
             filters={search.filters}
             activeFilterCount={search.activeFilterCount}
-            nights={search.nights}
+            mode={search.query.mode}
             onUpdate={search.updateFilters}
             onClear={search.clearFilters}
-            onTogglePlaceType={search.togglePlaceType}
-            onPropertyTypeChange={search.setPropertyType}
+            onToggleAmenity={search.toggleAmenity}
           />
         </div>
       </div>

@@ -59,12 +59,21 @@ export function toLocationSuggestion(city: string): LocationSuggestion {
 }
 
 export function buildSearchParams(values: SearchFormValues): URLSearchParams {
-  return new URLSearchParams({
+  const params: Record<string, string> = {
     location: values.location.city,
     guests: values.guests,
-    ...(values.checkIn && { checkIn: values.checkIn.toISOString() }),
-    ...(values.checkOut && { checkOut: values.checkOut.toISOString() }),
-  });
+    mode: values.mode,
+  };
+
+  if (values.mode === "stay") {
+    if (values.checkIn) params.checkIn = values.checkIn.toISOString();
+    if (values.checkOut) params.checkOut = values.checkOut.toISOString();
+  } else {
+    if (values.restDate) params.restDate = values.restDate.toISOString();
+    if (values.slot) params.slot = values.slot;
+  }
+
+  return new URLSearchParams(params);
 }
 
 function formatSuggestion(result: NominatimResult): LocationSuggestion | null {

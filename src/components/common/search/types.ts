@@ -1,3 +1,5 @@
+import type { BookingMode, RestSlot } from "@/lib/booking/types";
+
 export interface LocationSuggestion {
   id: string;
   label: string;
@@ -8,8 +10,11 @@ export interface LocationSuggestion {
 
 export interface SearchFormValues {
   location: LocationSuggestion;
+  mode: BookingMode;
   checkIn?: Date;
   checkOut?: Date;
+  restDate?: Date;
+  slot?: RestSlot;
   guests: string;
 }
 

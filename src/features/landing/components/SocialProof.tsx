@@ -21,7 +21,7 @@ export function SocialProof() {
           <span className="text-lg font-semibold">4.9</span>
         </div>
         <a href="#reviews" className="text-xs underline underline-offset-2 opacity-90 hover:opacity-100">
-          Based on 2.4M+ Reviews
+          Based on 120K+ guest reviews
         </a>
       </div>
     </div>

@@ -1,33 +1,33 @@
 export const SITE_NAV_LINKS = [
   { label: "Home", href: "/" },
-  { label: "Services", href: "/search" },
-  { label: "About Us", href: "#about" },
+  { label: "Find Hotels", href: "/search" },
+  { label: "How it works", href: "#how-it-works" },
   { label: "Contact", href: "#contact" },
 ] as const;
 
 export const FOOTER_LINKS = {
-  Neer: [
+  RestHalf: [
     { label: "About", href: "#" },
-    { label: "Team", href: "#" },
-    { label: "Policies", href: "#", badge: "New" as const },
+    { label: "How RestHalf works", href: "#how-it-works" },
+    { label: "Policies", href: "#" },
     { label: "Press", href: "#" },
     { label: "Help Center", href: "#" },
-    { label: "Releases", href: "#" },
+    { label: "Careers", href: "#" },
   ],
-  Explore: [
-    { label: "Book a car", href: "#" },
-    { label: "Book a home", href: "/search" },
-    { label: "Trust & Safety", href: "#" },
-    { label: "News", href: "#" },
-    { label: "Media kit", href: "#" },
+  Book: [
+    { label: "Rest · 12h slots", href: "/search?mode=rest" },
+    { label: "Stay · overnight", href: "/search?mode=stay" },
+    { label: "Near airport", href: "/search?category=near-airport" },
+    { label: "RestHalf Exclusive", href: "/search?category=resthalf-exclusive" },
+    { label: "Partner rates", href: "/search?lane=wholesale" },
     { label: "Contact", href: "#contact" },
   ],
-  Hosting: [
-    { label: "Become a host", href: "#host" },
-    { label: "All-star hotels", href: "#" },
-    { label: "Insurance & Protection", href: "#" },
-    { label: "Host Tools", href: "#" },
-    { label: "Tutorials", href: "#" },
+  Partners: [
+    { label: "Hotel partners", href: "#" },
+    { label: "Supplier integration", href: "#" },
+    { label: "API documentation", href: "#" },
+    { label: "Partner login", href: "#" },
+    { label: "Trust & Safety", href: "#" },
     { label: "Support", href: "#" },
   ],
 } as const;

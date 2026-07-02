@@ -21,12 +21,12 @@ export function HeroSection() {
 
           <div className="mx-auto max-w-3xl">
             <h1 className="text-balance font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-              <span className="text-black">Stay Where Every Moment </span>
-              <span className="font-normal text-white">Feels Special</span>
+              <span className="text-black">Rest when you need it. </span>
+              <span className="font-normal text-white">Stay when you want.</span>
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base text-white/90 sm:text-lg italic">
-              Explore handpicked hotels, villas, and apartments across top
-              destinations.
+              Book 12-hour rest slots or overnight stays at airport hotels and city properties
+              worldwide.
             </p>
           </div>
 

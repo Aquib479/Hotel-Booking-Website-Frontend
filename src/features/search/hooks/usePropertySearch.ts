@@ -1,6 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { differenceInDays, parseISO } from "date-fns";
+import type { AmenityFilter, RestSlot } from "@/lib/booking/types";
+import { supportsRestMode, supportsStayMode } from "@/lib/booking/availability";
+import { convertFromIdr, getWholesaleGuestPriceUsdRounded } from "@/lib/currency/format";
 import {
   DEFAULT_PER_PAGE,
   DEFAULT_PRICE_MAX,
@@ -10,15 +13,11 @@ import {
 import type {
   CountFilter,
   FilterState,
-  PlaceType,
   Property,
-  PropertyType,
   SearchQuery,
   SortOption,
   ViewMode,
 } from "../types";
-
-const DEFAULT_PLACE_TYPES: PlaceType[] = ["entire", "room"];
 
 function parseDate(value: string | null): Date | undefined {
   if (!value) return undefined;
@@ -38,20 +37,29 @@ function matchesLocation(property: Property, location: string): boolean {
   return (
     property.city.toLowerCase().includes(query) ||
     property.country.toLowerCase().includes(query) ||
-    `${property.city}, ${property.country}`.toLowerCase().includes(query) ||
     property.address.toLowerCase().includes(query)
   );
+}
+
+function getPropertyPriceUsd(property: Property): number {
+  if (property.lane === "wholesale" && property.wholesalePricing) {
+    return getWholesaleGuestPriceUsdRounded(property.wholesalePricing);
+  }
+  if (property.lane === "wholesale") return property.priceUsd;
+  return property.priceUsd || convertFromIdr(property.priceIdr, "USD");
 }
 
 function getDefaultFilters(): FilterState {
   return {
     priceMin: DEFAULT_PRICE_MIN,
     priceMax: DEFAULT_PRICE_MAX,
-    placeTypes: [...DEFAULT_PLACE_TYPES],
-    bedrooms: "any",
-    beds: "any",
-    bathrooms: "any",
-    propertyType: "any",
+    lane: "all",
+    starRating: "any",
+    roomType: "any",
+    maxOccupancy: "any",
+    amenities: [],
+    slotDuration: "any",
+    maxAirportDistance: "any",
     category: "all",
   };
 }
@@ -59,17 +67,14 @@ function getDefaultFilters(): FilterState {
 function countActiveFilters(filters: FilterState): number {
   let count = 0;
   if (filters.priceMin !== DEFAULT_PRICE_MIN || filters.priceMax !== DEFAULT_PRICE_MAX) count++;
-  if (
-    filters.placeTypes.length !== DEFAULT_PLACE_TYPES.length ||
-    !DEFAULT_PLACE_TYPES.every((t) => filters.placeTypes.includes(t))
-  ) {
-    count++;
-  }
-  if (filters.bedrooms !== "any") count++;
-  if (filters.beds !== "any") count++;
-  if (filters.bathrooms !== "any") count++;
-  if (filters.propertyType !== "any") count++;
-  if (filters.category !== "all") count++;
+  if (filters.lane !== "all") count++;
+  if (filters.starRating !== "any") count++;
+  if (filters.roomType !== "any") count++;
+  if (filters.maxOccupancy !== "any") count++;
+  if (filters.amenities.length > 0) count++;
+  if (filters.slotDuration !== "any") count++;
+  if (filters.maxAirportDistance !== "any") count++;
+  if (filters.category !== "all" && filters.category !== "resthalf-exclusive") count++;
   return count;
 }
 
@@ -78,10 +83,13 @@ export function usePropertySearch() {
 
   const query: SearchQuery = useMemo(
     () => ({
-      location: searchParams.get("location") ?? "Toronto, Canada",
+      location: searchParams.get("location") ?? "Bangalore",
+      mode: (searchParams.get("mode") as SearchQuery["mode"]) ?? "stay",
       checkIn: parseDate(searchParams.get("checkIn")),
       checkOut: parseDate(searchParams.get("checkOut")),
-      guests: searchParams.get("guests") ?? "4 adults",
+      restDate: parseDate(searchParams.get("restDate")),
+      slot: (searchParams.get("slot") as RestSlot) ?? "12-24",
+      guests: searchParams.get("guests") ?? "2 adults",
     }),
     [searchParams]
   );
@@ -99,11 +107,12 @@ export function usePropertySearch() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const nights = useMemo(() => {
+    if (query.mode === "rest") return 1;
     if (query.checkIn && query.checkOut) {
       return Math.max(1, differenceInDays(query.checkOut, query.checkIn));
     }
-    return 20;
-  }, [query.checkIn, query.checkOut]);
+    return 1;
+  }, [query.checkIn, query.checkOut, query.mode]);
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -121,13 +130,30 @@ export function usePropertySearch() {
 
   const setQuery = useCallback(
     (next: Partial<SearchQuery>) => {
-      updateParams({
+      const mode = next.mode ?? query.mode;
+      const updates: Record<string, string | null> = {
         location: next.location ?? query.location,
-        checkIn: next.checkIn?.toISOString() ?? (query.checkIn ? query.checkIn.toISOString() : null),
-        checkOut: next.checkOut?.toISOString() ?? (query.checkOut ? query.checkOut.toISOString() : null),
         guests: next.guests ?? query.guests,
+        mode,
         page: "1",
-      });
+      };
+
+      if (mode === "stay") {
+        updates.checkIn =
+          next.checkIn?.toISOString() ?? (query.checkIn ? query.checkIn.toISOString() : null);
+        updates.checkOut =
+          next.checkOut?.toISOString() ?? (query.checkOut ? query.checkOut.toISOString() : null);
+        updates.restDate = null;
+        updates.slot = null;
+      } else {
+        updates.restDate =
+          next.restDate?.toISOString() ?? (query.restDate ? query.restDate.toISOString() : null);
+        updates.slot = next.slot ?? query.slot ?? "12-24";
+        updates.checkIn = null;
+        updates.checkOut = null;
+      }
+
+      updateParams(updates);
     },
     [query, updateParams]
   );
@@ -135,35 +161,67 @@ export function usePropertySearch() {
   const filteredProperties = useMemo(() => {
     let results = MOCK_PROPERTIES.filter((property) => {
       if (!matchesLocation(property, query.location)) return false;
-      if (property.pricePerNight < filters.priceMin || property.pricePerNight > filters.priceMax) {
+
+      const price = getPropertyPriceUsd(property);
+      if (price < filters.priceMin || price > filters.priceMax) return false;
+
+      if (filters.lane !== "all" && property.lane !== filters.lane) return false;
+      if (filters.category === "resthalf-exclusive" && property.lane !== "direct") return false;
+      if (
+        filters.category !== "all" &&
+        filters.category !== "resthalf-exclusive" &&
+        property.category !== filters.category
+      ) {
         return false;
       }
-      if (!filters.placeTypes.includes(property.placeType)) return false;
-      if (!matchesCountFilter(property.bedrooms, filters.bedrooms)) return false;
-      if (!matchesCountFilter(property.beds, filters.beds)) return false;
-      if (!matchesCountFilter(property.bathrooms, filters.bathrooms)) return false;
-      if (filters.propertyType !== "any" && property.propertyType !== filters.propertyType) {
+
+      if (!matchesCountFilter(property.starRating, filters.starRating)) return false;
+      if (filters.roomType !== "any" && property.roomType !== filters.roomType) return false;
+      if (!matchesCountFilter(property.maxOccupancy, filters.maxOccupancy)) return false;
+
+      if (
+        filters.amenities.length > 0 &&
+        !filters.amenities.every((a) => property.amenities.includes(a))
+      ) {
         return false;
       }
-      if (filters.category !== "all" && property.category !== filters.category) return false;
+
+      if (filters.slotDuration !== "any" && property.slotDuration !== filters.slotDuration) {
+        return false;
+      }
+
+      if (
+        filters.maxAirportDistance !== "any" &&
+        property.distanceFromAirportKm > Number(filters.maxAirportDistance)
+      ) {
+        return false;
+      }
+
+      if (query.mode === "rest" && !supportsRestMode(property)) return false;
+      if (query.mode === "stay" && !supportsStayMode(property)) return false;
+
       return true;
     });
 
     results = [...results].sort((a, b) => {
       switch (sort) {
         case "price-asc":
-          return a.pricePerNight - b.pricePerNight;
+          return getPropertyPriceUsd(a) - getPropertyPriceUsd(b);
         case "price-desc":
-          return b.pricePerNight - a.pricePerNight;
+          return getPropertyPriceUsd(b) - getPropertyPriceUsd(a);
         case "rating":
           return b.rating - a.rating;
+        case "soonest-slot":
+          if (a.lane === "direct" && b.lane !== "direct") return -1;
+          if (b.lane === "direct" && a.lane !== "direct") return 1;
+          return (a.nextAvailableSlot ?? "").localeCompare(b.nextAvailableSlot ?? "");
         default:
           return b.createdAt.localeCompare(a.createdAt);
       }
     });
 
     return results;
-  }, [filters, query.location, sort]);
+  }, [filters, query.location, query.mode, sort]);
 
   const totalResults = filteredProperties.length;
   const totalPages = Math.max(1, Math.ceil(totalResults / perPage));
@@ -176,7 +234,10 @@ export function usePropertySearch() {
 
   const categoryCounts = useMemo(() => {
     const base = MOCK_PROPERTIES.filter((p) => matchesLocation(p, query.location));
-    const counts: Record<string, number> = { all: base.length };
+    const counts: Record<string, number> = {
+      all: base.length,
+      "resthalf-exclusive": base.filter((p) => p.lane === "direct").length,
+    };
     base.forEach((p) => {
       counts[p.category] = (counts[p.category] ?? 0) + 1;
     });
@@ -214,19 +275,15 @@ export function usePropertySearch() {
     });
   };
 
-  const togglePlaceType = (type: PlaceType) => {
+  const toggleAmenity = (amenity: AmenityFilter) => {
     setFilters((prev) => {
-      const exists = prev.placeTypes.includes(type);
-      const placeTypes = exists
-        ? prev.placeTypes.filter((t) => t !== type)
-        : [...prev.placeTypes, type];
-      return { ...prev, placeTypes: placeTypes.length ? placeTypes : [type] };
+      const exists = prev.amenities.includes(amenity);
+      const amenities = exists
+        ? prev.amenities.filter((a) => a !== amenity)
+        : [...prev.amenities, amenity];
+      return { ...prev, amenities };
     });
     updateParams({ page: "1" });
-  };
-
-  const setPropertyType = (type: PropertyType | "any") => {
-    updateFilters({ propertyType: type });
   };
 
   return {
@@ -252,7 +309,6 @@ export function usePropertySearch() {
     updateFilters,
     clearFilters,
     toggleFavorite,
-    togglePlaceType,
-    setPropertyType,
+    toggleAmenity,
   };
 }

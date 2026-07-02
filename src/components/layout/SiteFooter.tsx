@@ -8,9 +8,10 @@ export function SiteFooter() {
       <div className="mx-auto max-w-6xl">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_repeat(3,1fr)]">
           <div>
-            <p className="text-2xl font-bold text-white">Neer</p>
+            <p className="text-2xl font-bold text-white">RestHalf</p>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-400">
-              Design amazing digital experiences that create more happy in the world.
+              Flexible hotel rest for layovers and short stays — 12-hour slots or full overnight
+              bookings, worldwide.
             </p>
           </div>
 
@@ -26,11 +27,6 @@ export function SiteFooter() {
                         className="inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
                       >
                         {link.label}
-                        {"badge" in link && (
-                          <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white">
-                            {link.badge}
-                          </span>
-                        )}
                       </Link>
                     ) : (
                       <a
@@ -38,11 +34,6 @@ export function SiteFooter() {
                         className="inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
                       >
                         {link.label}
-                        {"badge" in link && (
-                          <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white">
-                            {link.badge}
-                          </span>
-                        )}
                       </a>
                     )}
                   </li>

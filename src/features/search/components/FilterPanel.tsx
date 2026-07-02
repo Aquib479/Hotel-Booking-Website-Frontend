@@ -1,34 +1,22 @@
-import {
-  Building2,
-  Home,
-  Tent,
-  Trees,
-  Warehouse,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
+  AIRPORT_DISTANCE_OPTIONS,
+  AMENITY_FILTER_OPTIONS,
   COUNT_OPTIONS,
-  PLACE_TYPE_OPTIONS,
-  PROPERTY_TYPE_OPTIONS,
+  ROOM_TYPE_OPTIONS,
+  SLOT_DURATION_OPTIONS,
+  STAR_RATING_OPTIONS,
 } from "../constants";
-import type { CountFilter, FilterState, PlaceType, PropertyType } from "../types";
-
-const PROPERTY_ICONS: Record<PropertyType, typeof Home> = {
-  house: Home,
-  apartment: Building2,
-  cabin: Trees,
-  villa: Warehouse,
-  camping: Tent,
-};
+import type { AmenityFilter } from "@/lib/booking/types";
+import type { CountFilter, FilterState } from "../types";
 
 interface FilterPanelProps {
   filters: FilterState;
   activeFilterCount: number;
-  nights: number;
+  mode: "rest" | "stay";
   onUpdate: (patch: Partial<FilterState>) => void;
   onClear: () => void;
-  onTogglePlaceType: (type: PlaceType) => void;
-  onPropertyTypeChange: (type: PropertyType | "any") => void;
+  onToggleAmenity: (amenity: AmenityFilter) => void;
 }
 
 function CountSelector({
@@ -71,14 +59,11 @@ function CountSelector({
 export function FilterPanel({
   filters,
   activeFilterCount,
-  nights,
+  mode,
   onUpdate,
   onClear,
-  onTogglePlaceType,
-  onPropertyTypeChange,
+  onToggleAmenity,
 }: FilterPanelProps) {
-  const avgTotal = 2594;
-
   return (
     <aside className="rounded-2xl border border-border bg-[#f9f9fb] p-5">
       <div className="mb-5 flex items-center justify-between">
@@ -89,114 +74,197 @@ export function FilterPanel({
             onClick={onClear}
             className="text-sm font-medium text-brand hover:text-brand/80"
           >
-            Clear all filter ({activeFilterCount})
+            Clear all ({activeFilterCount})
           </button>
         )}
       </div>
 
       <div className="space-y-6">
         <section>
-          <p className="mb-3 text-sm text-muted-foreground">
-            The average total price for {nights} nights is ${avgTotal.toLocaleString()}
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Minimum
-              </label>
-              <div className="flex items-center rounded-lg border border-border bg-white px-3 py-2">
-                <span className="text-sm text-muted-foreground">$</span>
-                <input
-                  type="number"
-                  value={filters.priceMin}
-                  min={0}
-                  onChange={(e) => onUpdate({ priceMin: Number(e.target.value) })}
-                  className="w-full bg-transparent pl-1 text-sm font-medium outline-none"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Maximum
-              </label>
-              <div className="flex items-center rounded-lg border border-border bg-white px-3 py-2">
-                <span className="text-sm text-muted-foreground">$</span>
-                <input
-                  type="number"
-                  value={filters.priceMax}
-                  min={filters.priceMin}
-                  onChange={(e) => onUpdate({ priceMax: Number(e.target.value) })}
-                  className="w-full bg-transparent pl-1 text-sm font-medium outline-none"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <h4 className="mb-3 text-sm font-semibold text-foreground">Type of place</h4>
-          <div className="space-y-3">
-            {PLACE_TYPE_OPTIONS.map((option) => (
-              <label key={option.value} className="flex cursor-pointer gap-3">
-                <input
-                  type="checkbox"
-                  checked={filters.placeTypes.includes(option.value)}
-                  onChange={() => onTogglePlaceType(option.value)}
-                  className="mt-1 size-4 rounded border-border accent-brand"
-                />
-                <span>
-                  <span className="block text-sm font-medium text-foreground">{option.label}</span>
-                  <span className="text-xs text-muted-foreground">{option.description}</span>
-                </span>
-              </label>
+          <h4 className="mb-3 text-sm font-semibold text-foreground">Booking lane</h4>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                { value: "all" as const, label: "All" },
+                { value: "direct" as const, label: "RestHalf Exclusive" },
+                { value: "wholesale" as const, label: "Partner rates" },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onUpdate({ lane: option.value })}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                  filters.lane === option.value
+                    ? "border-brand bg-brand/10 text-brand"
+                    : "border-border bg-white text-muted-foreground hover:border-brand/40"
+                )}
+              >
+                {option.label}
+              </button>
             ))}
           </div>
         </section>
 
-        <section className="space-y-4">
-          <h4 className="text-sm font-semibold text-foreground">Rooms and beds</h4>
-          <CountSelector
-            label="Bedrooms"
-            value={filters.bedrooms}
-            onChange={(bedrooms) => onUpdate({ bedrooms })}
-          />
-          <CountSelector
-            label="Beds"
-            value={filters.beds}
-            onChange={(beds) => onUpdate({ beds })}
-          />
-          <CountSelector
-            label="Bathrooms"
-            value={filters.bathrooms}
-            onChange={(bathrooms) => onUpdate({ bathrooms })}
-          />
+        <section>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                Min price (USD)
+              </label>
+              <input
+                type="number"
+                value={filters.priceMin}
+                min={0}
+                onChange={(e) => onUpdate({ priceMin: Number(e.target.value) })}
+                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                Max price (USD)
+              </label>
+              <input
+                type="number"
+                value={filters.priceMax}
+                min={filters.priceMin}
+                onChange={(e) => onUpdate({ priceMax: Number(e.target.value) })}
+                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium outline-none"
+              />
+            </div>
+          </div>
         </section>
 
         <section>
-          <h4 className="mb-3 text-sm font-semibold text-foreground">Property type</h4>
-          <div className="grid grid-cols-2 gap-2">
-            {PROPERTY_TYPE_OPTIONS.map((option) => {
-              const Icon = PROPERTY_ICONS[option.value];
-              const isActive = filters.propertyType === option.value;
+          <h4 className="mb-3 text-sm font-semibold text-foreground">Star rating</h4>
+          <div className="flex flex-wrap gap-2">
+            {STAR_RATING_OPTIONS.map((option) => {
+              const parsed = option === "any" ? "any" : Number(option);
+              const isActive = filters.starRating === parsed;
               return (
                 <button
-                  key={option.value}
+                  key={option}
                   type="button"
-                  onClick={() =>
-                    onPropertyTypeChange(isActive ? "any" : option.value)
-                  }
+                  onClick={() => onUpdate({ starRating: parsed as CountFilter })}
                   className={cn(
-                    "flex flex-col items-center gap-2 rounded-xl border p-3 text-sm font-medium transition-colors",
+                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                     isActive
-                      ? "border-brand bg-brand/5 text-brand"
-                      : "border-border bg-white text-foreground hover:border-brand/30"
+                      ? "border-brand bg-brand/10 text-brand"
+                      : "border-border bg-white text-muted-foreground hover:border-brand/40"
                   )}
                 >
-                  <Icon className="size-5" />
-                  {option.label}
+                  {option === "any" ? "Any" : `${option}+ stars`}
                 </button>
               );
             })}
+          </div>
+        </section>
+
+        <section>
+          <h4 className="mb-3 text-sm font-semibold text-foreground">Room type</h4>
+          <div className="flex flex-wrap gap-2">
+            {ROOM_TYPE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onUpdate({ roomType: option.value })}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-xs font-medium capitalize transition-colors",
+                  filters.roomType === option.value
+                    ? "border-brand bg-brand/10 text-brand"
+                    : "border-border bg-white text-muted-foreground hover:border-brand/40"
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <CountSelector
+          label="Max occupancy"
+          value={filters.maxOccupancy}
+          onChange={(maxOccupancy) => onUpdate({ maxOccupancy })}
+        />
+
+        <section>
+          <h4 className="mb-3 text-sm font-semibold text-foreground">Amenities</h4>
+          <div className="flex flex-wrap gap-2">
+            {AMENITY_FILTER_OPTIONS.map((amenity) => {
+              const isActive = filters.amenities.includes(amenity);
+              return (
+                <button
+                  key={amenity}
+                  type="button"
+                  onClick={() => onToggleAmenity(amenity)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                    isActive
+                      ? "border-brand bg-brand/10 text-brand"
+                      : "border-border bg-white text-muted-foreground hover:border-brand/40"
+                  )}
+                >
+                  {amenity}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {mode === "rest" && (
+          <section>
+            <h4 className="mb-3 text-sm font-semibold text-foreground">Slot duration</h4>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => onUpdate({ slotDuration: "any" })}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                  filters.slotDuration === "any"
+                    ? "border-brand bg-brand/10 text-brand"
+                    : "border-border bg-white text-muted-foreground hover:border-brand/40"
+                )}
+              >
+                Any
+              </button>
+              {SLOT_DURATION_OPTIONS.map((duration) => (
+                <button
+                  key={duration}
+                  type="button"
+                  onClick={() => onUpdate({ slotDuration: duration })}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                    filters.slotDuration === duration
+                      ? "border-brand bg-brand/10 text-brand"
+                      : "border-border bg-white text-muted-foreground hover:border-brand/40"
+                  )}
+                >
+                  {duration}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section>
+          <h4 className="mb-3 text-sm font-semibold text-foreground">Distance from airport</h4>
+          <div className="flex flex-col gap-2">
+            {AIRPORT_DISTANCE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onUpdate({ maxAirportDistance: option.value })}
+                className={cn(
+                  "rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors",
+                  filters.maxAirportDistance === option.value
+                    ? "border-brand bg-brand/10 text-brand"
+                    : "border-border bg-white text-muted-foreground hover:border-brand/40"
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </section>
       </div>

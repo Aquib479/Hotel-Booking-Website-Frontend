@@ -24,11 +24,6 @@ export function DetailTabs({ activeTab, onTabChange }: DetailTabsProps) {
             )}
           >
             {tab.label}
-            {"badge" in tab && (
-              <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                {tab.badge}
-              </span>
-            )}
             {activeTab === tab.id && (
               <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-foreground" />
             )}

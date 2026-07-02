@@ -1,3 +1,1 @@
-export function Checkout() {
-  return <main className="p-6">Checkout</main>;
-}
+export { CheckoutPage as Checkout } from "@/features/checkout";

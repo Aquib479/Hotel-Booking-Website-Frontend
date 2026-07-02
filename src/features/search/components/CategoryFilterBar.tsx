@@ -1,14 +1,12 @@
 import {
+  BadgeCheck,
+  Briefcase,
   Building2,
   ChevronLeft,
   ChevronRight,
-  Home,
+  Clock,
   LayoutGrid,
-  Tent,
-  Trees,
-  Warehouse,
-  Waves,
-  Box,
+  Plane,
 } from "lucide-react";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -16,13 +14,11 @@ import { CATEGORIES } from "../constants";
 
 const ICONS = {
   "layout-grid": LayoutGrid,
-  home: Home,
-  trees: Trees,
-  box: Box,
-  warehouse: Warehouse,
-  tent: Tent,
+  plane: Plane,
   "building-2": Building2,
-  waves: Waves,
+  briefcase: Briefcase,
+  clock: Clock,
+  "badge-check": BadgeCheck,
 } as const;
 
 interface CategoryFilterBarProps {

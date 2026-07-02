@@ -1,7 +1,7 @@
 export const FEATURE_BADGES = [
-  "2M+ Travelers Booked With Us",
-  "Top Rated Stays 2024",
-  "Secure Booking Guaranteed",
+  "500K+ Rest slots booked",
+  "Top rated layover hotels",
+  "Instant confirm on Exclusive",
 ] as const;
 
 export const REVIEW_AVATARS = [

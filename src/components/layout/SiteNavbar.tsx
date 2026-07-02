@@ -1,6 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 import { User } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CurrencySwitcher } from "@/components/common/CurrencySwitcher";
 import { cn } from "@/lib/utils";
 import { SITE_NAV_LINKS } from "./site-nav";
 
@@ -25,12 +25,9 @@ export function SiteNavbar({ variant = "default" }: SiteNavbarProps) {
       <div className="mx-auto flex items-center justify-between px-4 py-4 sm:px-12">
         <Link
           to="/"
-          className={cn(
-            "text-xl font-bold tracking-tight sm:text-2xl",
-            isOverlay ? "text-foreground" : "text-foreground"
-          )}
+          className="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
         >
-          Neer
+          RestHalf
         </Link>
 
         <nav
@@ -45,9 +42,7 @@ export function SiteNavbar({ variant = "default" }: SiteNavbarProps) {
                 className={({ isActive }) =>
                   cn(
                     "text-sm font-medium transition-colors",
-                    isActive
-                      ? "text-foreground font-bold"
-                      : "text-foreground"
+                    isActive ? "font-bold text-foreground" : "text-foreground"
                   )
                 }
               >
@@ -66,24 +61,7 @@ export function SiteNavbar({ variant = "default" }: SiteNavbarProps) {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* {!isOverlay && (
-            <Button
-              variant="outline"
-              className="hidden rounded-full border-border px-4 text-sm sm:inline-flex"
-            >
-              <Sparkles className="size-4 text-brand" />
-              Ask AJ
-            </Button>
-          )} */}
-          <Button
-            variant="outline"
-            className={cn(
-              "hidden rounded-full px-5 text-sm font-medium sm:inline-flex",
-              isOverlay && "border-foreground/20 bg-transparent backdrop-blur-sm hover:bg-transparent"
-            )}
-          >
-            Become a Host
-          </Button>
+          <CurrencySwitcher variant={isOverlay ? "overlay" : "default"} />
           <button
             type="button"
             aria-label="Open profile"

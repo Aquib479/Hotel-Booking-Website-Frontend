@@ -42,7 +42,7 @@ export function PropertyDetailsContent({ property }: PropertyDetailsContentProps
       <section>
         <h2 className="text-lg font-semibold text-foreground">What this place offers?</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {property.amenities.map((amenity) => (
+          {property.detailAmenities.map((amenity) => (
             <AmenityItem key={amenity.label} amenity={amenity} />
           ))}
         </div>
@@ -122,7 +122,7 @@ export function MessagesContent() {
       <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-12 text-center">
         <p className="font-semibold text-foreground">2 unread messages</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Contact the host to ask questions about this property before booking.
+          Contact RestHalf support for help with your booking or hotel questions.
         </p>
         <button
           type="button"
