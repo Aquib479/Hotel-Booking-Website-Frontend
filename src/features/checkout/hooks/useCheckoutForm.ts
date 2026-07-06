@@ -1,9 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
-import { DEFAULT_PHONE_COUNTRY_CODE } from "../constants";
+import { DEFAULT_PHONE_COUNTRY_CODE } from "@/lib/phone/constants";
+import { isValidE164, isValidEmail } from "@/lib/phone/validation";
 import type { GuestDetailsValues } from "../types";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const E164_RE = /^\+[1-9]\d{7,14}$/;
 
 const INITIAL_VALUES: GuestDetailsValues = {
   fullName: "",
@@ -24,14 +22,14 @@ function validateField(
       return undefined;
     case "email":
       if (!values.email.trim()) return "Email is required";
-      if (!EMAIL_RE.test(values.email.trim())) return "Enter a valid email address";
+      if (!isValidEmail(values.email)) return "Enter a valid email address";
       return undefined;
-    case "phoneNumber": {
-      const e164 = `${values.phoneCountryCode}${values.phoneNumber.replace(/\D/g, "")}`;
+    case "phoneNumber":
       if (!values.phoneNumber.trim()) return "Phone number is required";
-      if (!E164_RE.test(e164)) return "Enter a valid phone number with country code";
+      if (!isValidE164(values.phoneCountryCode, values.phoneNumber)) {
+        return "Enter a valid phone number with country code";
+      }
       return undefined;
-    }
     case "phoneCountryCode":
       return values.phoneCountryCode ? undefined : "Country code is required";
     case "specialRequests":

@@ -3,7 +3,10 @@ import { Button } from "@/components/ui/button";
 import type { NoDraftReason } from "../types";
 
 interface NoActiveDraftStateProps {
-  reason: NoDraftReason;
+  reason?: NoDraftReason;
+  title?: string;
+  body?: string;
+  cta?: string;
   searchHref?: string;
 }
 
@@ -20,15 +23,21 @@ const COPY: Record<NoDraftReason, { title: string; body: string; cta: string }> 
   },
 };
 
-export function NoActiveDraftState({ reason, searchHref = "/search" }: NoActiveDraftStateProps) {
-  const copy = COPY[reason];
+export function NoActiveDraftState({
+  reason = "missing",
+  title,
+  body,
+  cta,
+  searchHref = "/search",
+}: NoActiveDraftStateProps) {
+  const defaults = COPY[reason];
 
   return (
     <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
-      <h1 className="text-2xl font-bold text-foreground">{copy.title}</h1>
-      <p className="mt-3 text-muted-foreground">{copy.body}</p>
+      <h1 className="text-2xl font-bold text-foreground">{title ?? defaults.title}</h1>
+      <p className="mt-3 text-muted-foreground">{body ?? defaults.body}</p>
       <Button asChild className="mt-8 rounded-xl px-8">
-        <Link to={searchHref}>{copy.cta}</Link>
+        <Link to={searchHref}>{cta ?? defaults.cta}</Link>
       </Button>
     </main>
   );

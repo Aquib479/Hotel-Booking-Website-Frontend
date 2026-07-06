@@ -1,5 +1,11 @@
 import type { RestSlot } from "@/lib/booking/types";
+import {
+  DEFAULT_PHONE_COUNTRY_CODE,
+  PHONE_COUNTRY_CODES,
+} from "@/lib/phone/constants";
 import type { PaymentMethod } from "./types";
+
+export { DEFAULT_PHONE_COUNTRY_CODE, PHONE_COUNTRY_CODES };
 
 export const CHECKOUT_DRAFT_KEY = "resthalf-checkout-draft";
 
@@ -26,16 +32,3 @@ export const PAYMENT_METHODS: {
   { id: "virtual_account", label: "Virtual account", description: "Bank transfer (BCA, Mandiri, BNI)" },
   { id: "card", label: "Card", description: "Visa, Mastercard, JCB" },
 ];
-
-export const PHONE_COUNTRY_CODES = [
-  { code: "+62", label: "Indonesia (+62)" },
-  { code: "+971", label: "UAE (+971)" },
-  { code: "+65", label: "Singapore (+65)" },
-  { code: "+91", label: "India (+91)" },
-  { code: "+44", label: "UK (+44)" },
-  { code: "+1", label: "US / Canada (+1)" },
-  { code: "+81", label: "Japan (+81)" },
-  { code: "+61", label: "Australia (+61)" },
-] as const;
-
-export const DEFAULT_PHONE_COUNTRY_CODE = "+62";

@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useAuth } from "@/features/auth/context/AuthProvider";
 import { getPropertyById } from "@/features/property/data";
 import { useBookingPricing } from "@/features/property/hooks/useBookingPricing";
 import { useCheckoutDraft } from "../hooks/useCheckoutDraft";
@@ -14,17 +16,40 @@ import { CancellationPolicySummary } from "../components/CancellationPolicySumma
 import { TermsAcceptance } from "../components/TermsAcceptance";
 import { CheckoutCTA } from "../components/CheckoutCTA";
 import { NoActiveDraftState } from "../components/NoActiveDraftState";
+import { GuestCheckoutPrompt } from "../components/GuestCheckoutPrompt";
 import { usePaymentMethodSelection } from "../components/DirectPaymentMethods";
 
+const GUEST_CHECKOUT_KEY = "resthalf-checkout-guest-mode";
+
+function readGuestMode(): boolean {
+  try {
+    return sessionStorage.getItem(GUEST_CHECKOUT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function CheckoutPage() {
+  const [searchParams] = useSearchParams();
+  const { isAuthenticated, user } = useAuth();
   const { draft, isExpired, clearDraft } = useCheckoutDraft();
   const { format: formatCurrency } = useCurrency();
-  const form = useCheckoutForm();
+  const form = useCheckoutForm(
+    user
+      ? {
+          fullName: user.fullName,
+          email: user.email,
+          phoneCountryCode: user.phoneE164.match(/^\+\d{1,3}/)?.[0] ?? "+62",
+          phoneNumber: user.phoneE164.replace(/^\+\d{1,3}/, ""),
+        }
+      : undefined
+  );
   const { selectedMethod, setSelectedMethod } = usePaymentMethodSelection();
 
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [holdExpired, setHoldExpired] = useState(false);
+  const [guestMode, setGuestMode] = useState(() => readGuestMode() || isAuthenticated);
 
   const property = draft ? getPropertyById(draft.propertyId) : null;
   const dates = draft ? parseDraftDates(draft) : { restDate: undefined, checkIn: undefined, checkOut: undefined };
@@ -97,9 +122,17 @@ export function CheckoutPage() {
     return <NoActiveDraftState reason="missing" />;
   }
 
-  if (isExpired || holdExpired) {
+  const forceExpired = searchParams.get("expired") === "1";
+  if (isExpired || holdExpired || forceExpired) {
     return <NoActiveDraftState reason="expired" />;
   }
+
+  const handleContinueAsGuest = () => {
+    sessionStorage.setItem(GUEST_CHECKOUT_KEY, "1");
+    setGuestMode(true);
+  };
+
+  const showGuestPrompt = !isAuthenticated && !guestMode;
 
   const ctaLabel =
     draft.lane === "direct" ? `Pay ${payAmountLabel} now` : "Continue to complete booking";
@@ -108,6 +141,7 @@ export function CheckoutPage() {
     <CheckoutLayout
       summary={<BookingSummaryCard draft={draft} onHoldExpire={handleHoldExpire} />}
       stickyCta={
+        showGuestPrompt ? undefined : (
         <CheckoutCTA
           label={ctaLabel}
           onClick={handleCtaClick}
@@ -115,8 +149,13 @@ export function CheckoutPage() {
           disabledReason={disabledReason}
           isLoading={isSubmitting}
         />
+        )
       }
     >
+      {showGuestPrompt ? (
+        <GuestCheckoutPrompt onContinueAsGuest={handleContinueAsGuest} />
+      ) : (
+        <>
       <GuestDetailsForm
         values={form.values}
         errors={form.errors}
@@ -143,6 +182,8 @@ export function CheckoutPage() {
       <TermsAcceptance checked={termsAccepted} onChange={setTermsAccepted} />
 
       {/* Desktop CTA is inside PaymentSection; mobile uses sticky CheckoutCTA */}
+        </>
+      )}
     </CheckoutLayout>
   );
 }

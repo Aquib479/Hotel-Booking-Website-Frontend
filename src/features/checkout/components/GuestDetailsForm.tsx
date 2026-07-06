@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { PHONE_COUNTRY_CODES } from "../constants";
+import { PhoneInput } from "@/features/auth/components/PhoneInput";
 import type { GuestDetailsValues } from "../types";
 
 interface GuestDetailsFormProps {
@@ -72,34 +72,15 @@ export function GuestDetailsForm({
       </Field>
 
       <Field label="Phone number" error={errors.phoneNumber} touched={touched.phoneNumber}>
-        <div className="flex gap-2">
-          <select
-            value={values.phoneCountryCode}
-            onChange={(e) => onChange("phoneCountryCode", e.target.value)}
-            onBlur={() => onBlur("phoneCountryCode")}
-            className={cn(inputClass, "w-36 shrink-0")}
-            aria-label="Country code"
-          >
-            {PHONE_COUNTRY_CODES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-          <input
-            type="tel"
-            autoComplete="tel-national"
-            placeholder="8123456789"
-            value={values.phoneNumber}
-            onChange={(e) => onChange("phoneNumber", e.target.value.replace(/\D/g, ""))}
-            onBlur={() => onBlur("phoneNumber")}
-            className={cn(
-              inputClass,
-              "flex-1",
-              touched.phoneNumber && errors.phoneNumber && "border-red-400"
-            )}
-          />
-        </div>
+        <PhoneInput
+          countryCode={values.phoneCountryCode}
+          nationalNumber={values.phoneNumber}
+          onCountryCodeChange={(v) => onChange("phoneCountryCode", v)}
+          onNationalNumberChange={(v) => onChange("phoneNumber", v)}
+          onBlur={() => onBlur("phoneNumber")}
+          error={errors.phoneNumber}
+          touched={touched.phoneNumber}
+        />
       </Field>
 
       <Field label="Special requests (optional)" error={errors.specialRequests} touched={touched.specialRequests}>

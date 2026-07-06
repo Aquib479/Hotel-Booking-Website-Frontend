@@ -1,6 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 import { User } from "lucide-react";
 import { CurrencySwitcher } from "@/components/common/CurrencySwitcher";
+import { useAuth } from "@/features/auth/context/AuthProvider";
 import { cn } from "@/lib/utils";
 import { SITE_NAV_LINKS } from "./site-nav";
 
@@ -12,6 +13,7 @@ interface SiteNavbarProps {
 
 export function SiteNavbar({ variant = "default" }: SiteNavbarProps) {
   const isOverlay = variant === "overlay";
+  const { isAuthenticated, user } = useAuth();
 
   return (
     <header
@@ -62,18 +64,19 @@ export function SiteNavbar({ variant = "default" }: SiteNavbarProps) {
 
         <div className="flex items-center gap-2 sm:gap-3">
           <CurrencySwitcher variant={isOverlay ? "overlay" : "default"} />
-          <button
-            type="button"
-            aria-label="Open profile"
+          <Link
+            to={isAuthenticated ? "/account" : "/login"}
+            aria-label={isAuthenticated ? "Account settings" : "Log in"}
             className={cn(
               "flex size-8 items-center justify-center rounded-full border transition-colors",
               isOverlay
                 ? "border-foreground/15 bg-transparent text-foreground hover:bg-transparent hover:text-foreground"
                 : "border-border bg-muted text-muted-foreground hover:text-foreground"
             )}
+            title={isAuthenticated ? user?.fullName : "Log in"}
           >
             <User className="size-5" />
-          </button>
+          </Link>
         </div>
       </div>
     </header>
