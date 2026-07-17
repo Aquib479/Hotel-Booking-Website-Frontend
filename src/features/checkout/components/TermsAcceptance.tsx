@@ -1,3 +1,8 @@
+import { Link } from "react-router-dom";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+
 interface TermsAcceptanceProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -5,23 +10,30 @@ interface TermsAcceptanceProps {
 
 export function TermsAcceptance({ checked, onChange }: TermsAcceptanceProps) {
   return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-white p-4">
-      <input
-        type="checkbox"
+    <Label
+      className={cn(
+        "flex cursor-pointer items-start gap-3 rounded-xl border bg-card p-4 font-normal"
+      )}
+    >
+      <Checkbox
         checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 size-4 rounded border-border accent-brand"
+        onCheckedChange={(v) => onChange(v === true)}
+        className="mt-0.5"
       />
       <span className="text-sm text-muted-foreground">
         I agree to the{" "}
-        <a href="#" className="font-medium text-brand hover:underline" target="_blank" rel="noreferrer">
+        <Link to="/terms" className="font-medium text-brand hover:underline" target="_blank">
           Terms of Service
-        </a>{" "}
+        </Link>{" "}
         and{" "}
-        <a href="#" className="font-medium text-brand hover:underline" target="_blank" rel="noreferrer">
+        <Link
+          to="/cancellation-policy"
+          className="font-medium text-brand hover:underline"
+          target="_blank"
+        >
           Cancellation Policy
-        </a>
+        </Link>
       </span>
-    </label>
+    </Label>
   );
 }

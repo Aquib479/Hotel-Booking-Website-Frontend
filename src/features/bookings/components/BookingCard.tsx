@@ -1,7 +1,12 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Clock } from "lucide-react";
 import { LaneBadge } from "@/components/common/LaneBadge";
+import { CardImageRow, CardThumbnail } from "@/components/common/CardImageRow";
 import { formatPrice } from "@/lib/currency/format";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { BookingRecord } from "../types";
 import {
@@ -68,7 +73,8 @@ export function BookingCard({ booking }: BookingCardProps) {
   };
 
   return (
-    <article
+    <Card
+      padding="none"
       role="button"
       tabIndex={0}
       onClick={handleCardClick}
@@ -79,29 +85,34 @@ export function BookingCard({ booking }: BookingCardProps) {
         }
       }}
       className={cn(
-        "group flex cursor-pointer flex-col gap-4 rounded-2xl border bg-white p-4 transition-shadow hover:shadow-md sm:flex-row sm:items-start",
-        startingSoon ? "border-brand ring-2 ring-brand/20" : "border-border"
+        "cursor-pointer transition-all hover:shadow-md",
+        startingSoon && "border-brand ring-2 ring-brand/20"
       )}
     >
-      <img
-        src={booking.hotelImage}
-        alt=""
-        className="size-24 shrink-0 rounded-xl object-cover sm:size-28"
-      />
-
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h3 className="truncate font-semibold text-foreground">{booking.hotelName}</h3>
-            <p className="text-sm text-muted-foreground">
+      <CardImageRow
+        image={
+          <CardThumbnail
+            src={booking.hotelImage}
+            alt={booking.hotelName}
+            size="lg"
+            className="sm:min-h-[8.5rem]"
+          />
+        }
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h3 className="line-clamp-2 font-semibold leading-snug text-foreground">
+              {booking.hotelName}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               {booking.city}, {booking.country}
             </p>
           </div>
           {startingSoon && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-brand/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
+            <Badge variant="brand" className="shrink-0 gap-1 uppercase">
               <Clock className="size-3" />
               Starting soon
-            </span>
+            </Badge>
           )}
         </div>
 
@@ -121,7 +132,7 @@ export function BookingCard({ booking }: BookingCardProps) {
         />
 
         {booking.lane === "wholesale" && status === "upcoming" && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             Cancellations follow partner policy — not RestHalf&apos;s refund engine.
           </p>
         )}
@@ -130,23 +141,21 @@ export function BookingCard({ booking }: BookingCardProps) {
           <p className="text-xs text-muted-foreground">Reason: {booking.cancelReason}</p>
         )}
 
-        <div className="mt-1 flex items-center justify-between gap-3">
+        <Separator className="my-1" />
+
+        <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs text-muted-foreground">Paid</p>
             <p className="font-bold text-foreground">{paidLabel}</p>
           </div>
-          <button
+          <Button
             type="button"
+            variant={startingSoon ? "brand" : "outline"}
+            size="sm"
             onClick={handleAction}
-            className={cn(
-              "shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition-colors",
-              startingSoon
-                ? "bg-brand text-white hover:opacity-90"
-                : "border border-border bg-white hover:bg-muted/50"
-            )}
           >
             {action.label}
-          </button>
+          </Button>
         </div>
 
         <Link
@@ -156,7 +165,7 @@ export function BookingCard({ booking }: BookingCardProps) {
         >
           View booking {booking.confirmationCode}
         </Link>
-      </div>
-    </article>
+      </CardImageRow>
+    </Card>
   );
 }

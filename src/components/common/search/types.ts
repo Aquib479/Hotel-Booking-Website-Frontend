@@ -18,4 +18,4 @@ export interface SearchFormValues {
   guests: string;
 }
 
-export type SearchPanelVariant = "hero" | "page";
+export type SearchPanelVariant = "hero" | "page" | "landing";

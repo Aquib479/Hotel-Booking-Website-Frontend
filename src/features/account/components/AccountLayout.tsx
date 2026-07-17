@@ -14,7 +14,7 @@ export function AccountLayout({ children }: AccountLayoutProps) {
       <header className="mb-8">
         <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Account settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Manage your profile, preferences, and payment methods
+          Manage your profile, bookings, preferences, and payment methods
         </p>
       </header>
 

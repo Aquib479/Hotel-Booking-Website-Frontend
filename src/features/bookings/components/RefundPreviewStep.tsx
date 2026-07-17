@@ -1,3 +1,7 @@
+import { FormAlert } from "@/components/common/form";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RefundBreakdownCard } from "./RefundBreakdownCard";
 import type { BookingDetail, RefundPreview } from "../types";
 
@@ -26,24 +30,24 @@ export function RefundPreviewStep({
       </div>
 
       {isLoading && (
-        <div className="animate-pulse space-y-3 rounded-2xl border border-border p-5">
-          <div className="h-4 w-1/2 rounded bg-muted" />
-          <div className="h-4 w-full rounded bg-muted" />
-          <div className="h-16 rounded-xl bg-muted" />
-        </div>
+        <Card>
+          <CardContent className="space-y-3">
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-16 rounded-xl" />
+          </CardContent>
+        </Card>
       )}
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <p>{error}</p>
-          <button
-            type="button"
-            onClick={onRetry}
-            className="mt-2 font-medium text-red-800 underline"
-          >
-            Try again
-          </button>
-        </div>
+        <FormAlert
+          message={error}
+          action={
+            <Button type="button" variant="link" className="h-auto p-0" onClick={onRetry}>
+              Try again
+            </Button>
+          }
+        />
       )}
 
       {preview && !isLoading && <RefundBreakdownCard booking={booking} preview={preview} />}

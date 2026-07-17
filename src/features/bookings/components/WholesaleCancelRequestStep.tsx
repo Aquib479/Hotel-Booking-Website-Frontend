@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { FormField } from "@/components/common/form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 import {
   CANCEL_REASONS,
   SUPPORT_CONTACT_HREF,
@@ -33,12 +39,9 @@ export function WholesaleCancelRequestStep({
           confirm within {WHOLESALE_CANCEL_RESPONSE_HOURS} hours.
         </p>
         <p className="font-mono text-sm text-foreground">Reference: {submittedRef}</p>
-        <Link
-          to={`/bookings/${booking.id}`}
-          className="inline-block rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white"
-        >
-          Back to booking
-        </Link>
+        <Button variant="brand" asChild>
+          <Link to={`/bookings/${booking.id}`}>Back to booking</Link>
+        </Button>
       </div>
     );
   }
@@ -52,44 +55,51 @@ export function WholesaleCancelRequestStep({
         </p>
       </div>
 
-      <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-        {booking.hotelName} · Ref {booking.confirmationCode}
-        {booking.payment.supplierBookingRef && (
-          <span className="block font-mono text-xs">
-            Supplier ref: {booking.payment.supplierBookingRef}
-          </span>
-        )}
+      <Alert>
+        <AlertDescription>
+          {booking.hotelName} · Ref {booking.confirmationCode}
+          {booking.payment.supplierBookingRef && (
+            <span className="block font-mono text-xs">
+              Supplier ref: {booking.payment.supplierBookingRef}
+            </span>
+          )}
+        </AlertDescription>
+      </Alert>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-foreground">Reason for cancellation</p>
+        <RadioGroup
+          value={reason ?? ""}
+          onValueChange={(v) => setReason(v as CancelReasonId)}
+          className="space-y-2"
+        >
+          {CANCEL_REASONS.map((option) => (
+            <Label
+              key={option.id}
+              htmlFor={`wholesale-reason-${option.id}`}
+              className={cn(
+                "flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3.5 transition-all",
+                reason === option.id
+                  ? "border-brand bg-brand/5 shadow-sm"
+                  : "border-border bg-white hover:border-brand/40 hover:bg-muted/20"
+              )}
+            >
+              <RadioGroupItem id={`wholesale-reason-${option.id}`} value={option.id} />
+              <span className="text-sm">{option.label}</span>
+            </Label>
+          ))}
+        </RadioGroup>
       </div>
 
-      <fieldset className="space-y-2">
-        <legend className="mb-2 text-sm font-medium text-foreground">Reason for cancellation</legend>
-        {CANCEL_REASONS.map((option) => (
-          <label
-            key={option.id}
-            className={cn(
-              "flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3",
-              reason === option.id ? "border-brand bg-brand/5" : "border-border"
-            )}
-          >
-            <input
-              type="radio"
-              name="wholesale-reason"
-              checked={reason === option.id}
-              onChange={() => setReason(option.id)}
-              className="accent-brand"
-            />
-            <span className="text-sm">{option.label}</span>
-          </label>
-        ))}
-      </fieldset>
-
-      <textarea
-        rows={3}
-        value={detail}
-        onChange={(e) => setDetail(e.target.value)}
-        placeholder="Any additional details (optional)"
-        className="w-full resize-none rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-brand"
-      />
+      <FormField label="Additional details" htmlFor="wholesale-cancel-detail" optional>
+        <Textarea
+          id="wholesale-cancel-detail"
+          rows={3}
+          value={detail}
+          onChange={(e) => setDetail(e.target.value)}
+          placeholder="Any additional details (optional)"
+        />
+      </FormField>
 
       <p className="text-xs text-muted-foreground">
         Prefer to talk to someone?{" "}
@@ -98,14 +108,15 @@ export function WholesaleCancelRequestStep({
         </a>
       </p>
 
-      <button
+      <Button
         type="button"
+        variant="brand"
+        className="w-full"
         disabled={!reason || isSubmitting}
         onClick={() => reason && void onSubmit(reason, detail)}
-        className="w-full rounded-xl bg-brand py-3 text-sm font-semibold text-white disabled:opacity-50"
       >
         {isSubmitting ? "Submitting…" : "Submit cancellation request"}
-      </button>
+      </Button>
     </div>
   );
 }

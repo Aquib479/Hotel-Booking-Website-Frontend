@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { LaneBadge } from "@/components/common/LaneBadge";
 import { NoActiveDraftState } from "@/features/checkout/components/NoActiveDraftState";
+import { Button } from "@/components/ui/button";
 import { submitCancellation, submitWholesaleCancelRequest } from "../api";
 import { CancelFlowLayout } from "../components/CancelFlowLayout";
 import { CancelStepIndicator } from "../components/CancelStepIndicator";
@@ -102,12 +103,9 @@ export function CancelBookingPage() {
           The cancellation window has just closed since you opened this page. Your booking is still
           active.
         </p>
-        <Link
-          to={`/bookings/${booking.id}`}
-          className="mt-6 inline-block rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white"
-        >
-          Back to booking details
-        </Link>
+        <Button variant="brand" className="mt-6" asChild>
+          <Link to={`/bookings/${booking.id}`}>Back to booking details</Link>
+        </Button>
       </main>
     );
   }
@@ -130,27 +128,26 @@ export function CancelBookingPage() {
   const footer = (
     <div className="flex gap-3">
       {flow.step === "preview" && (
-        <button
-          type="button"
-          onClick={flow.goBack}
-          className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold hover:bg-muted/50"
-        >
+        <Button type="button" variant="outline" className="flex-1" onClick={flow.goBack}>
           Back
-        </button>
+        </Button>
       )}
       {flow.step === "reason" && (
-        <button
+        <Button
           type="button"
+          variant="brand"
+          className="flex-1"
           disabled={!canContinueReason}
           onClick={flow.goToPreview}
-          className="flex-1 rounded-xl bg-brand py-3 text-sm font-semibold text-white disabled:opacity-50"
         >
           Continue
-        </button>
+        </Button>
       )}
       {flow.step === "preview" && (
-        <button
+        <Button
           type="button"
+          variant="destructive"
+          className="flex-1 bg-red-50 text-red-700 hover:bg-red-100"
           disabled={
             isSubmitting ||
             refundPreview.isLoading ||
@@ -158,10 +155,9 @@ export function CancelBookingPage() {
             !refundPreview.preview
           }
           onClick={() => void handleConfirmCancel()}
-          className="flex-1 rounded-xl border-2 border-red-200 bg-red-50 py-3 text-sm font-semibold text-red-700 disabled:opacity-50"
         >
           {isSubmitting ? "Cancelling…" : "Confirm cancellation"}
-        </button>
+        </Button>
       )}
     </div>
   );

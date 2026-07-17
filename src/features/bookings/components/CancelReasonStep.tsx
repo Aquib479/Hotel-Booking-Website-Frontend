@@ -1,4 +1,9 @@
 import { cn } from "@/lib/utils";
+import { FormField } from "@/components/common/form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 import { CANCEL_REASONS, SUPPORT_CONTACT_HREF } from "../constants";
 import type { CancelReasonId } from "../types";
 
@@ -26,54 +31,55 @@ export function CancelReasonStep({
         </p>
       </div>
 
-      <fieldset className="space-y-2">
-        <legend className="sr-only">Cancellation reason</legend>
+      <RadioGroup
+        value={selected ?? ""}
+        onValueChange={(v) => onSelect(v as CancelReasonId)}
+        className="space-y-2"
+      >
         {CANCEL_REASONS.map((option) => (
-          <label
+          <Label
             key={option.id}
+            htmlFor={`cancel-reason-${option.id}`}
             className={cn(
-              "flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors",
+              "flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3.5 transition-all",
               selected === option.id
-                ? "border-brand bg-brand/5"
-                : "border-border hover:border-brand/40"
+                ? "border-brand bg-brand/5 shadow-sm"
+                : "border-border bg-white hover:border-brand/40 hover:bg-muted/20"
             )}
           >
-            <input
-              type="radio"
-              name="cancel-reason"
-              value={option.id}
-              checked={selected === option.id}
-              onChange={() => onSelect(option.id)}
-              className="accent-brand"
-            />
+            <RadioGroupItem id={`cancel-reason-${option.id}`} value={option.id} />
             <span className="text-sm font-medium text-foreground">{option.label}</span>
-          </label>
+          </Label>
         ))}
-      </fieldset>
+      </RadioGroup>
 
       {selectedConfig?.escalatesToSupport && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          We&apos;re sorry to hear that — you may want to{" "}
-          <a href={SUPPORT_CONTACT_HREF} className="font-medium underline">
-            contact support
-          </a>{" "}
-          first. They may be able to help without cancelling.
-        </div>
+        <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+          <AlertDescription>
+            We&apos;re sorry to hear that — you may want to{" "}
+            <a href={SUPPORT_CONTACT_HREF} className="font-medium underline">
+              contact support
+            </a>{" "}
+            first. They may be able to help without cancelling.
+          </AlertDescription>
+        </Alert>
       )}
 
       {(selected === "other" || selected === "hotel_issue") && (
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-foreground">
-            Additional details {selected === "other" ? "(required)" : "(optional)"}
-          </label>
-          <textarea
+        <FormField
+          label="Additional details"
+          htmlFor="cancel-reason-detail"
+          optional={selected === "hotel_issue"}
+          required={selected === "other"}
+        >
+          <Textarea
+            id="cancel-reason-detail"
             rows={3}
             value={reasonDetail}
             onChange={(e) => onDetailChange(e.target.value)}
             placeholder="Tell us a bit more…"
-            className="w-full resize-none rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
           />
-        </div>
+        </FormField>
       )}
     </div>
   );

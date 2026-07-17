@@ -1,26 +1,28 @@
+import { Card } from "@/components/ui/card";
+import { CardImageRow } from "@/components/common/CardImageRow";
+import { Skeleton } from "@/components/ui/skeleton";
+
 export function BookingsLoadingSkeleton() {
   return (
     <div className="space-y-4" aria-busy="true" aria-label="Loading bookings">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div
-          key={i}
-          className="flex animate-pulse flex-col gap-4 rounded-2xl border border-border bg-white p-4 sm:flex-row sm:items-start"
-        >
-          <div className="size-24 shrink-0 rounded-xl bg-muted sm:size-28" />
-          <div className="flex flex-1 flex-col gap-3">
-            <div className="h-5 w-2/3 rounded bg-muted" />
-            <div className="h-4 w-1/3 rounded bg-muted" />
+        <Card key={i} padding="none">
+          <CardImageRow
+            image={<Skeleton className="aspect-square w-full rounded-xl sm:min-h-[8.5rem]" />}
+          >
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
             <div className="flex gap-2">
-              <div className="h-5 w-20 rounded-full bg-muted" />
-              <div className="h-5 w-16 rounded-full bg-muted" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-16 rounded-full" />
             </div>
-            <div className="h-12 w-full max-w-xs rounded-lg bg-muted" />
-            <div className="flex justify-between">
-              <div className="h-5 w-24 rounded bg-muted" />
-              <div className="h-9 w-28 rounded-xl bg-muted" />
+            <Skeleton className="h-12 w-full max-w-xs rounded-lg" />
+            <div className="flex justify-between pt-2">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-9 w-28 rounded-xl" />
             </div>
-          </div>
-        </div>
+          </CardImageRow>
+        </Card>
       ))}
     </div>
   );

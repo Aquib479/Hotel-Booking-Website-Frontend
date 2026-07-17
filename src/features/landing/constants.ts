@@ -1,3 +1,32 @@
+export const TRUST_STATS = [
+  { value: "500K+", label: "Rest slots booked" },
+  { value: "4.9★", label: "Guest rating" },
+  { value: "120+", label: "Cities worldwide" },
+] as const;
+
+export const LANDING_BENEFITS = [
+  {
+    title: "12-hour rest slots",
+    description: "Perfect for layovers — book by the hour, not the full night.",
+    icon: "clock",
+  },
+  {
+    title: "Airport hotels",
+    description: "Properties near major hubs with fast check-in for tired travelers.",
+    icon: "plane",
+  },
+  {
+    title: "Instant confirmation",
+    description: "RestHalf Exclusive bookings confirm immediately with WhatsApp updates.",
+    icon: "zap",
+  },
+  {
+    title: "Global currencies",
+    description: "Browse in IDR, USD, SGD, and more — pay in checkout currency.",
+    icon: "globe",
+  },
+] as const;
+
 export const FEATURE_BADGES = [
   "500K+ Rest slots booked",
   "Top rated layover hotels",

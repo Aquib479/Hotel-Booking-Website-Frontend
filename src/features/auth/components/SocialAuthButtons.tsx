@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "../context/AuthProvider";
 import { SOCIAL_AUTH_ENABLED } from "../constants";
 import { signInWithGoogle } from "../api";
@@ -27,11 +28,12 @@ export function SocialAuthButtons() {
 
   return (
     <div>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        className="h-12 w-full gap-3"
         onClick={() => void handleGoogle()}
         disabled={isLoading}
-        className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-60"
       >
         <svg className="size-5" viewBox="0 0 24 24" aria-hidden>
           <path
@@ -52,7 +54,7 @@ export function SocialAuthButtons() {
           />
         </svg>
         Continue with Google
-      </button>
+      </Button>
       <AuthDivider />
     </div>
   );

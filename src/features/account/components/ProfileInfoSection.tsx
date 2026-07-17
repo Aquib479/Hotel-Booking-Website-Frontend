@@ -1,4 +1,9 @@
 import { useState } from "react";
+import { FormField } from "@/components/common/form";
+import { SectionCard } from "@/components/common/SectionCard";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { UserProfile } from "../types";
 
 interface ProfileInfoSectionProps {
@@ -7,9 +12,6 @@ interface ProfileInfoSectionProps {
   onSaveName: (name: string) => Promise<void>;
   onSaveEmail: (email: string) => Promise<void>;
 }
-
-const inputClass =
-  "w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 
 export function ProfileInfoSection({
   profile,
@@ -23,67 +25,62 @@ export function ProfileInfoSection({
   const [emailDirty, setEmailDirty] = useState(false);
 
   return (
-    <section className="rounded-2xl border border-border bg-white p-5">
-      <h2 className="text-lg font-semibold text-foreground">Profile</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Your name and contact email</p>
-
-      <div className="mt-5 space-y-4">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">Full name</label>
-          <input
+    <SectionCard title="Profile" description="Your name and contact email">
+      <div className="space-y-4">
+        <FormField label="Full name" htmlFor="profile-name">
+          <Input
+            id="profile-name"
             type="text"
             value={fullName}
             onChange={(e) => {
               setFullName(e.target.value);
               setNameDirty(true);
             }}
-            className={inputClass}
           />
           {nameDirty && (
-            <button
+            <Button
               type="button"
+              variant="link"
+              className="mt-2 h-auto p-0 text-brand"
               disabled={isSaving || fullName.trim() === profile.fullName}
-              onClick={() => {
-                void onSaveName(fullName).then(() => setNameDirty(false));
-              }}
-              className="mt-2 text-sm font-medium text-brand disabled:opacity-50"
+              onClick={() => void onSaveName(fullName).then(() => setNameDirty(false))}
             >
               {isSaving ? "Saving…" : "Save name"}
-            </button>
+            </Button>
           )}
-        </div>
+        </FormField>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">Email</label>
-          <input
+        <FormField label="Email" htmlFor="profile-email">
+          <Input
+            id="profile-email"
             type="email"
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
               setEmailDirty(true);
             }}
-            className={inputClass}
           />
           {profile.pendingEmail && (
-            <p className="mt-1.5 text-xs text-amber-700">
-              Confirmation sent to {profile.pendingEmail}. Your email won&apos;t change until you
-              confirm.
-            </p>
+            <Alert className="mt-2 border-amber-200 bg-amber-50">
+              <AlertDescription className="text-amber-800">
+                Confirmation sent to {profile.pendingEmail}. Your email won&apos;t change until
+                you confirm.
+              </AlertDescription>
+            </Alert>
           )}
           {emailDirty && (
-            <button
+            <Button
               type="button"
+              variant="link"
+              className="mt-2 h-auto p-0 text-brand"
               disabled={isSaving || email.trim() === profile.email}
-              onClick={() => {
-                void onSaveEmail(email).then(() => setEmailDirty(false));
-              }}
-              className="mt-2 text-sm font-medium text-brand disabled:opacity-50"
+              onClick={() => void onSaveEmail(email).then(() => setEmailDirty(false))}
             >
               {isSaving ? "Sending…" : "Save email"}
-            </button>
+            </Button>
           )}
-        </div>
+        </FormField>
       </div>
-    </section>
+    </SectionCard>
   );
 }

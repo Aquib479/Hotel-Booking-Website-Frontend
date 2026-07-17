@@ -37,6 +37,7 @@ interface SearchPanelProps {
 const fieldStyles: Record<SearchPanelVariant, string> = {
   hero: "rounded-2xl px-4 py-3 hover:bg-black/5 sm:px-5",
   page: "px-4 py-3 hover:bg-muted/50 sm:px-5",
+  landing: "w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-left hover:border-brand/30",
 };
 
 function resolveLocation(initial?: string | LocationSuggestion): LocationSuggestion {
@@ -194,8 +195,9 @@ export function SearchPanel({
   const [slotError, setSlotError] = useState<string | null>(null);
 
   const isHero = variant === "hero";
-  const locationLabel = isHero ? "Location" : "Where";
-  const guestLabel = isHero ? "Guest" : "Guests";
+  const isLanding = variant === "landing";
+  const locationLabel = isHero || isLanding ? "Location" : "Where";
+  const guestLabel = isHero || isLanding ? "Guests" : "Guests";
   const isRest = mode === "rest";
   const searchTimezone = getTimezoneForCity(location.city, location.country);
 
@@ -267,18 +269,85 @@ export function SearchPanel({
 
   return (
     <div className={cn("flex w-full flex-col gap-3", isHero ? "mx-auto max-w-5xl" : "")}>
-      <div className={cn("flex", isHero ? "justify-center" : "justify-start")}>
+      <div className={cn("flex", isHero || isLanding ? "justify-start" : "justify-start")}>
         <RestStayToggle value={mode} onChange={setMode} size={isHero ? "md" : "sm"} />
       </div>
 
       <div
         className={cn(
-          "flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-0",
-          isHero
-            ? "rounded-full bg-white p-2 shadow-2xl shadow-black/10 sm:p-2.5"
-            : "rounded-2xl border border-border bg-white p-2 shadow-sm lg:flex-row lg:items-center"
+          isLanding
+            ? "flex w-full flex-col gap-3"
+            : cn(
+                "flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-0",
+                isHero
+                  ? "rounded-full bg-white p-2 shadow-2xl shadow-black/10 sm:p-2.5"
+                  : "rounded-2xl border border-border bg-white p-2 shadow-sm lg:flex-row lg:items-center"
+              )
         )}
       >
+        {isLanding ? (
+          <>
+            <LocationSearchField
+              value={location}
+              onChange={setLocation}
+              variant={variant}
+              label={locationLabel}
+            />
+            {isRest ? (
+              <>
+                <DateField
+                  label="Rest date"
+                  value={formatDate(restDate)}
+                  selected={restDate}
+                  onSelect={(date) => {
+                    setRestDate(date);
+                    setSlotError(null);
+                  }}
+                  disabled={{ before: getEarliestSelectableRestDate(searchTimezone) }}
+                  variant={variant}
+                />
+                <SlotPicker
+                  value={slot}
+                  onChange={(next) => {
+                    setSlot(next);
+                    setSlotError(null);
+                  }}
+                  restDate={restDate}
+                  hotelTimezone={searchTimezone}
+                  triggerClassName={fieldStyles[variant]}
+                />
+              </>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <DateField
+                  label="Check-in"
+                  value={formatDate(checkIn)}
+                  selected={checkIn}
+                  onSelect={setCheckIn}
+                  variant={variant}
+                />
+                <DateField
+                  label="Check-out"
+                  value={formatDate(checkOut)}
+                  selected={checkOut}
+                  onSelect={setCheckOut}
+                  disabled={{ before: checkIn ?? new Date() }}
+                  variant={variant}
+                />
+              </div>
+            )}
+            <GuestField label={guestLabel} value={guests} onChange={setGuests} variant={variant} />
+            <Button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="mt-1 h-12 w-full rounded-xl bg-brand text-base font-semibold text-white hover:bg-brand/90"
+            >
+              {isLoading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+              {isLoading ? "Searching..." : submitLabel}
+            </Button>
+          </>
+        ) : (
+          <>
         <LocationSearchField
           value={location}
           onChange={setLocation}
@@ -363,6 +432,8 @@ export function SearchPanel({
           ) : null}
           {isLoading ? "Searching..." : submitLabel}
         </Button>
+          </>
+        )}
       </div>
       {slotError && isRest && (
         <p className="px-2 text-center text-xs text-red-600 sm:text-left">{slotError}</p>

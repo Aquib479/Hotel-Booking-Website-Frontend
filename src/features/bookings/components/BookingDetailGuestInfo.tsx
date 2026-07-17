@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { SectionCard } from "@/components/common/SectionCard";
+import { Button } from "@/components/ui/button";
 import type { BookingGuestInfo } from "../types";
 
 function maskPhone(phone: string): string {
@@ -18,9 +20,8 @@ export function BookingDetailGuestInfo({ guest }: BookingDetailGuestInfoProps) {
   const [showPhone, setShowPhone] = useState(false);
 
   return (
-    <section className="rounded-xl border border-border bg-white p-4">
-      <h2 className="text-sm font-semibold text-foreground">Guest information</h2>
-      <dl className="mt-3 space-y-2 text-sm">
+    <SectionCard title="Guest information" size="sm">
+      <dl className="space-y-2 text-sm">
         <div className="flex justify-between gap-4">
           <dt className="text-muted-foreground">Name</dt>
           <dd className="font-medium text-foreground">{guest.fullName}</dd>
@@ -33,14 +34,15 @@ export function BookingDetailGuestInfo({ guest }: BookingDetailGuestInfoProps) {
           <dt className="text-muted-foreground">Phone</dt>
           <dd className="flex items-center gap-2 font-medium text-foreground">
             {showPhone ? guest.phoneE164 : maskPhone(guest.phoneE164)}
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               onClick={() => setShowPhone((v) => !v)}
-              className="text-muted-foreground hover:text-foreground"
               aria-label={showPhone ? "Hide phone number" : "Show phone number"}
             >
               {showPhone ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-            </button>
+            </Button>
           </dd>
         </div>
         {guest.specialRequests && (
@@ -50,6 +52,6 @@ export function BookingDetailGuestInfo({ guest }: BookingDetailGuestInfoProps) {
           </div>
         )}
       </dl>
-    </section>
+    </SectionCard>
   );
 }

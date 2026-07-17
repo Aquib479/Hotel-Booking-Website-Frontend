@@ -1,19 +1,20 @@
 import { useCallback, useState } from "react";
-import { cn } from "@/lib/utils";
 import {
   detectIdentifierType,
   isValidEmail,
   normalizePhoneIdentifier,
 } from "@/lib/phone/validation";
+import { FormAlert, FormField } from "@/components/common/form";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "../context/AuthProvider";
 import { LOGIN_GENERIC_ERROR } from "../constants";
 import { useAuthForm } from "../hooks/useAuthForm";
 import { useAuthRedirect } from "../hooks/useAuthRedirect";
 import type { LoginFormValues } from "../types";
 import { ForgotPasswordLink } from "./ForgotPasswordLink";
-
-const inputClass =
-  "w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/20";
 
 const INITIAL: LoginFormValues = {
   identifier: "",
@@ -80,68 +81,55 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-foreground">
-          Email or phone number
-        </label>
-        <input
+      <FormField
+        label="Email or phone number"
+        htmlFor="login-identifier"
+        error={form.touched.identifier ? form.errors.identifier : undefined}
+      >
+        <Input
+          id="login-identifier"
           type="text"
           autoComplete="username"
+          aria-invalid={!!(form.touched.identifier && form.errors.identifier)}
           value={form.values.identifier}
           onChange={(e) => form.handleChange("identifier", e.target.value)}
           onBlur={() => form.handleBlur("identifier")}
-          className={cn(
-            inputClass,
-            form.touched.identifier && form.errors.identifier && "border-red-400"
-          )}
         />
-        {form.touched.identifier && form.errors.identifier && (
-          <p className="mt-1 text-xs text-red-600">{form.errors.identifier}</p>
-        )}
-      </div>
+      </FormField>
 
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-foreground">Password</label>
-        <input
+      <FormField
+        label="Password"
+        htmlFor="login-password"
+        error={form.touched.password ? form.errors.password : undefined}
+      >
+        <Input
+          id="login-password"
           type="password"
           autoComplete="current-password"
+          aria-invalid={!!(form.touched.password && form.errors.password)}
           value={form.values.password}
           onChange={(e) => form.handleChange("password", e.target.value)}
           onBlur={() => form.handleBlur("password")}
-          className={cn(
-            inputClass,
-            form.touched.password && form.errors.password && "border-red-400"
-          )}
         />
-        {form.touched.password && form.errors.password && (
-          <p className="mt-1 text-xs text-red-600">{form.errors.password}</p>
-        )}
         <ForgotPasswordLink />
+      </FormField>
+
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="login-remember"
+          checked={form.values.rememberMe}
+          onCheckedChange={(checked) => form.handleChange("rememberMe", checked === true)}
+        />
+        <Label htmlFor="login-remember" className="font-normal text-muted-foreground">
+          Remember me
+        </Label>
       </div>
 
-      <label className="flex cursor-pointer items-center gap-2">
-        <input
-          type="checkbox"
-          checked={form.values.rememberMe}
-          onChange={(e) => form.handleChange("rememberMe", e.target.checked)}
-          className="size-4 rounded border-border accent-brand"
-        />
-        <span className="text-sm text-muted-foreground">Remember me</span>
-      </label>
+      {submitError && <FormAlert message={submitError} />}
 
-      {submitError && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-          {submitError}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <Button type="submit" variant="brand" size="lg" className="w-full" disabled={isLoading}>
         {isLoading ? "Signing in…" : "Log in"}
-      </button>
+      </Button>
     </form>
   );
 }

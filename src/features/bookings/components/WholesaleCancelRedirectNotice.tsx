@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { WHOLESALE_CANCEL_API_ENABLED } from "../constants";
 import type { BookingDetail } from "../types";
 
@@ -10,27 +12,22 @@ export function WholesaleCancelRedirectNotice({ booking }: WholesaleCancelRedire
   const supplier = booking.supplierName ?? "the partner supplier";
 
   return (
-    <div className="rounded-xl border border-border bg-muted/30 px-4 py-4 text-sm">
-      <p className="font-medium text-foreground">Cancellation via partner policy</p>
-      <p className="mt-1 text-muted-foreground">
-        This booking was made through {supplier}. RestHalf does not process cancellations directly
-        for partner rates — the supplier&apos;s policy at time of booking applies.
-      </p>
-      {WHOLESALE_CANCEL_API_ENABLED ? (
-        <Link
-          to={`/bookings/${booking.id}/cancel`}
-          className="mt-3 inline-block rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+    <Alert>
+      <AlertTitle>Cancellation via partner policy</AlertTitle>
+      <AlertDescription>
+        <p>
+          This booking was made through {supplier}. RestHalf does not process cancellations directly
+          for partner rates — the supplier&apos;s policy at time of booking applies.
+        </p>
+        <Button
+          variant={WHOLESALE_CANCEL_API_ENABLED ? "brand" : "outline"}
+          size="sm"
+          className="mt-3"
+          asChild
         >
-          Request cancellation
-        </Link>
-      ) : (
-        <Link
-          to={`/bookings/${booking.id}/cancel`}
-          className="mt-3 inline-block rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted/50"
-        >
-          Request cancellation
-        </Link>
-      )}
-    </div>
+          <Link to={`/bookings/${booking.id}/cancel`}>Request cancellation</Link>
+        </Button>
+      </AlertDescription>
+    </Alert>
   );
 }

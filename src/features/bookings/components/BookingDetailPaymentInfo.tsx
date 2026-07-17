@@ -1,4 +1,5 @@
 import { formatPrice } from "@/lib/currency/format";
+import { SectionCard } from "@/components/common/SectionCard";
 import type { BookingDetail } from "../types";
 
 interface BookingDetailPaymentInfoProps {
@@ -9,9 +10,8 @@ export function BookingDetailPaymentInfo({ booking }: BookingDetailPaymentInfoPr
   const { payment } = booking;
 
   return (
-    <section className="rounded-xl border border-border bg-white p-4">
-      <h2 className="text-sm font-semibold text-foreground">Payment</h2>
-      <dl className="mt-3 space-y-2 text-sm">
+    <SectionCard title="Payment" size="sm">
+      <dl className="space-y-2 text-sm">
         <div className="flex justify-between gap-4">
           <dt className="text-muted-foreground">Amount paid</dt>
           <dd className="font-bold text-foreground">
@@ -33,6 +33,6 @@ export function BookingDetailPaymentInfo({ booking }: BookingDetailPaymentInfoPr
           </div>
         )}
       </dl>
-    </section>
+    </SectionCard>
   );
 }

@@ -20,6 +20,7 @@ interface LocationSearchFieldProps {
 const fieldStyles: Record<SearchPanelVariant, string> = {
   hero: "rounded-2xl px-4 py-3 hover:bg-black/5 sm:px-5",
   page: "px-4 py-3 hover:bg-muted/50 sm:px-5",
+  landing: "w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-left hover:border-brand/30",
 };
 
 export function LocationSearchField({

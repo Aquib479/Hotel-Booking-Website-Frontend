@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { FormField } from "@/components/common/form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DELETE_ACCOUNT_CONFIRM_TEXT, DELETE_ACCOUNT_COPY } from "../constants";
 
 interface DeleteAccountSectionProps {
@@ -13,52 +17,51 @@ export function DeleteAccountSection({ isDeleting, onDelete }: DeleteAccountSect
   const canDelete = confirmText === DELETE_ACCOUNT_CONFIRM_TEXT;
 
   return (
-    <section className="rounded-2xl border border-red-200 bg-red-50/50 p-5">
-      <h2 className="text-lg font-semibold text-red-800">{DELETE_ACCOUNT_COPY.title}</h2>
-      <p className="mt-2 text-sm text-red-900/80">{DELETE_ACCOUNT_COPY.body}</p>
-
-      {!showForm ? (
-        <button
-          type="button"
-          onClick={() => setShowForm(true)}
-          className="mt-4 rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
-        >
-          Delete my account
-        </button>
-      ) : (
-        <div className="mt-4 space-y-3">
-          <label className="block text-sm font-medium text-red-800">
-            {DELETE_ACCOUNT_COPY.confirmLabel}
-          </label>
-          <input
-            type="text"
-            value={confirmText}
-            onChange={(e) => setConfirmText(e.target.value)}
-            placeholder={DELETE_ACCOUNT_CONFIRM_TEXT}
-            className="w-full max-w-xs rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-red-400"
-          />
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={!canDelete || isDeleting}
-              onClick={() => void onDelete()}
-              className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              {isDeleting ? "Deleting…" : "Permanently delete account"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowForm(false);
-                setConfirmText("");
-              }}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-medium"
-            >
-              Cancel
-            </button>
+    <Card className="border-destructive/30 bg-destructive/5">
+      <CardHeader>
+        <CardTitle className="text-destructive">{DELETE_ACCOUNT_COPY.title}</CardTitle>
+        <CardDescription className="text-destructive/80">{DELETE_ACCOUNT_COPY.body}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {!showForm ? (
+          <Button type="button" variant="destructive" onClick={() => setShowForm(true)}>
+            Delete my account
+          </Button>
+        ) : (
+          <div className="space-y-3">
+            <FormField label={DELETE_ACCOUNT_COPY.confirmLabel} htmlFor="delete-confirm">
+              <Input
+                id="delete-confirm"
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder={DELETE_ACCOUNT_CONFIRM_TEXT}
+                className="max-w-xs"
+              />
+            </FormField>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={!canDelete || isDeleting}
+                onClick={() => void onDelete()}
+              >
+                {isDeleting ? "Deleting…" : "Permanently delete account"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowForm(false);
+                  setConfirmText("");
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
-    </section>
+        )}
+      </CardContent>
+    </Card>
   );
 }

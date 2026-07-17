@@ -8,6 +8,7 @@ import {
   isSameCalendarYmd,
 } from "@/lib/booking/timezone";
 import { getPropertyById } from "@/features/property/data";
+import { getCancellationPolicySummary } from "@/features/support/types";
 import type { BookingDetail, BookingRecord, BookingTabStatus } from "./types";
 import { SLOT_STARTING_SOON_HOURS } from "./constants";
 
@@ -195,27 +196,7 @@ export function buildMockBookings(now = new Date()): BookingRecord[] {
 
 export function enrichBookingDetail(record: BookingRecord): BookingDetail {
   const property = getPropertyById(record.propertyId);
-
-  const policy =
-    record.lane === "direct"
-      ? {
-          headline: "Free cancellation up to 2 hours before slot start",
-          bullets: [
-            "Cancel free of charge up to 2 hours before your slot begins.",
-            "Cancellations within 2 hours are charged the full slot rate.",
-            "No-shows are non-refundable.",
-            "Refunds are processed within 5–7 business days to your original payment method.",
-          ],
-        }
-      : {
-          headline: "Subject to partner cancellation policy",
-          bullets: [
-            `This rate was provided by ${property?.supplierName ?? "our partner supplier"} at time of booking.`,
-            "Cancellation and refund rules follow the supplier's policy as captured below.",
-            "RestHalf cannot override partner policies once the handoff is complete.",
-            "Contact RestHalf support to request a cancellation.",
-          ],
-        };
+  const policy = getCancellationPolicySummary(record.lane, property?.supplierName);
 
   const refund =
     record.refundStatus && record.refundStatus !== "none"

@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { CheckCircle } from "lucide-react";
 import { formatPrice } from "@/lib/currency/format";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { BOOKINGS_STATUS_PARAM } from "../constants";
 import type { CancelBookingResult } from "../types";
 
@@ -31,38 +33,34 @@ export function CancelConfirmationStep({
         </p>
       </div>
 
-      <div className="rounded-xl border border-border bg-muted/30 px-4 py-4 text-left text-sm">
-        {!isZeroRefund ? (
-          <>
-            <p className="font-semibold text-foreground">
-              Refund: {formatPrice(result.refundAmount, result.currency)}
+      <Card className="bg-muted/30 text-left">
+        <CardContent className="text-sm">
+          {!isZeroRefund ? (
+            <>
+              <p className="font-semibold text-foreground">
+                Refund: {formatPrice(result.refundAmount, result.currency)}
+              </p>
+              <p className="mt-1 text-muted-foreground">{result.timelineText}</p>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Cancellation is complete. Refund processing is separate — track progress on your
+                booking detail page.
+              </p>
+            </>
+          ) : (
+            <p className="font-medium text-foreground">
+              No refund applies. Your booking status is now cancelled.
             </p>
-            <p className="mt-1 text-muted-foreground">{result.timelineText}</p>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Cancellation is complete. Refund processing is separate — track progress on your
-              booking detail page.
-            </p>
-          </>
-        ) : (
-          <p className="font-medium text-foreground">
-            No refund applies. Your booking status is now cancelled.
-          </p>
-        )}
-      </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <Link
-          to={`/bookings?${BOOKINGS_STATUS_PARAM}=cancelled`}
-          className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
-        >
-          View cancelled bookings
-        </Link>
-        <Link
-          to={`/bookings/${bookingId}`}
-          className="rounded-xl border border-border px-6 py-3 text-sm font-semibold hover:bg-muted/50"
-        >
-          View booking details
-        </Link>
+        <Button variant="brand" asChild>
+          <Link to={`/bookings?${BOOKINGS_STATUS_PARAM}=cancelled`}>View cancelled bookings</Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link to={`/bookings/${bookingId}`}>View booking details</Link>
+        </Button>
       </div>
     </div>
   );

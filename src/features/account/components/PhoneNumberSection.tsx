@@ -4,9 +4,10 @@ import { PhoneInput } from "@/features/auth/components/PhoneInput";
 import { OtpVerificationModal } from "@/features/auth/components/OtpVerificationModal";
 import { getDefaultPhoneCountryCode } from "@/lib/phone/constants";
 import { toE164 } from "@/lib/phone/validation";
-import { cn } from "@/lib/utils";
-import type { UserProfile } from "../types";
-import type { PhoneVerificationStatus } from "../types";
+import { SectionCard } from "@/components/common/SectionCard";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import type { UserProfile, PhoneVerificationStatus } from "../types";
 
 function maskPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -20,6 +21,15 @@ function getPhoneStatus(profile: UserProfile): PhoneVerificationStatus {
   if (profile.phoneVerified) return "verified";
   return "unverified";
 }
+
+const STATUS_VARIANT: Record<
+  PhoneVerificationStatus,
+  "success" | "secondary" | "outline"
+> = {
+  verified: "success",
+  pending: "secondary",
+  unverified: "outline",
+};
 
 const STATUS_LABELS: Record<PhoneVerificationStatus, string> = {
   verified: "Verified",
@@ -63,49 +73,35 @@ export function PhoneNumberSection({
   };
 
   return (
-    <section className="rounded-2xl border border-border bg-white p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Phone number</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Used for WhatsApp booking updates
-          </p>
-        </div>
-        <span
-          className={cn(
-            "rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-            status === "verified" && "bg-emerald-100 text-emerald-800",
-            status === "pending" && "bg-amber-100 text-amber-800",
-            status === "unverified" && "bg-slate-100 text-slate-600"
-          )}
-        >
+    <SectionCard
+      title="Phone number"
+      description="Used for WhatsApp booking updates"
+      action={
+        <Badge variant={STATUS_VARIANT[status]} className="uppercase">
           {STATUS_LABELS[status]}
-        </span>
-      </div>
-
+        </Badge>
+      }
+    >
       {!isEditing ? (
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <p className="font-medium text-foreground">
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-medium">
             {showPhone ? displayPhone : maskPhone(displayPhone)}
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               onClick={() => setShowPhone((v) => !v)}
-              className="ml-2 text-muted-foreground hover:text-foreground"
               aria-label={showPhone ? "Hide phone" : "Show phone"}
             >
-              {showPhone ? <EyeOff className="inline size-4" /> : <Eye className="inline size-4" />}
-            </button>
+              {showPhone ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </Button>
           </p>
-          <button
-            type="button"
-            onClick={() => setIsEditing(true)}
-            className="text-sm font-medium text-brand hover:underline"
-          >
+          <Button type="button" variant="link" className="h-auto p-0" onClick={() => setIsEditing(true)}>
             Change number
-          </button>
+          </Button>
         </div>
       ) : (
-        <div className="mt-4 space-y-3">
+        <div className="space-y-3">
           <PhoneInput
             countryCode={countryCode}
             nationalNumber={nationalNumber}
@@ -113,20 +109,12 @@ export function PhoneNumberSection({
             onNationalNumberChange={setNationalNumber}
           />
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleRequestChange}
-              className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white"
-            >
+            <Button type="button" variant="brand" onClick={handleRequestChange}>
               Verify new number
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsEditing(false)}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-medium"
-            >
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -134,9 +122,7 @@ export function PhoneNumberSection({
       {showOtp && pendingPhone && (
         <OtpVerificationModal
           phoneE164={pendingPhone}
-          onVerified={() => {
-            setShowOtp(false);
-          }}
+          onVerified={() => setShowOtp(false)}
           onSkip={() => {
             onCancelChange();
             setShowOtp(false);
@@ -144,6 +130,6 @@ export function PhoneNumberSection({
           verify={(code) => onConfirmChange(pendingPhone, code)}
         />
       )}
-    </section>
+    </SectionCard>
   );
 }

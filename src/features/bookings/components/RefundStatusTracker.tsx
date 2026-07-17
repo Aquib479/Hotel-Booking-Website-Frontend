@@ -1,5 +1,6 @@
 import { formatPrice } from "@/lib/currency/format";
 import { cn } from "@/lib/utils";
+import { SectionCard } from "@/components/common/SectionCard";
 import { REFUND_TIMELINE_TEXT } from "../constants";
 import type { BookingRefundInfo } from "../types";
 
@@ -25,10 +26,8 @@ export function RefundStatusTracker({ refund }: RefundStatusTrackerProps) {
     refund.refundAmount !== undefined && refund.refundAmount < refund.originalAmount;
 
   return (
-    <section className="rounded-xl border border-border bg-white p-4">
-      <h2 className="text-sm font-semibold text-foreground">Refund status</h2>
-
-      <ol className="mt-4 flex items-center gap-2">
+    <SectionCard title="Refund status" size="sm">
+      <ol className="flex items-center gap-2">
         {STEPS.map((step, i) => (
           <li key={step.id} className="flex flex-1 items-center gap-2">
             <div className="flex flex-col items-center gap-1">
@@ -66,6 +65,6 @@ export function RefundStatusTracker({ refund }: RefundStatusTrackerProps) {
         )}
         <p className="text-xs text-muted-foreground">{REFUND_TIMELINE_TEXT}</p>
       </div>
-    </section>
+    </SectionCard>
   );
 }

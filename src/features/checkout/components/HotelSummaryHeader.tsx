@@ -1,6 +1,8 @@
 import type { BookingLane } from "@/lib/booking/types";
 import { LaneBadge } from "@/components/common/LaneBadge";
+import { CardImageRow, CardThumbnail } from "@/components/common/CardImageRow";
 import { Star } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface HotelSummaryHeaderProps {
   imageUrl: string;
@@ -8,6 +10,8 @@ interface HotelSummaryHeaderProps {
   location: string;
   starRating: number;
   lane: BookingLane;
+  className?: string;
+  compact?: boolean;
 }
 
 export function HotelSummaryHeader({
@@ -16,25 +20,32 @@ export function HotelSummaryHeader({
   location,
   starRating,
   lane,
+  className,
+  compact = false,
 }: HotelSummaryHeaderProps) {
   return (
-    <div className="flex gap-3">
-      <img
-        src={imageUrl}
-        alt=""
-        className="size-16 shrink-0 rounded-xl object-cover sm:size-20"
-      />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <h2 className="font-semibold text-foreground">{name}</h2>
-          <LaneBadge lane={lane} />
-        </div>
-        <p className="mt-0.5 text-sm text-muted-foreground">{location}</p>
-        <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+    <CardImageRow
+      className={cn(compact && "p-0 sm:p-0", className)}
+      image={
+        <CardThumbnail
+          src={imageUrl}
+          alt={name}
+          size={compact ? "md" : "lg"}
+          className={compact ? "size-16 sm:size-20" : undefined}
+        />
+      }
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <LaneBadge lane={lane} />
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Star className="size-3.5 fill-amber-400 text-amber-400" />
-          <span>{starRating}-star hotel</span>
+          <span>{starRating}-star</span>
         </div>
       </div>
-    </div>
+
+      <h2 className="line-clamp-2 text-base font-semibold leading-snug text-foreground">{name}</h2>
+
+      <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">{location}</p>
+    </CardImageRow>
   );
 }

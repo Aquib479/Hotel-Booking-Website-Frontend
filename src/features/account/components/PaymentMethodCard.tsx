@@ -1,4 +1,7 @@
 import { CreditCard, Smartphone, Star, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import type { SavedPaymentMethod } from "../types";
 
 interface PaymentMethodCardProps {
@@ -11,41 +14,46 @@ export function PaymentMethodCard({ method, onSetDefault, onRemove }: PaymentMet
   const Icon = method.type === "card" ? CreditCard : Smartphone;
 
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-border bg-white p-4">
-      <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-        <Icon className="size-5 text-muted-foreground" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-medium text-foreground">{method.label}</p>
-        <p className="text-sm text-muted-foreground">{method.maskedIdentifier}</p>
-        {method.expiry && (
-          <p className="text-xs text-muted-foreground">Expires {method.expiry}</p>
-        )}
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {method.isDefault ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-brand">
-            <Star className="size-3" />
-            Default
-          </span>
-        ) : (
-          <button
+    <Card padding="none">
+      <div className="flex items-center gap-4 p-4 sm:p-5">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted ring-1 ring-border/80">
+          <Icon className="size-5 text-muted-foreground" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-foreground">{method.label}</p>
+          <p className="text-sm text-muted-foreground">{method.maskedIdentifier}</p>
+          {method.expiry && (
+            <p className="text-xs text-muted-foreground">Expires {method.expiry}</p>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {method.isDefault ? (
+            <Badge variant="brand">
+              <Star className="size-3" />
+              Default
+            </Badge>
+          ) : (
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto p-0 text-xs"
+              onClick={onSetDefault}
+            >
+              Set default
+            </Button>
+          )}
+          <Button
             type="button"
-            onClick={onSetDefault}
-            className="text-xs font-medium text-brand hover:underline"
+            variant="ghost"
+            size="icon-sm"
+            onClick={onRemove}
+            aria-label="Remove payment method"
+            className="text-muted-foreground hover:text-destructive"
           >
-            Set default
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onRemove}
-          className="rounded-lg p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
-          aria-label="Remove payment method"
-        >
-          <Trash2 className="size-4" />
-        </button>
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
       </div>
-    </div>
+    </Card>
   );
 }

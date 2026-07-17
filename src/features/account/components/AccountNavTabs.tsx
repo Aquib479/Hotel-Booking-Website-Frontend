@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { AccountSection } from "../types";
 
@@ -11,6 +12,17 @@ export function AccountNavTabs({ active, sections, onChange }: AccountNavTabsPro
   return (
     <nav aria-label="Account sections">
       <ul className="flex gap-1 overflow-x-auto border-b border-border lg:flex-col lg:gap-0 lg:border-0">
+        <li className="shrink-0 lg:shrink">
+          <Link
+            to="/bookings"
+            className={cn(
+              "block w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-colors",
+              "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            )}
+          >
+            My Bookings
+          </Link>
+        </li>
         {sections.map((item) => (
           <li key={item.id} className="shrink-0 lg:shrink">
             <button

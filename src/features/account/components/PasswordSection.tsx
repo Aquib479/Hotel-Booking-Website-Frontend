@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { PasswordStrengthMeter } from "@/features/auth/components/PasswordStrengthMeter";
-import { cn } from "@/lib/utils";
+import { FormAlert, FormField } from "@/components/common/form";
+import { SectionCard } from "@/components/common/SectionCard";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface PasswordSectionProps {
   hasPassword: boolean;
   isSaving: boolean;
   onSubmit: (current: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
-
-const inputClass =
-  "w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 
 export function PasswordSection({ hasPassword, isSaving, onSubmit }: PasswordSectionProps) {
   const [current, setCurrent] = useState("");
@@ -38,60 +38,62 @@ export function PasswordSection({ hasPassword, isSaving, onSubmit }: PasswordSec
   };
 
   return (
-    <section className="rounded-2xl border border-border bg-white p-5">
-      <h2 className="text-lg font-semibold text-foreground">
-        {hasPassword ? "Change password" : "Set a password"}
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {hasPassword
+    <SectionCard
+      title={hasPassword ? "Change password" : "Set a password"}
+      description={
+        hasPassword
           ? "Update your password for email or phone login"
-          : "You signed in with Google — add a password to log in without social auth"}
-      </p>
-
-      <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
+          : "You signed in with Google — add a password to log in without social auth"
+      }
+    >
+      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         {hasPassword && (
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Current password</label>
-            <input
+          <FormField label="Current password" htmlFor="current-password">
+            <Input
+              id="current-password"
               type="password"
               value={current}
               onChange={(e) => setCurrent(e.target.value)}
-              className={inputClass}
               autoComplete="current-password"
             />
-          </div>
+          </FormField>
         )}
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">New password</label>
-          <input
+        <FormField label="New password" htmlFor="new-password">
+          <Input
+            id="new-password"
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className={inputClass}
             autoComplete="new-password"
           />
           <PasswordStrengthMeter password={newPassword} />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">Confirm new password</label>
-          <input
+        </FormField>
+        <FormField
+          label="Confirm new password"
+          htmlFor="confirm-password"
+          error={confirm && newPassword !== confirm ? "Passwords don't match" : undefined}
+        >
+          <Input
+            id="confirm-password"
             type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className={cn(inputClass, confirm && newPassword !== confirm && "border-red-400")}
             autoComplete="new-password"
+            aria-invalid={!!(confirm && newPassword !== confirm)}
           />
-        </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {success && <p className="text-sm text-emerald-600">Password updated.</p>}
-        <button
+        </FormField>
+        {error && <FormAlert message={error} />}
+        {success && (
+          <FormAlert variant="success" title="Password updated" message="Your password has been saved." />
+        )}
+        <Button
           type="submit"
+          variant="brand"
           disabled={isSaving || !newPassword || newPassword !== confirm}
-          className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           {isSaving ? "Saving…" : hasPassword ? "Update password" : "Set password"}
-        </button>
+        </Button>
       </form>
-    </section>
+    </SectionCard>
   );
 }

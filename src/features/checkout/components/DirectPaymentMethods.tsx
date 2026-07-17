@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { CreditCard, Smartphone, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SelectableCard } from "@/components/common/SelectableCard";
+import { SectionCard } from "@/components/common/SectionCard";
+import { Button } from "@/components/ui/button";
 import { PAYMENT_METHODS } from "../constants";
 import type { PaymentMethod } from "../types";
 
@@ -35,49 +38,37 @@ export function DirectPaymentMethods({
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">Payment method</h2>
-        <p className="text-sm text-muted-foreground">Choose how you&apos;d like to pay</p>
-      </div>
-
+    <SectionCard title="Payment method" description="Choose how you'd like to pay">
       <div className="grid gap-3 sm:grid-cols-3">
         {PAYMENT_METHODS.map((method) => {
           const Icon = ICONS[method.id];
           const isSelected = selectedMethod === method.id;
           return (
-            <button
+            <SelectableCard
               key={method.id}
-              type="button"
+              selected={isSelected}
               onClick={() => onSelectMethod(method.id)}
-              className={cn(
-                "flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors",
-                isSelected
-                  ? "border-brand bg-brand/5 ring-2 ring-brand/30"
-                  : "border-border bg-white hover:border-brand/40"
-              )}
             >
               <Icon className={cn("size-5", isSelected ? "text-brand" : "text-muted-foreground")} />
-              <span className="text-sm font-semibold text-foreground">{method.label}</span>
+              <span className="text-sm font-semibold">{method.label}</span>
               <span className="text-xs text-muted-foreground">{method.description}</span>
-            </button>
+            </SelectableCard>
           );
         })}
       </div>
 
-      <button
+      <Button
         type="button"
+        variant="brand"
+        size="lg"
         onClick={handlePay}
         disabled={disabled || !selectedMethod || isSubmitting}
         title={disabled ? disabledReason : undefined}
-        className={cn(
-          "hidden h-12 w-full rounded-xl bg-brand text-base font-semibold text-white transition-opacity hover:bg-brand/90 lg:block",
-          (disabled || !selectedMethod) && "cursor-not-allowed opacity-50"
-        )}
+        className="mt-4 hidden h-12 w-full lg:flex"
       >
         {isSubmitting ? "Processing…" : `Pay ${payAmountLabel} now`}
-      </button>
-    </div>
+      </Button>
+    </SectionCard>
   );
 }
 

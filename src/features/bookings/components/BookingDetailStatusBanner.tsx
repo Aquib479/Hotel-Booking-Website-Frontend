@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { StatusBannerMessage } from "../statusMessage";
 
 interface BookingDetailStatusBannerProps {
@@ -14,11 +15,8 @@ const TONE_STYLES: Record<StatusBannerMessage["tone"], string> = {
 
 export function BookingDetailStatusBanner({ banner }: BookingDetailStatusBannerProps) {
   return (
-    <div
-      className={cn("rounded-xl border px-4 py-3 text-sm font-medium", TONE_STYLES[banner.tone])}
-      role="status"
-    >
-      {banner.message}
-    </div>
+    <Alert className={cn(TONE_STYLES[banner.tone])} role="status">
+      <AlertDescription className="font-medium">{banner.message}</AlertDescription>
+    </Alert>
   );
 }

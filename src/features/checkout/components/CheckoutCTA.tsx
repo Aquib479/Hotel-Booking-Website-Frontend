@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface CheckoutCTAProps {
@@ -19,19 +20,17 @@ export function CheckoutCTA({
   className,
 }: CheckoutCTAProps) {
   return (
-    <button
+    <Button
       type="button"
+      variant="brand"
+      size="lg"
       onClick={onClick}
       disabled={disabled || isLoading}
       title={disabled ? disabledReason : undefined}
-      className={cn(
-        "flex h-12 w-full items-center justify-center rounded-xl bg-brand text-base font-semibold text-white transition-opacity hover:bg-brand/90",
-        (disabled || isLoading) && "cursor-not-allowed opacity-50",
-        className
-      )}
+      className={cn("h-12 w-full text-base", className)}
     >
-      {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
+      {isLoading && <Loader2 className="animate-spin" />}
       {isLoading ? "Processing…" : label}
-    </button>
+    </Button>
   );
 }

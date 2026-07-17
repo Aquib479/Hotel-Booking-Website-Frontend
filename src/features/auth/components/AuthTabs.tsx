@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AUTH_FROM_BOOKING_PARAM } from "../constants";
 import { useAuthRedirect } from "../hooks/useAuthRedirect";
 import type { AuthTab } from "../types";
@@ -19,31 +20,25 @@ export function AuthTabs({ active }: AuthTabsProps) {
   ];
 
   return (
-    <div
-      className={cn(
-        "mb-6 flex rounded-xl border border-border bg-muted/40 p-1",
-        fromBooking && active === "signup" && "opacity-90"
-      )}
-      role="tablist"
-      aria-label="Authentication"
+    <Tabs
+      value={active}
+      className={cn("mb-6", fromBooking && active === "signup" && "opacity-90")}
     >
-      {tabs.map((tab) => (
-        <Link
-          key={tab.id}
-          to={tab.path}
-          role="tab"
-          aria-selected={active === tab.id}
-          className={cn(
-            "flex-1 rounded-lg py-2.5 text-center text-sm font-medium transition-colors",
-            active === tab.id
-              ? "bg-white text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-            fromBooking && tab.id === "login" && active === "signup" && "text-muted-foreground/70"
-          )}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </div>
+      <TabsList className="grid h-auto w-full grid-cols-2" aria-label="Authentication">
+        {tabs.map((tab) => (
+          <TabsTrigger key={tab.id} value={tab.id} asChild>
+            <Link
+              to={tab.path}
+              className={cn(
+                "w-full py-2.5",
+                fromBooking && tab.id === "login" && active === "signup" && "text-muted-foreground/70"
+              )}
+            >
+              {tab.label}
+            </Link>
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }

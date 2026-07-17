@@ -1,11 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
-import { cn } from "@/lib/utils";
 import { getDefaultPhoneCountryCode } from "@/lib/phone/constants";
 import { isValidE164, isValidEmail, toE164 } from "@/lib/phone/validation";
 import { useCurrency } from "@/context/CurrencyContext";
 import { TermsAcceptance } from "@/features/checkout/components/TermsAcceptance";
 import { useCheckoutDraft } from "@/features/checkout/hooks/useCheckoutDraft";
 import { getPropertyById } from "@/features/property/data";
+import { FormAlert, FormField, FormMessage } from "@/components/common/form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "../context/AuthProvider";
 import { SIGNUP_REQUIRES_EMAIL } from "../constants";
 import { useAuthForm } from "../hooks/useAuthForm";
@@ -14,9 +17,6 @@ import type { SignupFormValues } from "../types";
 import { PhoneInput } from "./PhoneInput";
 import { PasswordStrengthMeter } from "./PasswordStrengthMeter";
 import { OtpVerificationModal } from "./OtpVerificationModal";
-
-const inputClass =
-  "w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/20";
 
 function validateSignupField(
   field: keyof SignupFormValues,
@@ -121,51 +121,51 @@ export function SignupForm() {
   return (
     <>
       {draft && property && (
-        <div className="mb-4 rounded-xl border border-brand/30 bg-brand/5 px-4 py-3 text-sm text-foreground">
-          Create an account to finish booking <span className="font-semibold">{hotelName}</span>.
-          Your booking details are saved.
-        </div>
+        <Alert className="mb-4 border-brand/30 bg-brand/5">
+          <AlertDescription>
+            Create an account to finish booking <span className="font-semibold">{hotelName}</span>.
+            Your booking details are saved.
+          </AlertDescription>
+        </Alert>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-foreground">Full name</label>
-          <input
+        <FormField
+          label="Full name"
+          htmlFor="signup-name"
+          error={form.touched.fullName ? form.errors.fullName : undefined}
+        >
+          <Input
+            id="signup-name"
             type="text"
             autoComplete="name"
+            aria-invalid={!!(form.touched.fullName && form.errors.fullName)}
             value={form.values.fullName}
             onChange={(e) => form.handleChange("fullName", e.target.value)}
             onBlur={() => form.handleBlur("fullName")}
-            className={cn(
-              inputClass,
-              form.touched.fullName && form.errors.fullName && "border-red-400"
-            )}
           />
-          {form.touched.fullName && form.errors.fullName && (
-            <p className="mt-1 text-xs text-red-600">{form.errors.fullName}</p>
-          )}
-        </div>
+        </FormField>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-foreground">Email</label>
-          <input
+        <FormField
+          label="Email"
+          htmlFor="signup-email"
+          error={form.touched.email ? form.errors.email : undefined}
+        >
+          <Input
+            id="signup-email"
             type="email"
             autoComplete="email"
+            aria-invalid={!!(form.touched.email && form.errors.email)}
             value={form.values.email}
             onChange={(e) => form.handleChange("email", e.target.value)}
             onBlur={() => form.handleBlur("email")}
-            className={cn(
-              inputClass,
-              form.touched.email && form.errors.email && "border-red-400"
-            )}
           />
-          {form.touched.email && form.errors.email && (
-            <p className="mt-1 text-xs text-red-600">{form.errors.email}</p>
-          )}
-        </div>
+        </FormField>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-foreground">Phone number</label>
+        <FormField
+          label="Phone number"
+          error={form.touched.phoneNumber ? form.errors.phoneNumber : undefined}
+        >
           <PhoneInput
             countryCode={form.values.phoneCountryCode}
             nationalNumber={form.values.phoneNumber}
@@ -175,50 +175,38 @@ export function SignupForm() {
             error={form.errors.phoneNumber}
             touched={form.touched.phoneNumber}
           />
-        </div>
+        </FormField>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-foreground">Password</label>
-          <input
+        <FormField
+          label="Password"
+          htmlFor="signup-password"
+          error={form.touched.password ? form.errors.password : undefined}
+        >
+          <Input
+            id="signup-password"
             type="password"
             autoComplete="new-password"
+            aria-invalid={!!(form.touched.password && form.errors.password)}
             value={form.values.password}
             onChange={(e) => form.handleChange("password", e.target.value)}
             onBlur={() => form.handleBlur("password")}
-            className={cn(
-              inputClass,
-              form.touched.password && form.errors.password && "border-red-400"
-            )}
           />
-          {form.touched.password && form.errors.password && (
-            <p className="mt-1 text-xs text-red-600">{form.errors.password}</p>
-          )}
           <PasswordStrengthMeter password={form.values.password} />
-        </div>
+        </FormField>
 
         <div>
           <TermsAcceptance
             checked={form.values.termsAccepted}
             onChange={(checked) => form.handleChange("termsAccepted", checked)}
           />
-          {form.touched.termsAccepted && form.errors.termsAccepted && (
-            <p className="mt-1 text-xs text-red-600">{form.errors.termsAccepted}</p>
-          )}
+          <FormMessage error={form.touched.termsAccepted ? form.errors.termsAccepted : undefined} />
         </div>
 
-        {submitError && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-            {submitError}
-          </p>
-        )}
+        {submitError && <FormAlert message={submitError} />}
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button type="submit" variant="brand" size="lg" className="w-full" disabled={isLoading}>
           {isLoading ? "Creating account…" : "Create account"}
-        </button>
+        </Button>
       </form>
 
       {showOtp && (
