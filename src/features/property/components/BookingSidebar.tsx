@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { CalendarDays, ExternalLink, Users, Zap } from "lucide-react";
+import { CalendarDays, ExternalLink, Loader2, Users, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -16,13 +16,16 @@ import { LaneBadge } from "@/components/common/LaneBadge";
 import { PriceDisplay } from "@/components/common/PriceDisplay";
 import { RestStayToggle } from "@/components/common/RestStayToggle";
 import { SlotPicker } from "@/components/common/SlotPicker";
+import type { RestSlot } from "@/lib/booking/types";
 import {
   getAvailableSlots,
   resolveSlotSelection,
 } from "@/lib/booking/availability";
 import { getEarliestSelectableRestDate } from "@/lib/booking/timezone";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useAuth } from "@/features/auth/context/AuthProvider";
 import { buildCheckoutDraft, saveCheckoutDraftToStorage } from "@/features/checkout";
+import { searchAvailability, createHold } from "@/features/checkout/api";
 import { GUEST_OPTIONS } from "../data";
 import { useBookingPricing } from "../hooks/useBookingPricing";
 import type { BookingSidebarProps } from "../types";
@@ -54,7 +57,11 @@ export function BookingSidebar({
     guests: initialBooking?.guests ?? "2 adults",
   });
 
+  const { isAuthenticated } = useAuth();
   const showSlotPicker = isDirect && (slotDuration === "12h" || mode === "rest");
+
+  const [isBooking, setIsBooking] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   const pricing = useBookingPricing(
     lane,
@@ -66,26 +73,108 @@ export function BookingSidebar({
   );
   const formatDate = (date?: Date) => (date ? format(date, "MMM. d, yyyy") : "Select");
 
-  const handleCheckout = () => {
+  function frontendSlotToBackend(slot: RestSlot): "HALF_DAY" | "FULL_DAY" {
+    return slot === "24h" ? "FULL_DAY" : "HALF_DAY";
+  }
+
+  function parseGuestCount(label: string): number {
+    const match = label.match(/(\d+)/);
+    return match ? Number(match[1]) : 2;
+  }
+
+  const handleCheckout = async () => {
     if (showSlotPicker && booking.restDate) {
       const resolved = resolveSlotSelection(booking.slot, booking.restDate, hotelTimezone);
       if (!resolved || getAvailableSlots(booking.restDate, hotelTimezone).length === 0) return;
     }
 
-    const draft = buildCheckoutDraft({
-      propertyId,
-      lane,
-      mode,
-      currency,
-      hotelTimezone,
-      guestsLabel: booking.guests,
-      restDate: mode === "rest" ? booking.restDate : undefined,
-      slot: mode === "rest" ? booking.slot : undefined,
-      checkIn: mode === "stay" ? booking.checkIn : undefined,
-      checkOut: mode === "stay" ? booking.checkOut : undefined,
-    });
-    saveCheckoutDraftToStorage(draft);
-    navigate("/checkout");
+    if (!isAuthenticated) {
+      const draft = buildCheckoutDraft({
+        propertyId,
+        lane,
+        mode,
+        currency,
+        hotelTimezone,
+        guestsLabel: booking.guests,
+        restDate: mode === "rest" ? booking.restDate : undefined,
+        slot: mode === "rest" ? booking.slot : undefined,
+        checkIn: mode === "stay" ? booking.checkIn : undefined,
+        checkOut: mode === "stay" ? booking.checkOut : undefined,
+      });
+      saveCheckoutDraftToStorage(draft);
+      navigate("/checkout");
+      return;
+    }
+
+    setIsBooking(true);
+    setBookingError(null);
+
+    try {
+      const dateStr = mode === "rest" && booking.restDate
+        ? format(booking.restDate, "yyyy-MM-dd")
+        : format(booking.checkIn, "yyyy-MM-dd");
+
+      const slotType = mode === "rest"
+        ? frontendSlotToBackend((booking.slot as RestSlot) ?? "12-24")
+        : "FULL_DAY" as const;
+
+      const availability = await searchAvailability(propertyId, dateStr, slotType);
+
+      if (availability.rooms.length === 0) {
+        setBookingError("No rooms available for the selected date and slot.");
+        setIsBooking(false);
+        return;
+      }
+
+      const cheapestRoom = availability.rooms.reduce((best, room) =>
+        room.price < best.price ? room : best
+      );
+
+      const holdResponse = await createHold({
+        roomId: cheapestRoom.id,
+        date: dateStr,
+        slotType,
+        numGuests: parseGuestCount(booking.guests),
+      });
+
+      const draft = buildCheckoutDraft({
+        propertyId,
+        lane,
+        mode,
+        currency,
+        hotelTimezone,
+        guestsLabel: booking.guests,
+        restDate: mode === "rest" ? booking.restDate : undefined,
+        slot: mode === "rest" ? booking.slot : undefined,
+        checkIn: mode === "stay" ? booking.checkIn : undefined,
+        checkOut: mode === "stay" ? booking.checkOut : undefined,
+      });
+
+      draft.roomId = cheapestRoom.id;
+      draft.bookingId = holdResponse.bookingId;
+      draft.holdExpiresAt = holdResponse.holdExpiresAt;
+      draft.holdId = holdResponse.bookingId;
+      draft.totalPrice = holdResponse.totalPrice;
+      draft.currency = holdResponse.currency as typeof draft.currency;
+      draft.hotelMeta = {
+        name: holdResponse.hotel.name,
+        address: holdResponse.hotel.address ?? "",
+        city: holdResponse.hotel.city ?? "",
+        country: holdResponse.hotel.country ?? "",
+        imageUrl: holdResponse.hotel.imageUrl
+          ?? holdResponse.hotel.imageUrls?.[0]
+          ?? "",
+        starRating: Math.round(holdResponse.hotel.rating ?? 4),
+      };
+
+      saveCheckoutDraftToStorage(draft);
+      navigate("/checkout");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create booking hold";
+      setBookingError(message);
+    } finally {
+      setIsBooking(false);
+    }
   };
 
   return (
@@ -224,11 +313,23 @@ export function BookingSidebar({
         </div>
       </div>
 
+      {bookingError && (
+        <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {bookingError}
+        </p>
+      )}
+
       <Button
-        onClick={handleCheckout}
+        onClick={() => void handleCheckout()}
+        disabled={isBooking}
         className="mt-5 h-12 w-full rounded-xl bg-brand text-base font-semibold text-white hover:bg-brand/90"
       >
-        {isDirect ? "Continue to checkout" : "Continue via partner"}
+        {isBooking ? (
+          <span className="flex items-center gap-2">
+            <Loader2 className="size-4 animate-spin" />
+            Checking availability…
+          </span>
+        ) : isDirect ? "Continue to checkout" : "Continue via partner"}
       </Button>
     </div>
   );

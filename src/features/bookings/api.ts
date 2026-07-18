@@ -1,141 +1,184 @@
+import { api } from "@/services/api";
+import type { RestSlot } from "@/lib/booking/types";
+import type { CurrencyCode } from "@/lib/currency/types";
 import type {
   BookingFilters,
   BookingsListResult,
   BookingDetail,
+  BookingRecord,
+  BookingTabStatus,
   CancelBookingResult,
   CancelReasonId,
   RefundPreview,
   WholesaleCancelRequestResult,
 } from "./types";
 import { BOOKINGS_PER_PAGE, REFUND_TIMELINE_TEXT } from "./constants";
-import { buildMockBookings, classifyBookingStatus, enrichBookingDetail } from "./utils";
-import { isDirectCancelEligible } from "@/lib/booking/cancellation";
+import { classifyBookingStatus } from "./utils";
 
-const MOCK_CANCELLED_KEY = "resthalf-mock-cancelled-bookings";
+import { AUTH_TOKEN_KEY } from "@/features/auth/constants";
 
-function readCancelledIds(): Set<string> {
-  try {
-    const raw = localStorage.getItem(MOCK_CANCELLED_KEY);
-    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
-  } catch {
-    return new Set();
-  }
+function getToken(): string | null {
+  return localStorage.getItem(AUTH_TOKEN_KEY);
 }
 
-function markCancelled(id: string) {
-  const ids = readCancelledIds();
-  ids.add(id);
-  localStorage.setItem(MOCK_CANCELLED_KEY, JSON.stringify([...ids]));
+interface ApiBookingResponse {
+  id: string;
+  status: string;
+  slotType: string;
+  numGuests: number;
+  checkIn: string;
+  checkOut: string;
+  totalPrice: number;
+  currency: string;
+  holdExpiresAt: string | null;
+  paymentOrderId: string | null;
+  paymentExpiresAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  room: {
+    id: string;
+    roomNumber: string;
+    roomType: string;
+  } | null;
+  hotel: {
+    id: string;
+    name: string;
+    address: string | null;
+    city: string | null;
+    country: string | null;
+    rating: number | null;
+    imageUrl: string | null;
+  } | null;
+  guest: {
+    fullName: string;
+    email: string | null;
+    phone: string;
+  } | null;
+}
+
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop";
+
+function slotWindowFromType(slotType: string, checkIn: string): RestSlot {
+  if (slotType === "FULL_DAY") return "24h";
+  const hour = new Date(checkIn).getUTCHours();
+  return hour < 12 ? "00-12" : "12-24";
+}
+
+function toBookingRecord(raw: ApiBookingResponse): BookingRecord {
+  const slotWindow = slotWindowFromType(raw.slotType, raw.checkIn);
+  return {
+    id: raw.id,
+    confirmationCode: raw.paymentOrderId ?? `RH-${raw.id.slice(0, 8).toUpperCase()}`,
+    propertyId: raw.hotel?.id ?? "",
+    hotelName: raw.hotel?.name ?? "Unknown Hotel",
+    hotelImage: raw.hotel?.imageUrl ?? FALLBACK_IMAGE,
+    city: raw.hotel?.city ?? "",
+    country: raw.hotel?.country ?? "",
+    lane: "direct",
+    mode: "rest",
+    slotDate: raw.checkIn,
+    slotWindow,
+    hotelTimezone: "Asia/Kolkata",
+    paidAmount: raw.totalPrice,
+    paidCurrency: (raw.currency as CurrencyCode) || "IDR",
+    bookedAt: raw.createdAt,
+    cancelledAt: raw.cancelledAt ?? undefined,
+    cancelReason: raw.cancelledAt ? "Cancelled" : undefined,
+    refundStatus: raw.cancelledAt ? "pending" : undefined,
+  };
+}
+
+function toBookingDetail(raw: ApiBookingResponse): BookingDetail {
+  const record = toBookingRecord(raw);
+  return {
+    ...record,
+    address: raw.hotel?.address ?? `${record.city}, ${record.country}`,
+    starRating: raw.hotel?.rating ?? 4,
+    guests: { adults: raw.numGuests, children: 0 },
+    roomType: raw.room?.roomType ?? undefined,
+    ratePlanName: raw.slotType === "FULL_DAY" ? "Full-day rest slot" : "Half-day rest slot",
+    supplierName: undefined,
+    guest: {
+      fullName: raw.guest?.fullName ?? "Guest",
+      email: raw.guest?.email ?? "",
+      phoneE164: raw.guest?.phone ?? "",
+    },
+    payment: {
+      method: raw.currency === "IDR" ? "ewallet" : "card",
+      methodLabel: raw.currency === "IDR" ? "GoPay" : "Card",
+      transactionId: raw.paymentOrderId ?? "",
+    },
+    policy: {
+      headline: "Free cancellation before slot start",
+      bullets: [
+        "Cancel before the slot begins for a full refund.",
+        "No refund once the slot has started.",
+      ],
+    },
+    refund: record.cancelledAt
+      ? {
+          status: "pending",
+          originalAmount: record.paidAmount,
+          refundAmount: record.paidAmount,
+          currency: record.paidCurrency,
+          requestedAt: record.cancelledAt,
+          currentStep: "processing",
+        }
+      : undefined,
+  };
 }
 
 export async function fetchBookingById(id: string): Promise<BookingDetail | null> {
-  await new Promise((r) => setTimeout(r, 450));
-  const cancelled = readCancelledIds();
-  const booking = buildMockBookings().find((b) => b.id === id);
-  if (!booking) return null;
+  const token = getToken();
+  if (!token) return null;
 
-  const detail = enrichBookingDetail(booking);
-  if (cancelled.has(id)) {
-    return {
-      ...detail,
-      cancelledAt: new Date().toISOString(),
-      cancelReason: "Guest cancelled",
-      refundStatus: "pending",
-      refund: {
-        status: "pending",
-        originalAmount: detail.paidAmount,
-        refundAmount: detail.paidAmount,
-        currency: detail.paidCurrency,
-        requestedAt: new Date().toISOString(),
-        currentStep: "processing",
-      },
-    };
+  try {
+    const raw = await api.get<ApiBookingResponse>(`/bookings/${id}`, { token });
+    return toBookingDetail(raw);
+  } catch {
+    return null;
   }
-  return detail;
 }
 
-/** Backend refund-calculation endpoint — sole source of refund numbers in the frontend */
 export async function fetchRefundPreview(
-  bookingId: string,
-  reason: CancelReasonId
+  _bookingId: string,
+  _reason: CancelReasonId
 ): Promise<RefundPreview> {
-  await new Promise((r) => setTimeout(r, 650));
-
-  const booking = buildMockBookings().find((b) => b.id === bookingId);
+  const booking = await fetchBookingById(_bookingId);
   if (!booking) throw new Error("Booking not found");
 
-  const amountPaid = booking.paidAmount;
-  const currency = booking.paidCurrency;
-
-  let refundPercentage = 100;
-  let policyExplanation = "Full refund — cancelled before the free cancellation cutoff.";
-  let nonRefundableNote: string | undefined;
-
-  if (
-    booking.lane === "direct" &&
-    booking.mode === "rest" &&
-    booking.slotDate &&
-    booking.slotWindow
-  ) {
-    const eligible = isDirectCancelEligible(
-      booking.slotDate,
-      booking.slotWindow,
-      booking.hotelTimezone
-    );
-    if (!eligible) {
-      refundPercentage = 0;
-      policyExplanation = "No refund — cancellation is outside the free cancellation window.";
-      nonRefundableNote = "The full slot rate is non-refundable per policy.";
-    }
-  }
-
-  if (reason === "hotel_issue") {
-    policyExplanation =
-      "Full refund requested due to hotel issue — subject to review if escalated to support.";
-  }
-
-  const refundAmount = Math.round((amountPaid * refundPercentage) / 100);
-  const nonRefundableAmount = amountPaid - refundAmount;
-
   return {
-    amountPaid,
-    currency,
-    refundPercentage,
-    refundAmount,
-    nonRefundableAmount,
-    policyExplanation,
-    nonRefundableNote:
-      nonRefundableAmount > 0
-        ? nonRefundableNote ?? `${nonRefundableAmount} is non-refundable per cancellation policy.`
-        : undefined,
+    amountPaid: booking.paidAmount,
+    currency: booking.paidCurrency,
+    refundPercentage: 100,
+    refundAmount: booking.paidAmount,
+    nonRefundableAmount: 0,
+    policyExplanation: "Full refund — cancelled before the rest slot began.",
     timelineText: REFUND_TIMELINE_TEXT,
   };
 }
 
 export async function submitCancellation(
   bookingId: string,
-  reason: CancelReasonId,
-  reasonDetail?: string
+  _reason: CancelReasonId,
+  _reasonDetail?: string
 ): Promise<CancelBookingResult> {
-  await new Promise((r) => setTimeout(r, 800));
-  const preview = await fetchRefundPreview(bookingId, reason);
-  markCancelled(bookingId);
-  void reasonDetail;
+  const token = getToken();
+  await api.post(`/bookings/${bookingId}/release`, undefined, { token });
   return {
     success: true,
-    refundAmount: preview.refundAmount,
-    currency: preview.currency,
-    timelineText: preview.timelineText,
+    refundAmount: 0,
+    currency: "IDR",
+    timelineText: REFUND_TIMELINE_TEXT,
   };
 }
 
 export async function submitWholesaleCancelRequest(
   bookingId: string,
   _reason: CancelReasonId,
-  reasonDetail?: string
+  _reasonDetail?: string
 ): Promise<WholesaleCancelRequestResult> {
-  await new Promise((r) => setTimeout(r, 700));
-  void reasonDetail;
   return {
     success: true,
     referenceId: `WCR-${bookingId.toUpperCase()}-${Date.now().toString(36)}`,
@@ -144,23 +187,15 @@ export async function submitWholesaleCancelRequest(
 }
 
 export async function fetchBookings(filters: BookingFilters): Promise<BookingsListResult> {
-  await new Promise((r) => setTimeout(r, 500));
+  const token = getToken();
+  if (!token) {
+    return { bookings: [], total: 0, counts: { upcoming: 0, past: 0, cancelled: 0 } };
+  }
 
-  const all = buildMockBookings().map((b) => {
-    if (!readCancelledIds().has(b.id)) return b;
-    return {
-      ...b,
-      cancelledAt: b.cancelledAt ?? new Date().toISOString(),
-      cancelReason: b.cancelReason ?? "Guest cancelled",
-      refundStatus: b.refundStatus ?? ("pending" as const),
-    };
-  });
-  const counts = {
-    upcoming: 0,
-    past: 0,
-    cancelled: 0,
-  };
+  const rawList = await api.get<ApiBookingResponse[]>("/bookings/my", { token });
+  const all = rawList.map(toBookingRecord);
 
+  const counts: Record<BookingTabStatus, number> = { upcoming: 0, past: 0, cancelled: 0 };
   all.forEach((b) => {
     counts[classifyBookingStatus(b)] += 1;
   });

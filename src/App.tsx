@@ -24,6 +24,8 @@ import StaffWalkIn from "@/pages/StaffWalkIn";
 import StaffDashboard from "@/pages/StaffDashboard";
 import { StaffAuthProvider } from "@/features/staff";
 import { StaffLayout, StaffRouteGuard } from "@/features/staff";
+import { AdminHotelsPage } from "@/features/staff/pages/AdminHotelsPage";
+import { AdminRoomsPage } from "@/features/staff/pages/AdminRoomsPage";
 
 export default function App() {
   return (
@@ -40,6 +42,8 @@ export default function App() {
                 <Route element={<StaffLayout />}>
                   <Route path="/staff/walk-in" element={<StaffWalkIn />} />
                   <Route path="/staff/dashboard" element={<StaffDashboard />} />
+                  <Route path="/staff/admin/hotels" element={<AdminHotelsPage />} />
+                  <Route path="/staff/admin/hotels/:hotelId/rooms" element={<AdminRoomsPage />} />
                 </Route>
               </Route>
               <Route element={<AppLayout />}>

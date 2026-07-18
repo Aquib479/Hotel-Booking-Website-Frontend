@@ -8,8 +8,19 @@ export interface CheckoutGuests {
   children: number;
 }
 
+export interface CheckoutHotelMeta {
+  name: string;
+  address: string;
+  city: string;
+  country: string;
+  imageUrl: string;
+  starRating: number;
+}
+
 export interface CheckoutDraft {
   propertyId: string;
+  roomId?: string;
+  bookingId?: string;
   lane: BookingLane;
   mode: BookingMode;
   slotDate?: string;
@@ -23,6 +34,8 @@ export interface CheckoutDraft {
   holdExpiresAt?: string;
   holdId?: string;
   hotelTimezone: string;
+  totalPrice?: number;
+  hotelMeta?: CheckoutHotelMeta;
   createdAt: string;
 }
 

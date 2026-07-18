@@ -40,6 +40,8 @@ export interface PropertyDetail extends Property {
   policies: string[];
   reviews: Review[];
   mapImage: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface BookingState {

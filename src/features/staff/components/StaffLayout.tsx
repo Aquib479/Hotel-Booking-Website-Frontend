@@ -1,8 +1,10 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LogOut, LayoutDashboard, UserPlus } from "lucide-react";
+import { Building2, LogOut, LayoutDashboard, UserPlus } from "lucide-react";
 import { useStaffAuth } from "../hooks/useStaffAuth";
 import { STAFF_DASHBOARD_PATH, STAFF_WALK_IN_PATH } from "../constants";
 import { cn } from "@/lib/utils";
+
+const STAFF_ADMIN_HOTELS_PATH = "/staff/admin/hotels";
 
 export function StaffLayout() {
   const { staff, logout } = useStaffAuth();
@@ -52,6 +54,18 @@ export function StaffLayout() {
             >
               <LayoutDashboard className="size-4" />
               <span className="hidden sm:inline">Today</span>
+            </NavLink>
+            <NavLink
+              to={STAFF_ADMIN_HOTELS_PATH}
+              className={({ isActive }) =>
+                cn(
+                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  isActive ? "bg-white/15 text-white" : "text-slate-300 hover:bg-white/10"
+                )
+              }
+            >
+              <Building2 className="size-4" />
+              <span className="hidden sm:inline">Hotels</span>
             </NavLink>
           </nav>
 

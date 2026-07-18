@@ -1,12 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useAuth } from "@/features/auth/context/AuthProvider";
-import { getPropertyById } from "@/features/property/data";
-import { useBookingPricing } from "@/features/property/hooks/useBookingPricing";
+import { confirmBooking, releaseBooking as releaseBookingHold } from "../api";
 import { useCheckoutDraft } from "../hooks/useCheckoutDraft";
 import { useCheckoutForm } from "../hooks/useCheckoutForm";
-import { parseDraftDates } from "../utils";
 import type { PaymentMethod } from "../types";
 import { CheckoutLayout } from "../components/CheckoutLayout";
 import { BookingSummaryCard } from "../components/BookingSummaryCard";
@@ -46,28 +44,15 @@ export function CheckoutPage() {
   );
   const { selectedMethod, setSelectedMethod } = usePaymentMethodSelection();
 
+  const navigate = useNavigate();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [holdExpired, setHoldExpired] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [guestMode, setGuestMode] = useState(() => readGuestMode() || isAuthenticated);
 
-  const property = draft ? getPropertyById(draft.propertyId) : null;
-  const dates = draft ? parseDraftDates(draft) : { restDate: undefined, checkIn: undefined, checkOut: undefined };
-
-  const pricing = useBookingPricing(
-    property?.lane ?? "direct",
-    property?.priceUsd ?? 0,
-    property?.priceIdr ?? 0,
-    {
-      mode: draft?.mode ?? "stay",
-      checkIn: dates.checkIn,
-      checkOut: dates.checkOut,
-    },
-    property?.wholesalePricing,
-    property?.slotDuration ?? "12h"
-  );
-
-  const payAmountLabel = formatCurrency(pricing.totalDue);
+  const totalPrice = draft?.totalPrice ?? 0;
+  const payAmountLabel = formatCurrency(totalPrice);
 
   const disabledReason = useMemo(() => {
     if (!termsAccepted) return "Accept the terms to continue";
@@ -79,32 +64,67 @@ export function CheckoutPage() {
   const isActionDisabled = Boolean(disabledReason) || isSubmitting;
 
   const handleHoldExpire = useCallback(() => {
+    if (draft?.bookingId) {
+      void releaseBookingHold(draft.bookingId);
+    }
     setHoldExpired(true);
     clearDraft();
-  }, [clearDraft]);
+  }, [clearDraft, draft?.bookingId]);
 
   const handleSubmitPayment = useCallback(
-    async (method: PaymentMethod) => {
+    async (_method: PaymentMethod) => {
       if (!form.validateForm() || !termsAccepted || !draft) return;
       setIsSubmitting(true);
+      setPaymentError(null);
       try {
-        // Backend: create Midtrans/Xendit payment intent and redirect
-        await new Promise((r) => setTimeout(r, 800));
-        console.info("onSubmitPayment", { method, draft, guest: form.values, phone: form.e164Phone });
+        if (!draft.bookingId) {
+          setPaymentError("No active booking hold. Please go back and try again.");
+          return;
+        }
+
+        const result = await confirmBooking(draft.bookingId);
+
+        if (result.redirectUrl) {
+          window.location.href = result.redirectUrl;
+        } else if (result.snapToken) {
+          const snap = (window as unknown as Record<string, unknown>).snap as
+            | { pay: (token: string, opts: Record<string, unknown>) => void }
+            | undefined;
+          if (snap) {
+            snap.pay(result.snapToken, {
+              onSuccess: () => {
+                clearDraft();
+                navigate(`/bookings/${draft.bookingId}`);
+              },
+              onPending: () => {
+                navigate(`/bookings/${draft.bookingId}`);
+              },
+              onError: () => {
+                setPaymentError("Payment failed. Please try again.");
+              },
+              onClose: () => {
+                setPaymentError("Payment window closed. You can try again before the hold expires.");
+              },
+            });
+          } else {
+            window.location.href = result.redirectUrl;
+          }
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Payment failed";
+        setPaymentError(message);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [draft, form, termsAccepted]
+    [draft, form, termsAccepted, clearDraft, navigate]
   );
 
   const handleWholesaleContinue = useCallback(async () => {
     if (!form.validateForm() || !termsAccepted || !draft) return;
     setIsSubmitting(true);
     try {
-      // Backend: hand off to TBO/Hotelbeds partner flow
       await new Promise((r) => setTimeout(r, 800));
-      console.info("onWholesaleHandoff", { draft, guest: form.values });
     } finally {
       setIsSubmitting(false);
     }
@@ -118,7 +138,7 @@ export function CheckoutPage() {
     }
   }, [draft?.lane, selectedMethod, handleSubmitPayment, handleWholesaleContinue]);
 
-  if (!draft || !property) {
+  if (!draft) {
     return <NoActiveDraftState reason="missing" />;
   }
 
@@ -136,6 +156,8 @@ export function CheckoutPage() {
 
   const ctaLabel =
     draft.lane === "direct" ? `Pay ${payAmountLabel} now` : "Continue to complete booking";
+
+  const supplierName = draft.hotelMeta?.name;
 
   return (
     <CheckoutLayout
@@ -156,6 +178,12 @@ export function CheckoutPage() {
         <GuestCheckoutPrompt onContinueAsGuest={handleContinueAsGuest} />
       ) : (
         <>
+      {paymentError && (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {paymentError}
+        </div>
+      )}
+
       <GuestDetailsForm
         values={form.values}
         errors={form.errors}
@@ -166,7 +194,7 @@ export function CheckoutPage() {
 
       <PaymentSection
         lane={draft.lane}
-        supplierName={property.supplierName}
+        supplierName={supplierName}
         payAmountLabel={payAmountLabel}
         selectedMethod={selectedMethod}
         onSelectMethod={setSelectedMethod}
@@ -177,11 +205,9 @@ export function CheckoutPage() {
         disabledReason={disabledReason}
       />
 
-      <CancellationPolicySummary lane={draft.lane} supplierName={property.supplierName} />
+      <CancellationPolicySummary lane={draft.lane} supplierName={supplierName} />
 
       <TermsAcceptance checked={termsAccepted} onChange={setTermsAccepted} />
-
-      {/* Desktop CTA is inside PaymentSection; mobile uses sticky CheckoutCTA */}
         </>
       )}
     </CheckoutLayout>

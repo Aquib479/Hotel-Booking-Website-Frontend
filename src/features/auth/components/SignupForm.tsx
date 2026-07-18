@@ -4,7 +4,6 @@ import { isValidE164, isValidEmail, toE164 } from "@/lib/phone/validation";
 import { useCurrency } from "@/context/CurrencyContext";
 import { TermsAcceptance } from "@/features/checkout/components/TermsAcceptance";
 import { useCheckoutDraft } from "@/features/checkout/hooks/useCheckoutDraft";
-import { getPropertyById } from "@/features/property/data";
 import { FormAlert, FormField, FormMessage } from "@/components/common/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,8 +73,7 @@ export function SignupForm() {
   const [showOtp, setShowOtp] = useState(false);
   const [signedUpPhone, setSignedUpPhone] = useState("");
 
-  const property = draft ? getPropertyById(draft.propertyId) : null;
-  const hotelName = property?.title ?? "your hotel";
+  const hotelName = draft?.hotelMeta?.name ?? "your hotel";
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -120,7 +118,7 @@ export function SignupForm() {
 
   return (
     <>
-      {draft && property && (
+      {draft && (
         <Alert className="mb-4 border-brand/30 bg-brand/5">
           <AlertDescription>
             Create an account to finish booking <span className="font-semibold">{hotelName}</span>.
@@ -147,7 +145,7 @@ export function SignupForm() {
         </FormField>
 
         <FormField
-          label="Email"
+          label="Email (optional)"
           htmlFor="signup-email"
           error={form.touched.email ? form.errors.email : undefined}
         >

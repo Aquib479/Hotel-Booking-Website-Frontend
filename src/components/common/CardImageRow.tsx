@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CardImageRowProps {
@@ -53,17 +54,26 @@ interface CardThumbnailProps {
 }
 
 export function CardThumbnail({ src, alt, className, size = "md" }: CardThumbnailProps) {
+  const sizeClasses = cn(
+    size === "md" && "aspect-square w-full rounded-xl",
+    size === "lg" && "aspect-[4/3] w-full rounded-xl sm:aspect-square sm:h-full sm:min-h-[7rem]",
+    size === "banner" && "aspect-[16/10] w-full rounded-none sm:aspect-[4/3]",
+    className
+  );
+
+  if (!src) {
+    return (
+      <div className={cn("flex items-center justify-center bg-muted ring-1 ring-border/80", sizeClasses)}>
+        <Building2 className="size-8 text-muted-foreground/40" />
+      </div>
+    );
+  }
+
   return (
     <img
       src={src}
       alt={alt}
-      className={cn(
-        "object-cover ring-1 ring-border/80",
-        size === "md" && "aspect-square w-full rounded-xl",
-        size === "lg" && "aspect-[4/3] w-full rounded-xl sm:aspect-square sm:h-full sm:min-h-[7rem]",
-        size === "banner" && "aspect-[16/10] w-full rounded-none sm:aspect-[4/3]",
-        className
-      )}
+      className={cn("object-cover ring-1 ring-border/80", sizeClasses)}
     />
   );
 }

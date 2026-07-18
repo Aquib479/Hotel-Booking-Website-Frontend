@@ -1,114 +1,139 @@
+import { api, ApiError } from "@/services/api";
 import type { AuthResult, AuthUser, SignupResult } from "./types";
 
-const MOCK_USERS_KEY = "resthalf-mock-users";
+/** Deployed API returns { id, token }; newer builds may also include profile fields */
+type AuthApiResponse = {
+  id: string;
+  token: string;
+  fullName?: string;
+  phone?: string;
+  email?: string | null;
+  createdAt?: string | Date;
+};
 
-interface MockStoredUser extends AuthUser {
-  password: string;
-}
-
-function readMockUsers(): MockStoredUser[] {
+function decodeJwtPhone(token: string): string {
   try {
-    const raw = localStorage.getItem(MOCK_USERS_KEY);
-    return raw ? (JSON.parse(raw) as MockStoredUser[]) : [];
+    const payload = token.split(".")[1];
+    if (!payload) return "";
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = atob(normalized);
+    const data = JSON.parse(json) as { phone?: string };
+    return data.phone ?? "";
   } catch {
-    return [];
+    return "";
   }
 }
 
-function writeMockUsers(users: MockStoredUser[]) {
-  localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(users));
+function toIsoDate(value: string | Date | undefined): string {
+  if (!value) return new Date().toISOString();
+  if (typeof value === "string") return value;
+  return value.toISOString();
 }
 
-function findUser(identifier: string): MockStoredUser | undefined {
-  const normalized = identifier.trim().toLowerCase();
-  return readMockUsers().find(
-    (u) =>
-      u.email.toLowerCase() === normalized ||
-      u.phoneE164 === identifier.replace(/\s/g, "") ||
-      u.phoneE164 === identifier
-  );
+function toAuthUser(
+  data: AuthApiResponse,
+  fallback: { fullName?: string; email?: string; phone?: string }
+): AuthUser {
+  return {
+    id: data.id,
+    fullName: data.fullName ?? fallback.fullName ?? "",
+    email: data.email ?? fallback.email ?? "",
+    phoneE164: data.phone ?? fallback.phone ?? decodeJwtPhone(data.token),
+    phoneVerified: false,
+    hasPassword: true,
+    createdAt: toIsoDate(data.createdAt),
+  };
 }
 
 export async function login(input: {
-  identifier: string;
+  phone: string;
   password: string;
   rememberMe?: boolean;
 }): Promise<AuthResult> {
-  await delay(600);
-  const user = findUser(input.identifier);
-  if (!user || user.password !== input.password) {
-    return { success: false, error: "invalid_credentials" };
+  try {
+    const data = await api.post<AuthApiResponse>("/auth/guest/login", {
+      phone: input.phone,
+      password: input.password,
+    });
+    return {
+      success: true,
+      user: toAuthUser(data, { phone: input.phone }),
+      token: data.token,
+      needsPhoneVerification: false,
+    };
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      return { success: false, error: "invalid_credentials" };
+    }
+    return { success: false, error: "network" };
   }
-  const { password: _, ...authUser } = user;
-  return {
-    success: true,
-    user: authUser,
-    needsPhoneVerification: !authUser.phoneVerified,
-  };
 }
 
 export async function signup(
   data: Omit<AuthUser, "id" | "phoneVerified" | "createdAt"> & { password: string }
 ): Promise<SignupResult> {
-  await delay(800);
-  const users = readMockUsers();
-  if (users.some((u) => u.email.toLowerCase() === data.email.toLowerCase())) {
-    return { success: false, error: "email_taken" };
-  }
-  if (users.some((u) => u.phoneE164 === data.phoneE164)) {
-    return { success: false, error: "phone_taken" };
-  }
-  if (data.password.length < 8) {
+  if (data.password.length < 6) {
     return { success: false, error: "weak_password" };
   }
 
-  const newUser: MockStoredUser = {
-    id: crypto.randomUUID(),
-    fullName: data.fullName,
-    email: data.email,
-    phoneE164: data.phoneE164,
-    phoneVerified: false,
-    createdAt: new Date().toISOString(),
-    password: data.password,
-  };
-  writeMockUsers([...users, newUser]);
+  try {
+    const body: {
+      fullName: string;
+      phone: string;
+      password: string;
+      email?: string;
+    } = {
+      fullName: data.fullName,
+      phone: data.phoneE164,
+      password: data.password,
+    };
+    const email = data.email.trim();
+    if (email) body.email = email;
 
-  const { password: _, ...authUser } = newUser;
-  return { success: true, user: authUser, needsPhoneVerification: true };
+    const res = await api.post<AuthApiResponse>("/auth/guest/register", body);
+    return {
+      success: true,
+      user: toAuthUser(res, {
+        fullName: data.fullName,
+        email,
+        phone: data.phoneE164,
+      }),
+      token: res.token,
+      needsPhoneVerification: false,
+    };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      const msg = err.message.toLowerCase();
+      if (err.status === 400 && msg.includes("phone")) {
+        return { success: false, error: "phone_taken" };
+      }
+      if (err.status === 400 && msg.includes("email")) {
+        return { success: false, error: "email_taken" };
+      }
+      if (msg.includes("password")) {
+        return { success: false, error: "weak_password" };
+      }
+    }
+    return { success: false, error: "network" };
+  }
 }
 
-export async function requestPasswordReset(_identifier: string): Promise<void> {
-  await delay(500);
+/** Not yet available on the API */
+export async function requestPasswordReset(_phone: string): Promise<void> {
+  throw new ApiError(501, "Password reset is not available yet");
 }
 
+/** Not yet available on the API */
 export async function sendOtp(_phoneE164: string): Promise<{ expiresAt: string }> {
-  await delay(400);
-  const expiresAt = new Date(Date.now() + OTP_RESEND_COOLDOWN_MS).toISOString();
-  return { expiresAt };
+  throw new ApiError(501, "OTP verification is not available yet");
 }
 
-const OTP_RESEND_COOLDOWN_MS = 30_000;
-const MOCK_OTP = "123456";
-
-export async function verifyOtp(_phoneE164: string, code: string): Promise<boolean> {
-  await delay(500);
-  return code === MOCK_OTP;
+/** Not yet available on the API */
+export async function verifyOtp(_phoneE164: string, _code: string): Promise<boolean> {
+  return false;
 }
 
+/** Not yet available on the API */
 export async function signInWithGoogle(): Promise<AuthResult> {
-  await delay(700);
-  const user: AuthUser = {
-    id: crypto.randomUUID(),
-    fullName: "Google User",
-    email: "google.user@example.com",
-    phoneE164: "",
-    phoneVerified: false,
-    hasPassword: false,
-    createdAt: new Date().toISOString(),
-  };
-  return { success: true, user, needsPhoneVerification: true };
-}
-
-function delay(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
+  return { success: false, error: "network" };
 }

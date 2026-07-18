@@ -1,9 +1,9 @@
-import { Map } from "lucide-react";
 import { usePropertySearch } from "@/features/search/hooks/usePropertySearch";
 import { SearchTopBar } from "@/features/search/components/SearchTopBar";
 import { ResultsToolbar } from "@/features/search/components/ResultsToolbar";
 import { CategoryFilterBar } from "@/features/search/components/CategoryFilterBar";
 import { PropertyCard } from "@/features/search/components/PropertyCard";
+import { SearchMapView } from "@/features/search/components/SearchMapView";
 import { FilterPanel } from "@/features/search/components/FilterPanel";
 import { SearchPagination } from "@/features/search/components/SearchPagination";
 
@@ -71,16 +71,10 @@ export default function SearchResults() {
                 </div>
               )
             ) : (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-white py-24 text-center">
-                <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-brand/10">
-                  <Map className="size-8 text-brand" />
-                </div>
-                <p className="text-lg font-semibold text-foreground">Map View</p>
-                <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                  Showing {search.totalResults} hotels near {search.query.location}. Map
-                  integration can be added here.
-                </p>
-              </div>
+              <SearchMapView
+                properties={search.filteredProperties}
+                searchParams={detailSearchParams}
+              />
             )}
 
             {search.view === "card" && search.totalResults > 0 && (

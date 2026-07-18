@@ -1,14 +1,14 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { differenceInDays, parseISO } from "date-fns";
+import { differenceInDays, format, parseISO } from "date-fns";
 import type { AmenityFilter, RestSlot } from "@/lib/booking/types";
 import { supportsRestMode, supportsStayMode } from "@/lib/booking/availability";
 import { convertFromIdr, getWholesaleGuestPriceUsdRounded } from "@/lib/currency/format";
+import { api } from "@/services/api";
 import {
   DEFAULT_PER_PAGE,
   DEFAULT_PRICE_MAX,
   DEFAULT_PRICE_MIN,
-  MOCK_PROPERTIES,
 } from "../constants";
 import type {
   CountFilter,
@@ -18,6 +18,78 @@ import type {
   SortOption,
   ViewMode,
 } from "../types";
+
+interface SearchApiHotel {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  rating: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  source: string;
+  imageUrl: string | null;
+  imageUrls: string[];
+}
+
+interface SearchApiResult {
+  hotel: SearchApiHotel;
+  availableRooms: number;
+  startingPrice: number;
+  currency: string;
+  roomTypes: string[];
+  maxOccupancy: number;
+}
+
+interface SearchApiResponse {
+  date: string;
+  slotType: string;
+  startTime: string;
+  endTime: string;
+  results: SearchApiResult[];
+}
+
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop";
+
+function mapApiResultToProperty(result: SearchApiResult, slotType: string): Property {
+  const h = result.hotel;
+  const roomType = result.roomTypes[0] ?? "double";
+
+  return {
+    id: h.id,
+    title: h.name,
+    address: h.address ?? "",
+    city: h.city ?? "",
+    country: h.country ?? "",
+    image: h.imageUrl ?? FALLBACK_IMAGE,
+    rating: h.rating ?? 4.0,
+    starRating: Math.round(h.rating ?? 4),
+    lane: "direct",
+    priceUsd: 0,
+    priceIdr: result.startingPrice,
+    roomType: roomType as Property["roomType"],
+    maxOccupancy: result.maxOccupancy,
+    amenities: [],
+    category: "all",
+    latitude: h.latitude ?? null,
+    longitude: h.longitude ?? null,
+    distanceFromAirportKm: 0,
+    slotDuration: slotType === "FULL_DAY" ? "24h" : "12h",
+    timezone: "Asia/Jakarta",
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function frontendSlotToBackend(slot: RestSlot): "HALF_DAY" | "FULL_DAY" {
+  return slot === "24h" ? "FULL_DAY" : "HALF_DAY";
+}
+
+function parseGuestCount(guestsLabel: string): number {
+  const match = guestsLabel.match(/(\d+)/);
+  return match ? Number(match[1]) : 2;
+}
 
 function parseDate(value: string | null): Date | undefined {
   if (!value) return undefined;
@@ -106,6 +178,55 @@ export function usePropertySearch() {
 
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
+  const [apiProperties, setApiProperties] = useState<Property[] | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const dateStr =
+      query.mode === "rest" && query.restDate
+        ? format(query.restDate, "yyyy-MM-dd")
+        : query.checkIn
+          ? format(query.checkIn, "yyyy-MM-dd")
+          : format(new Date(), "yyyy-MM-dd");
+
+    const slotType =
+      query.mode === "rest"
+        ? frontendSlotToBackend(query.slot ?? "12-24")
+        : "FULL_DAY";
+
+    const guests = parseGuestCount(query.guests);
+
+    const params = new URLSearchParams();
+    params.set("date", dateStr);
+    params.set("slotType", slotType);
+    params.set("guests", String(guests));
+    if (query.location.trim()) {
+      params.set("q", query.location.trim());
+    }
+
+    setIsLoading(true);
+
+    api
+      .get<SearchApiResponse>(`/search?${params.toString()}`)
+      .then((res) => {
+        if (cancelled) return;
+        const mapped = res.results.map((r) => mapApiResultToProperty(r, res.slotType));
+        setApiProperties(mapped);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setApiProperties(null);
+        setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [query.location, query.mode, query.restDate, query.checkIn, query.slot, query.guests]);
+
   const nights = useMemo(() => {
     if (query.mode === "rest") return 1;
     if (query.checkIn && query.checkOut) {
@@ -158,8 +279,10 @@ export function usePropertySearch() {
     [query, updateParams]
   );
 
+  const sourceProperties = apiProperties ?? [];
+
   const filteredProperties = useMemo(() => {
-    let results = MOCK_PROPERTIES.filter((property) => {
+    let results = sourceProperties.filter((property) => {
       if (!matchesLocation(property, query.location)) return false;
 
       const price = getPropertyPriceUsd(property);
@@ -221,7 +344,7 @@ export function usePropertySearch() {
     });
 
     return results;
-  }, [filters, query.location, query.mode, sort]);
+  }, [filters, query.location, query.mode, sort, sourceProperties]);
 
   const totalResults = filteredProperties.length;
   const totalPages = Math.max(1, Math.ceil(totalResults / perPage));
@@ -233,7 +356,7 @@ export function usePropertySearch() {
   }, [currentPage, filteredProperties, perPage]);
 
   const categoryCounts = useMemo(() => {
-    const base = MOCK_PROPERTIES.filter((p) => matchesLocation(p, query.location));
+    const base = sourceProperties;
     const counts: Record<string, number> = {
       all: base.length,
       "resthalf-exclusive": base.filter((p) => p.lane === "direct").length,
@@ -242,7 +365,7 @@ export function usePropertySearch() {
       counts[p.category] = (counts[p.category] ?? 0) + 1;
     });
     return counts;
-  }, [query.location]);
+  }, [sourceProperties]);
 
   const activeFilterCount = countActiveFilters(filters);
 
@@ -297,9 +420,12 @@ export function usePropertySearch() {
     totalResults,
     nights,
     paginatedProperties,
+    filteredProperties,
     categoryCounts,
     activeFilterCount,
     favorites,
+    isLoading,
+    isUsingMockData: apiProperties === null,
     setQuery,
     setSort,
     setView,

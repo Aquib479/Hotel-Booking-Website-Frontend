@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { parseISO } from "date-fns";
 import type { RestSlot } from "@/lib/booking/types";
 import { supportsStayMode } from "@/lib/booking/availability";
-import { getPropertyById } from "@/features/property/data";
+import { usePropertyDetail } from "@/features/property/hooks/usePropertyDetail";
 import { ImageGallery } from "@/features/property/components/ImageGallery";
 import { PropertyInfoHeader } from "@/features/property/components/PropertyInfoHeader";
 import { DetailTabs } from "@/features/property/components/DetailTabs";
@@ -28,15 +29,24 @@ function parseDateParam(value: string | null): Date | undefined {
 export default function HotelDetails() {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const property = id ? getPropertyById(id) : null;
+  const { property, isLoading, error } = usePropertyDetail(id);
 
   const [activeTab, setActiveTab] = useState<DetailTab>("details");
   const [isSaved, setIsSaved] = useState(false);
 
-  if (!property) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#fafafa]">
-        <p className="text-lg font-semibold">Hotel not found</p>
+        <Loader2 className="size-8 animate-spin text-brand" />
+        <p className="text-sm text-muted-foreground">Loading hotel details…</p>
+      </div>
+    );
+  }
+
+  if (!property || error) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#fafafa]">
+        <p className="text-lg font-semibold">{error ?? "Hotel not found"}</p>
         <Button asChild>
           <Link to="/search">Back to search</Link>
         </Button>
@@ -78,11 +88,13 @@ export default function HotelDetails() {
   return (
     <div className="min-h-screen bg-[#fafafa]">
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
-        <ImageGallery
-          images={property.images}
-          photoCount={property.photoCount}
-          title={property.title}
-        />
+        {property.images.length > 0 && (
+          <ImageGallery
+            images={property.images}
+            photoCount={property.photoCount}
+            title={property.title}
+          />
+        )}
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px] lg:items-start">
           <div>
@@ -101,9 +113,9 @@ export default function HotelDetails() {
               <>
                 <PropertyDetailsContent property={property} />
                 <LocationMap
-                  mapImage={property.mapImage}
+                  latitude={property.latitude}
+                  longitude={property.longitude}
                   address={property.address}
-                  distanceFromAirportKm={property.distanceFromAirportKm}
                 />
               </>
             )}

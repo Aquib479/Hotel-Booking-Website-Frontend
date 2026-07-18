@@ -1,9 +1,7 @@
-import { useCallback, useState } from "react";
-import {
-  detectIdentifierType,
-  isValidEmail,
-  normalizePhoneIdentifier,
-} from "@/lib/phone/validation";
+import { useCallback, useMemo, useState } from "react";
+import { getDefaultPhoneCountryCode } from "@/lib/phone/constants";
+import { isValidE164, toE164 } from "@/lib/phone/validation";
+import { useCurrency } from "@/context/CurrencyContext";
 import { FormAlert, FormField } from "@/components/common/form";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,32 +13,21 @@ import { useAuthForm } from "../hooks/useAuthForm";
 import { useAuthRedirect } from "../hooks/useAuthRedirect";
 import type { LoginFormValues } from "../types";
 import { ForgotPasswordLink } from "./ForgotPasswordLink";
-
-const INITIAL: LoginFormValues = {
-  identifier: "",
-  password: "",
-  rememberMe: false,
-};
+import { PhoneInput } from "./PhoneInput";
 
 function validateLoginField(
   field: keyof LoginFormValues,
   values: LoginFormValues
 ): string | undefined {
   switch (field) {
-    case "identifier": {
-      if (!values.identifier.trim()) return "Email or phone is required";
-      const type = detectIdentifierType(values.identifier);
-      if (type === "email" && !isValidEmail(values.identifier)) {
-        return "Enter a valid email address";
-      }
-      if (type === "phone" && normalizePhoneIdentifier(values.identifier).length < 8) {
-        return "Enter a valid phone number";
-      }
-      if (type === "unknown" && !isValidEmail(values.identifier)) {
-        return "Enter a valid email or phone number";
+    case "phoneNumber":
+      if (!values.phoneNumber.trim()) return "Phone number is required";
+      if (!isValidE164(values.phoneCountryCode, values.phoneNumber)) {
+        return "Enter a valid phone number with country code";
       }
       return undefined;
-    }
+    case "phoneCountryCode":
+      return values.phoneCountryCode ? undefined : "Country code is required";
     case "password":
       if (!values.password) return "Password is required";
       return undefined;
@@ -52,9 +39,21 @@ function validateLoginField(
 }
 
 export function LoginForm() {
+  const { currency } = useCurrency();
   const { login, isLoading } = useAuth();
   const { redirectAfterAuth } = useAuthRedirect();
-  const form = useAuthForm(INITIAL, validateLoginField);
+
+  const initial = useMemo(
+    (): LoginFormValues => ({
+      phoneCountryCode: getDefaultPhoneCountryCode(currency),
+      phoneNumber: "",
+      password: "",
+      rememberMe: false,
+    }),
+    [currency]
+  );
+
+  const form = useAuthForm(initial, validateLoginField);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmit = useCallback(
@@ -63,11 +62,8 @@ export function LoginForm() {
       setSubmitError(null);
       if (!form.validateAll()) return;
 
-      const result = await login(
-        form.values.identifier.trim(),
-        form.values.password,
-        form.values.rememberMe
-      );
+      const phone = toE164(form.values.phoneCountryCode, form.values.phoneNumber);
+      const result = await login(phone, form.values.password, form.values.rememberMe);
 
       if (!result.success) {
         setSubmitError(LOGIN_GENERIC_ERROR);
@@ -82,18 +78,18 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <FormField
-        label="Email or phone number"
-        htmlFor="login-identifier"
-        error={form.touched.identifier ? form.errors.identifier : undefined}
+        label="Phone number"
+        error={form.touched.phoneNumber ? form.errors.phoneNumber : undefined}
       >
-        <Input
-          id="login-identifier"
-          type="text"
-          autoComplete="username"
-          aria-invalid={!!(form.touched.identifier && form.errors.identifier)}
-          value={form.values.identifier}
-          onChange={(e) => form.handleChange("identifier", e.target.value)}
-          onBlur={() => form.handleBlur("identifier")}
+        <PhoneInput
+          countryCode={form.values.phoneCountryCode}
+          nationalNumber={form.values.phoneNumber}
+          onCountryCodeChange={(v) => form.handleChange("phoneCountryCode", v)}
+          onNationalNumberChange={(v) => form.handleChange("phoneNumber", v)}
+          onBlur={() => form.handleBlur("phoneNumber")}
+          error={form.errors.phoneNumber}
+          touched={form.touched.phoneNumber}
+          showHelper={false}
         />
       </FormField>
 

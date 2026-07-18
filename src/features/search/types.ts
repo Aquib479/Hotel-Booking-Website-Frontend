@@ -39,6 +39,8 @@ export interface Property {
   maxOccupancy: number;
   amenities: AmenityFilter[];
   category: string;
+  latitude: number | null;
+  longitude: number | null;
   distanceFromAirportKm: number;
   slotDuration: SlotDuration;
   /** IANA timezone for slot cutoffs and checkout hold countdowns */

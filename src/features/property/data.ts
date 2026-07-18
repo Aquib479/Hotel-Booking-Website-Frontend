@@ -125,6 +125,8 @@ export function getPropertyById(id: string): PropertyDetail | null {
     ],
     reviews: buildReviews(base),
     mapImage: img("photo-1524661135-423995f22d0b", 1200),
+    latitude: null,
+    longitude: null,
   };
 }
 

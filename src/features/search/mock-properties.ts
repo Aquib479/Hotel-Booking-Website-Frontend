@@ -2,7 +2,7 @@ import { getWholesaleGuestPriceUsdRounded } from "@/lib/currency/format";
 import { getTimezoneForCity } from "@/lib/booking/timezone";
 import type { Property } from "./types";
 
-type PropertySeed = Omit<Property, "timezone">;
+type PropertySeed = Omit<Property, "timezone" | "latitude" | "longitude">;
 
 const img = (id: string) =>
   `https://images.unsplash.com/${id}?w=800&h=600&fit=crop`;
@@ -366,6 +366,8 @@ const RAW_PROPERTIES: PropertySeed[] = [
 export const MOCK_PROPERTIES: Property[] = RAW_PROPERTIES.map((property) => {
   const withTimezone: Property = {
     ...property,
+    latitude: null,
+    longitude: null,
     timezone: getTimezoneForCity(property.city, property.country),
   };
 

@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
-import { getHotelById } from "../api";
-import type { Hotel } from "../types";
+import { getRoomsByHotel } from "../api";
+import type { Room } from "../types";
 import { ApiError } from "@/services/api";
 
-export function useHotelDetails(id?: string) {
-  const [data, setData] = useState<Hotel | null>(null);
-  const [isLoading, setIsLoading] = useState(Boolean(id));
+export function useHotelRooms(hotelId?: string) {
+  const [data, setData] = useState<Room[]>([]);
+  const [isLoading, setIsLoading] = useState(Boolean(hotelId));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) {
-      setData(null);
+    if (!hotelId) {
+      setData([]);
       setIsLoading(false);
       setError(null);
       return;
@@ -22,13 +22,13 @@ export function useHotelDetails(id?: string) {
       setIsLoading(true);
       setError(null);
       try {
-        const hotel = await getHotelById(id!);
-        if (!cancelled) setData(hotel);
+        const rooms = await getRoomsByHotel(hotelId!);
+        if (!cancelled) setData(rooms);
       } catch (err) {
         if (!cancelled) {
-          setData(null);
+          setData([]);
           setError(
-            err instanceof ApiError ? err.message : "Failed to load hotel"
+            err instanceof ApiError ? err.message : "Failed to load rooms"
           );
         }
       } finally {
@@ -40,7 +40,7 @@ export function useHotelDetails(id?: string) {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [hotelId]);
 
-  return { data, isLoading, error, id };
+  return { data, isLoading, error };
 }
