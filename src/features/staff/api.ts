@@ -1,9 +1,5 @@
-import { getAvailableSlots, supportsRestMode } from "@/lib/booking/availability";
-import { getPropertyById } from "@/features/property/data";
-import { MOCK_PROPERTIES } from "@/features/search/constants";
-import type { Property } from "@/features/search/types";
+import { getAvailableSlots } from "@/lib/booking/availability";
 import type { RestSlot } from "@/lib/booking/types";
-import type { CurrencyCode } from "@/lib/currency/types";
 import {
   MOCK_COMMISSION_RATE,
   MOCK_STAFF_CREDENTIALS,
@@ -21,40 +17,21 @@ import type {
   WalkInRoom,
 } from "./types";
 
-function propertyLocalCurrency(property: Property): CurrencyCode {
-  if (property.country === "India") return "IDR";
-  if (property.country === "United Kingdom") return "GBP";
-  if (property.country === "UAE") return "USD";
-  if (property.country === "Singapore") return "SGD";
-  return "USD";
-}
-
-function propertySlotRate(property: Property): number {
-  const currency = propertyLocalCurrency(property);
-  if (currency === "IDR") return property.priceIdr;
-  if (currency === "GBP") return Math.round(property.priceUsd * 0.79);
-  return property.priceUsd;
-}
-
-function toStaffProperty(property: Property): StaffPropertyScope {
-  return {
-    propertyId: property.id,
-    propertyName: property.title,
-    city: property.city,
-    country: property.country,
-    timezone: property.timezone,
-    localCurrency: propertyLocalCurrency(property),
-    baseSlotRate: propertySlotRate(property),
-  };
-}
-
-const STAFF_PROPERTY = MOCK_PROPERTIES.find((p) => p.id === "1")!;
+const STAFF_PROPERTY: StaffPropertyScope = {
+  propertyId: "staff-demo-hotel",
+  propertyName: "RestHalf Demo Hotel",
+  city: "Bangalore",
+  country: "India",
+  timezone: "Asia/Kolkata",
+  localCurrency: "IDR",
+  baseSlotRate: 350000,
+};
 
 export const MOCK_STAFF_USER: StaffUser = {
   id: "staff-1",
   displayName: "Priya Sharma",
   email: MOCK_STAFF_CREDENTIALS.email,
-  property: toStaffProperty(STAFF_PROPERTY),
+  property: STAFF_PROPERTY,
 };
 
 function todayYmd(timezone: string): string {
@@ -94,22 +71,17 @@ function writeWalkIns(records: WalkInRecord[]) {
   localStorage.setItem(STAFF_WALKINS_STORAGE_KEY, JSON.stringify(records));
 }
 
-function generateRoomInventory(property: Property, now = new Date()): WalkInRoom[] {
-  if (!supportsRestMode(property)) return [];
-
-  const count = property.ringFencedRooms ?? 4;
+function generateRoomInventory(property: StaffPropertyScope, now = new Date()): WalkInRoom[] {
+  const count = 4;
   const allSlots = getAvailableSlots(now, property.timezone, now);
   const dateYmd = todayYmd(property.timezone);
   const locks = readRoomLocks().filter(
-    (l) => l.propertyId === property.id && l.dateYmd === dateYmd
+    (l) => l.propertyId === property.propertyId && l.dateYmd === dateYmd
   );
-
-  const currency = propertyLocalCurrency(property);
-  const rate = propertySlotRate(property);
 
   return Array.from({ length: count }, (_, i) => {
     const roomNumber = String(101 + i);
-    const roomId = `${property.id}-r${roomNumber}`;
+    const roomId = `${property.propertyId}-r${roomNumber}`;
     const lockedSlots = new Set(
       locks.filter((l) => l.roomId === roomId).map((l) => l.slot)
     );
@@ -119,10 +91,10 @@ function generateRoomInventory(property: Property, now = new Date()): WalkInRoom
       id: roomId,
       roomNumber,
       label: `Room ${roomNumber}`,
-      roomType: property.roomType,
+      roomType: "double" as const,
       availableSlots,
-      rateAmount: rate,
-      rateCurrency: currency,
+      rateAmount: property.baseSlotRate,
+      rateCurrency: property.localCurrency,
     };
   }).filter((r) => r.availableSlots.length > 0);
 }
@@ -149,10 +121,8 @@ export async function fetchAvailableRooms(
 ): Promise<WalkInRoom[]> {
   await new Promise((r) => setTimeout(r, 300));
 
-  const property = MOCK_PROPERTIES.find((p) => p.id === propertyId);
-  if (!property || property.id !== propertyId) return [];
-
-  return generateRoomInventory(property, now);
+  if (propertyId !== STAFF_PROPERTY.propertyId) return [];
+  return generateRoomInventory(STAFF_PROPERTY, now);
 }
 
 export async function submitWalkInBooking(params: {
@@ -248,6 +218,6 @@ export async function fetchRecentWalkIns(
     .slice(0, limit);
 }
 
-export function getStaffPropertyDetail(propertyId: string) {
-  return getPropertyById(propertyId);
+export function getStaffPropertyDetail(_propertyId: string) {
+  return null;
 }

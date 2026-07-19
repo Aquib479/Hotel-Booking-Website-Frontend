@@ -1,37 +1,18 @@
-import {
-  BadgeCheck,
-  Briefcase,
-  Building2,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  LayoutGrid,
-  Plane,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
-import { CATEGORIES } from "../constants";
+import { AMENITY_FILTER_OPTIONS } from "../constants";
+import type { AmenityFilter } from "@/lib/booking/types";
 
-const ICONS = {
-  "layout-grid": LayoutGrid,
-  plane: Plane,
-  "building-2": Building2,
-  briefcase: Briefcase,
-  clock: Clock,
-  "badge-check": BadgeCheck,
-} as const;
-
-interface CategoryFilterBarProps {
-  activeCategory: string;
-  categoryCounts: Record<string, number>;
-  onCategoryChange: (category: string) => void;
+interface AmenityFilterBarProps {
+  selectedAmenities: AmenityFilter[];
+  onToggleAmenity: (amenity: AmenityFilter) => void;
 }
 
-export function CategoryFilterBar({
-  activeCategory,
-  categoryCounts,
-  onCategoryChange,
-}: CategoryFilterBarProps) {
+export function AmenityFilterBar({
+  selectedAmenities,
+  onToggleAmenity,
+}: AmenityFilterBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -43,7 +24,7 @@ export function CategoryFilterBar({
       <button
         type="button"
         onClick={() => scroll("left")}
-        aria-label="Scroll categories left"
+        aria-label="Scroll amenities left"
         className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground hover:text-foreground sm:flex"
       >
         <ChevronLeft className="size-4" />
@@ -53,16 +34,14 @@ export function CategoryFilterBar({
         ref={scrollRef}
         className="flex flex-1 gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {CATEGORIES.map((category) => {
-          const Icon = ICONS[category.icon as keyof typeof ICONS];
-          const count = categoryCounts[category.id];
-          const isActive = activeCategory === category.id;
+        {AMENITY_FILTER_OPTIONS.map((amenity) => {
+          const isActive = selectedAmenities.includes(amenity);
 
           return (
             <button
-              key={category.id}
+              key={amenity}
               type="button"
-              onClick={() => onCategoryChange(category.id)}
+              onClick={() => onToggleAmenity(amenity)}
               className={cn(
                 "flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors",
                 isActive
@@ -70,9 +49,7 @@ export function CategoryFilterBar({
                   : "border-border bg-white text-foreground hover:border-foreground/30"
               )}
             >
-              <Icon className="size-4" />
-              {category.label}
-              {category.id !== "all" && count !== undefined ? ` (${count})` : ""}
+              {amenity}
             </button>
           );
         })}
@@ -81,7 +58,7 @@ export function CategoryFilterBar({
       <button
         type="button"
         onClick={() => scroll("right")}
-        aria-label="Scroll categories right"
+        aria-label="Scroll amenities right"
         className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground hover:text-foreground sm:flex"
       >
         <ChevronRight className="size-4" />

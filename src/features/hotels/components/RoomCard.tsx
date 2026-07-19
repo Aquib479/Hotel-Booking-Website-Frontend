@@ -1,6 +1,6 @@
 import type { Room } from "../types";
 
-const FALLBACK_AMENITIES = ["WiFi", "AC"];
+const FALLBACK_AMENITIES = ["WiFi", "Air conditioning"];
 
 const FALLBACK_DESCRIPTIONS: Record<string, string> = {
   single: "Cozy single room with essential amenities for a comfortable rest.",

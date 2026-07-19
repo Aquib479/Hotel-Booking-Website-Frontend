@@ -1,5 +1,3 @@
-export { MOCK_PROPERTIES } from "./mock-properties";
-
 export const DEFAULT_PRICE_MIN = 0;
 export const DEFAULT_PRICE_MAX = 500;
 export const DEFAULT_PER_PAGE = 9;

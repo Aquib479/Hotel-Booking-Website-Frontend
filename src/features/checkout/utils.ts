@@ -6,6 +6,14 @@ import { SLOT_HOLD_MINUTES } from "./constants";
 import type { CheckoutDraft, CheckoutGuests } from "./types";
 
 export function parseGuestsLabel(label: string): CheckoutGuests {
+  const travellersMatch = label.match(/(\d+)\s*travellers?/i);
+  if (travellersMatch) {
+    return {
+      adults: Number(travellersMatch[1]),
+      children: 0,
+    };
+  }
+
   const adultsMatch = label.match(/(\d+)\s*adult/i);
   const childrenMatch = label.match(/(\d+)\s*kid/i);
   return {
@@ -15,10 +23,12 @@ export function parseGuestsLabel(label: string): CheckoutGuests {
 }
 
 export function formatGuestsSummary(guests: CheckoutGuests): string {
-  const parts = [`${guests.adults} adult${guests.adults !== 1 ? "s" : ""}`];
-  if (guests.children > 0) {
-    parts.push(`${guests.children} child${guests.children !== 1 ? "ren" : ""}`);
+  const total = guests.adults + guests.children;
+  if (guests.children === 0) {
+    return `${total} traveller${total === 1 ? "" : "s"}`;
   }
+  const parts = [`${guests.adults} adult${guests.adults !== 1 ? "s" : ""}`];
+  parts.push(`${guests.children} child${guests.children !== 1 ? "ren" : ""}`);
   return parts.join(", ");
 }
 
