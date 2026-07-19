@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -28,8 +29,9 @@ export function CurrencySwitcher({ className, variant = "default" }: CurrencySwi
         )}
       >
         <SelectValue />
+        <ChevronDown className="size-3.5 opacity-60" />
       </SelectTrigger>
-      <SelectContent position="popper" side="bottom" align="end" sideOffset={4}>
+      <SelectContent align="end">
         {currencies.map((c) => (
           <SelectItem key={c.code} value={c.code}>
             {c.code} · {c.symbol}

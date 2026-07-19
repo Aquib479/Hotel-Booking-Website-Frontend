@@ -28,7 +28,7 @@ function draftFromSearchParams(params: URLSearchParams, currency: CurrencyCode):
 
   const mode = (params.get("mode") as CheckoutDraft["mode"]) ?? "stay";
   const lane = (params.get("lane") as CheckoutDraft["lane"]) ?? "direct";
-  const guestsLabel = params.get("guests") ?? "2 travellers";
+  const guestsLabel = params.get("guests") ?? "2 adults";
 
   return buildCheckoutDraft({
     propertyId,

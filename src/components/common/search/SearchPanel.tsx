@@ -5,7 +5,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { RestStayToggle } from "@/components/common/RestStayToggle";
 import { SlotPicker } from "@/components/common/SlotPicker";
-import { TravellerPicker, formatTravellersLabel, DEFAULT_TRAVELLER_SELECTION } from "@/components/common/travellers";
 import {
   getAvailableSlots,
   resolveSlotSelection,
@@ -17,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { LocationSearchField } from "./LocationSearchField";
 import {
   DEFAULT_LOCATION,
+  GUEST_OPTIONS,
   toLocationSuggestion,
 } from "./location-api";
 import type { LocationSuggestion, SearchFormValues, SearchPanelVariant } from "./types";
@@ -33,8 +33,6 @@ interface SearchPanelProps {
   initialGuests?: string;
   onSubmit: (values: SearchFormValues) => void | Promise<void>;
 }
-
-const DEFAULT_GUESTS_LABEL = formatTravellersLabel(DEFAULT_TRAVELLER_SELECTION);
 
 const fieldStyles: Record<SearchPanelVariant, string> = {
   hero: "rounded-2xl px-4 py-3 hover:bg-black/5 sm:px-5",
@@ -115,29 +113,54 @@ function GuestField({
   onChange: (guests: string) => void;
   variant: SearchPanelVariant;
 }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <TravellerPicker value={value} onChange={onChange}>
-      <button
-        type="button"
-        className={cn(
-          "flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left transition-colors",
-          fieldStyles[variant]
-        )}
-      >
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Users className="size-3.5" />
-          {label}
-        </span>
-        <span
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
           className={cn(
-            "truncate font-semibold text-foreground",
-            variant === "hero" ? "text-sm sm:text-base" : "text-sm"
+            "flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left transition-colors",
+            fieldStyles[variant]
           )}
         >
-          {value}
-        </span>
-      </button>
-    </TravellerPicker>
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Users className="size-3.5" />
+            {label}
+          </span>
+          <span
+            className={cn(
+              "truncate font-semibold text-foreground",
+              variant === "hero" ? "text-sm sm:text-base" : "text-sm"
+            )}
+          >
+            {value}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-52 p-1" align="start">
+        <ul>
+          {GUEST_OPTIONS.map((option) => (
+            <li key={option}>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(option);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "w-full rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted",
+                  value === option && "bg-muted font-medium"
+                )}
+              >
+                {option}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -167,7 +190,7 @@ export function SearchPanel({
     initialRestDate ?? new Date()
   );
   const [slot, setSlot] = useState<RestSlot>(initialSlot ?? "12-24");
-  const [guests, setGuests] = useState<string>(initialGuests ?? DEFAULT_GUESTS_LABEL);
+  const [guests, setGuests] = useState<string>(initialGuests ?? GUEST_OPTIONS[1]);
   const [isLoading, setIsLoading] = useState(false);
   const [slotError, setSlotError] = useState<string | null>(null);
 

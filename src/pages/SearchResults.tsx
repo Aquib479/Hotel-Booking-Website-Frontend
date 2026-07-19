@@ -1,9 +1,7 @@
-import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { usePropertySearch } from "@/features/search/hooks/usePropertySearch";
 import { SearchTopBar } from "@/features/search/components/SearchTopBar";
 import { ResultsToolbar } from "@/features/search/components/ResultsToolbar";
-import { AmenityFilterBar } from "@/features/search/components/AmenityFilterBar";
+import { CategoryFilterBar } from "@/features/search/components/CategoryFilterBar";
 import { PropertyCard } from "@/features/search/components/PropertyCard";
 import { SearchMapView } from "@/features/search/components/SearchMapView";
 import { FilterPanel } from "@/features/search/components/FilterPanel";
@@ -41,31 +39,15 @@ export default function SearchResults() {
           onViewChange={search.setView}
         />
 
-        <AmenityFilterBar
-          selectedAmenities={search.filters.amenities}
-          onToggleAmenity={search.toggleAmenity}
+        <CategoryFilterBar
+          activeCategory={search.filters.category}
+          categoryCounts={search.categoryCounts}
+          onCategoryChange={search.setCategory}
         />
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_300px]">
           <div>
-            {search.isLoading ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-white py-20 text-center">
-                <Loader2 className="mb-3 size-8 animate-spin text-brand" />
-                <p className="text-sm font-medium text-foreground">Loading hotels...</p>
-              </div>
-            ) : search.error ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-white py-20 text-center">
-                <p className="text-lg font-semibold text-foreground">Unable to load hotels</p>
-                <p className="mt-2 text-sm text-muted-foreground">{search.error}</p>
-                <Button
-                  type="button"
-                  className="mt-4"
-                  onClick={() => search.reload()}
-                >
-                  Try again
-                </Button>
-              </div>
-            ) : search.view === "card" ? (
+            {search.view === "card" ? (
               search.paginatedProperties.length > 0 ? (
                 <div className="grid gap-6 sm:grid-cols-2">
                   {search.paginatedProperties.map((property) => (
@@ -92,25 +74,18 @@ export default function SearchResults() {
               <SearchMapView
                 properties={search.filteredProperties}
                 searchParams={detailSearchParams}
-                mode={search.query.mode}
-                nights={search.nights}
-                favorites={search.favorites}
-                onToggleFavorite={search.toggleFavorite}
               />
             )}
 
-            {!search.isLoading &&
-              !search.error &&
-              search.view === "card" &&
-              search.totalResults > 0 && (
-                <SearchPagination
-                  page={search.page}
-                  totalPages={search.totalPages}
-                  perPage={search.perPage}
-                  onPageChange={search.setPage}
-                  onPerPageChange={search.setPerPage}
-                />
-              )}
+            {search.view === "card" && search.totalResults > 0 && (
+              <SearchPagination
+                page={search.page}
+                totalPages={search.totalPages}
+                perPage={search.perPage}
+                onPageChange={search.setPage}
+                onPerPageChange={search.setPerPage}
+              />
+            )}
           </div>
 
           <FilterPanel
@@ -119,6 +94,7 @@ export default function SearchResults() {
             mode={search.query.mode}
             onUpdate={search.updateFilters}
             onClear={search.clearFilters}
+            onToggleAmenity={search.toggleAmenity}
           />
         </div>
       </div>

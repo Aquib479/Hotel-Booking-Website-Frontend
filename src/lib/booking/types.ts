@@ -22,10 +22,7 @@ export const ROOM_TYPE_OPTIONS: { value: RoomType | "any"; label: string }[] = [
 
 export const AMENITY_FILTER_OPTIONS = [
   "WiFi",
-  "Air conditioning",
-  "Free Parking",
-  "Free cancellation",
-  "1+ bathroom",
+  "AC",
   "Pool",
   "Airport shuttle",
   "Breakfast",

@@ -5,16 +5,17 @@ import { CalendarDays, ExternalLink, Loader2, Users, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LaneBadge } from "@/components/common/LaneBadge";
 import { PriceDisplay } from "@/components/common/PriceDisplay";
 import { RestStayToggle } from "@/components/common/RestStayToggle";
 import { SlotPicker } from "@/components/common/SlotPicker";
-import {
-  TravellerPicker,
-  formatTravellersLabel,
-  DEFAULT_TRAVELLER_SELECTION,
-  parseGuestCountFromLabel,
-} from "@/components/common/travellers";
 import type { RestSlot } from "@/lib/booking/types";
 import {
   getAvailableSlots,
@@ -25,10 +26,9 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { useAuth } from "@/features/auth/context/AuthProvider";
 import { buildCheckoutDraft, saveCheckoutDraftToStorage } from "@/features/checkout";
 import { searchAvailability, createHold } from "@/features/checkout/api";
+import { GUEST_OPTIONS } from "../data";
 import { useBookingPricing } from "../hooks/useBookingPricing";
 import type { BookingSidebarProps } from "../types";
-
-const DEFAULT_GUESTS_LABEL = formatTravellersLabel(DEFAULT_TRAVELLER_SELECTION);
 
 export function BookingSidebar({
   propertyId,
@@ -54,7 +54,7 @@ export function BookingSidebar({
     checkOut: initialBooking?.checkOut ?? new Date(Date.now() + 86400000),
     restDate: initialBooking?.restDate ?? new Date(),
     slot: initialBooking?.slot ?? "12-24",
-    guests: initialBooking?.guests ?? DEFAULT_GUESTS_LABEL,
+    guests: initialBooking?.guests ?? "2 adults",
   });
 
   const { isAuthenticated } = useAuth();
@@ -75,6 +75,11 @@ export function BookingSidebar({
 
   function frontendSlotToBackend(slot: RestSlot): "HALF_DAY" | "FULL_DAY" {
     return slot === "24h" ? "FULL_DAY" : "HALF_DAY";
+  }
+
+  function parseGuestCount(label: string): number {
+    const match = label.match(/(\d+)/);
+    return match ? Number(match[1]) : 2;
   }
 
   const handleCheckout = async () => {
@@ -129,7 +134,7 @@ export function BookingSidebar({
         roomId: cheapestRoom.id,
         date: dateStr,
         slotType,
-        numGuests: parseGuestCountFromLabel(booking.guests),
+        numGuests: parseGuestCount(booking.guests),
       });
 
       const draft = buildCheckoutDraft({
@@ -255,23 +260,39 @@ export function BookingSidebar({
       )}
 
       <div className="mt-3 overflow-hidden rounded-xl border border-border">
-        <TravellerPicker
-          value={booking.guests}
-          onChange={(guests) => setBooking((b) => ({ ...b, guests }))}
-        >
-          <button
-            type="button"
-            className="flex w-full items-center justify-between px-4 py-3 text-left text-sm"
-          >
-            <span className="flex items-center gap-2">
-              <Users className="size-4 text-muted-foreground" />
-              <span>
-                <span className="block text-xs text-muted-foreground">Guests</span>
-                <span className="font-medium text-foreground">{booking.guests}</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between px-4 py-3 text-left text-sm"
+            >
+              <span className="flex items-center gap-2">
+                <Users className="size-4 text-muted-foreground" />
+                <span>
+                  <span className="block text-xs text-muted-foreground">Guests</span>
+                  <span className="font-medium text-foreground">{booking.guests}</span>
+                </span>
               </span>
-            </span>
-          </button>
-        </TravellerPicker>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-44 p-2" align="start">
+            <Select
+              value={booking.guests}
+              onValueChange={(guests) => setBooking((b) => ({ ...b, guests }))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GUEST_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="mt-5 space-y-2.5 border-t border-border pt-4 text-sm">
@@ -329,10 +350,8 @@ function DateField({
   disabledBefore?: Date;
   className?: string;
 }) {
-  const [open, setOpen] = useState(false);
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -349,10 +368,7 @@ function DateField({
         <Calendar
           mode="single"
           selected={selected}
-          onSelect={(date) => {
-            onSelect(date);
-            setOpen(false);
-          }}
+          onSelect={onSelect}
           disabled={disabledBefore ? { before: disabledBefore } : undefined}
         />
       </PopoverContent>
