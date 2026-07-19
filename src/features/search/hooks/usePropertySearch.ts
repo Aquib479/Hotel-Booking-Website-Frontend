@@ -10,6 +10,7 @@ import {
   DEFAULT_PRICE_MAX,
   DEFAULT_PRICE_MIN,
 } from "../constants";
+import { resolvePropertyCoordinates } from "../map-coordinates";
 import type {
   CountFilter,
   FilterState,
@@ -56,6 +57,12 @@ const FALLBACK_IMAGE =
 function mapApiResultToProperty(result: SearchApiResult, slotType: string): Property {
   const h = result.hotel;
   const roomType = result.roomTypes[0] ?? "double";
+  const coords = resolvePropertyCoordinates({
+    id: h.id,
+    city: h.city ?? "",
+    latitude: h.latitude ?? null,
+    longitude: h.longitude ?? null,
+  });
 
   return {
     id: h.id,
@@ -73,8 +80,8 @@ function mapApiResultToProperty(result: SearchApiResult, slotType: string): Prop
     maxOccupancy: result.maxOccupancy,
     amenities: [],
     category: "all",
-    latitude: h.latitude ?? null,
-    longitude: h.longitude ?? null,
+    latitude: coords?.lat ?? null,
+    longitude: coords?.lng ?? null,
     distanceFromAirportKm: 0,
     slotDuration: slotType === "FULL_DAY" ? "24h" : "12h",
     timezone: "Asia/Jakarta",
@@ -145,8 +152,6 @@ function countActiveFilters(filters: FilterState): number {
   if (filters.maxOccupancy !== "any") count++;
   if (filters.amenities.length > 0) count++;
   if (filters.slotDuration !== "any") count++;
-  if (filters.maxAirportDistance !== "any") count++;
-  if (filters.category !== "all" && filters.category !== "resthalf-exclusive") count++;
   return count;
 }
 
@@ -161,7 +166,7 @@ export function usePropertySearch() {
       checkOut: parseDate(searchParams.get("checkOut")),
       restDate: parseDate(searchParams.get("restDate")),
       slot: (searchParams.get("slot") as RestSlot) ?? "12-24",
-      guests: searchParams.get("guests") ?? "2 adults",
+      guests: searchParams.get("guests") ?? "2 travellers",
     }),
     [searchParams]
   );
@@ -178,8 +183,10 @@ export function usePropertySearch() {
 
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-  const [apiProperties, setApiProperties] = useState<Property[] | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [apiProperties, setApiProperties] = useState<Property[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,6 +214,7 @@ export function usePropertySearch() {
     }
 
     setIsLoading(true);
+    setError(null);
 
     api
       .get<SearchApiResponse>(`/search?${params.toString()}`)
@@ -218,14 +226,23 @@ export function usePropertySearch() {
       })
       .catch(() => {
         if (cancelled) return;
-        setApiProperties(null);
+        setApiProperties([]);
+        setError("Failed to load hotels. Please try again.");
         setIsLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [query.location, query.mode, query.restDate, query.checkIn, query.slot, query.guests]);
+  }, [
+    query.location,
+    query.mode,
+    query.restDate,
+    query.checkIn,
+    query.slot,
+    query.guests,
+    reloadKey,
+  ]);
 
   const nights = useMemo(() => {
     if (query.mode === "rest") return 1;
@@ -279,7 +296,7 @@ export function usePropertySearch() {
     [query, updateParams]
   );
 
-  const sourceProperties = apiProperties ?? [];
+  const sourceProperties = apiProperties;
 
   const filteredProperties = useMemo(() => {
     let results = sourceProperties.filter((property) => {
@@ -425,7 +442,8 @@ export function usePropertySearch() {
     activeFilterCount,
     favorites,
     isLoading,
-    isUsingMockData: apiProperties === null,
+    error,
+    reload: () => setReloadKey((key) => key + 1),
     setQuery,
     setSort,
     setView,

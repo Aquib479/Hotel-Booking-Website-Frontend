@@ -1,13 +1,10 @@
 import { cn } from "@/lib/utils";
 import {
-  AIRPORT_DISTANCE_OPTIONS,
-  AMENITY_FILTER_OPTIONS,
   COUNT_OPTIONS,
   ROOM_TYPE_OPTIONS,
   SLOT_DURATION_OPTIONS,
   STAR_RATING_OPTIONS,
 } from "../constants";
-import type { AmenityFilter } from "@/lib/booking/types";
 import type { CountFilter, FilterState } from "../types";
 
 interface FilterPanelProps {
@@ -16,7 +13,6 @@ interface FilterPanelProps {
   mode: "rest" | "stay";
   onUpdate: (patch: Partial<FilterState>) => void;
   onClear: () => void;
-  onToggleAmenity: (amenity: AmenityFilter) => void;
 }
 
 function CountSelector({
@@ -62,7 +58,6 @@ export function FilterPanel({
   mode,
   onUpdate,
   onClear,
-  onToggleAmenity,
 }: FilterPanelProps) {
   return (
     <aside className="rounded-2xl border border-border bg-[#f9f9fb] p-5">
@@ -188,30 +183,6 @@ export function FilterPanel({
           onChange={(maxOccupancy) => onUpdate({ maxOccupancy })}
         />
 
-        <section>
-          <h4 className="mb-3 text-sm font-semibold text-foreground">Amenities</h4>
-          <div className="flex flex-wrap gap-2">
-            {AMENITY_FILTER_OPTIONS.map((amenity) => {
-              const isActive = filters.amenities.includes(amenity);
-              return (
-                <button
-                  key={amenity}
-                  type="button"
-                  onClick={() => onToggleAmenity(amenity)}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                    isActive
-                      ? "border-brand bg-brand/10 text-brand"
-                      : "border-border bg-white text-muted-foreground hover:border-brand/40"
-                  )}
-                >
-                  {amenity}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
         {mode === "rest" && (
           <section>
             <h4 className="mb-3 text-sm font-semibold text-foreground">Slot duration</h4>
@@ -246,27 +217,6 @@ export function FilterPanel({
             </div>
           </section>
         )}
-
-        <section>
-          <h4 className="mb-3 text-sm font-semibold text-foreground">Distance from airport</h4>
-          <div className="flex flex-col gap-2">
-            {AIRPORT_DISTANCE_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => onUpdate({ maxAirportDistance: option.value })}
-                className={cn(
-                  "rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors",
-                  filters.maxAirportDistance === option.value
-                    ? "border-brand bg-brand/10 text-brand"
-                    : "border-border bg-white text-muted-foreground hover:border-brand/40"
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </section>
       </div>
     </aside>
   );

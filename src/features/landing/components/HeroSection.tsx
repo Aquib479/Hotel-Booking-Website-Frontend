@@ -5,7 +5,7 @@ export function HeroSection() {
   return (
     <section
       id="home"
-      className="relative flex h-[calc(100dvh-4.25rem)] flex-col overflow-hidden"
+      className="relative flex min-h-[calc(100dvh-4.25rem)] flex-col overflow-x-hidden"
     >
       <div
         className="absolute inset-0 bg-gradient-to-br from-violet-50 via-white to-sky-50"
