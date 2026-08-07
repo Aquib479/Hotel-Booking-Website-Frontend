@@ -1,35 +1,10 @@
 import type { LocationSuggestion, SearchFormValues } from "./types";
-
-interface NominatimAddress {
-  city?: string;
-  town?: string;
-  village?: string;
-  state?: string;
-  region?: string;
-  country?: string;
-}
-
-interface NominatimResult {
-  place_id: number;
-  name?: string;
-  display_name: string;
-  address?: NominatimAddress;
-}
-
-const FALLBACK_LOCATIONS: LocationSuggestion[] = [
-  { id: "fb-bangalore", city: "Bangalore", state: "Karnataka", country: "India", label: "Bangalore, Karnataka, India" },
-  { id: "fb-mumbai", city: "Mumbai", state: "Maharashtra", country: "India", label: "Mumbai, Maharashtra, India" },
-  { id: "fb-delhi", city: "New Delhi", state: "Delhi", country: "India", label: "New Delhi, Delhi, India" },
-  { id: "fb-toronto", city: "Toronto", state: "Ontario", country: "Canada", label: "Toronto, Ontario, Canada" },
-  { id: "fb-london", city: "London", state: "England", country: "United Kingdom", label: "London, England, United Kingdom" },
-  { id: "fb-paris", city: "Paris", state: "Île-de-France", country: "France", label: "Paris, Île-de-France, France" },
-  { id: "fb-tokyo", city: "Tokyo", state: "Tokyo", country: "Japan", label: "Tokyo, Tokyo, Japan" },
-  { id: "fb-new-york", city: "New York", state: "New York", country: "United States", label: "New York, New York, United States" },
-  { id: "fb-dubai", city: "Dubai", state: "Dubai", country: "United Arab Emirates", label: "Dubai, Dubai, United Arab Emirates" },
-  { id: "fb-sydney", city: "Sydney", state: "New South Wales", country: "Australia", label: "Sydney, New South Wales, Australia" },
-  { id: "fb-zurich", city: "Zurich", state: "Zurich", country: "Switzerland", label: "Zurich, Zurich, Switzerland" },
-  { id: "fb-maldives", city: "Malé", state: "Kaafu Atoll", country: "Maldives", label: "Malé, Kaafu Atoll, Maldives" },
-];
+import type { LocationType } from "@/services/zentrumhub";
+import {
+  autosuggest,
+  isZentrumConfigured,
+  type LocationSuggestionZh,
+} from "@/services/zentrumhub";
 
 export const GUEST_OPTIONS = [
   "1 adult",
@@ -39,31 +14,40 @@ export const GUEST_OPTIONS = [
   "3+ adults",
 ] as const;
 
-export const DEFAULT_LOCATION: LocationSuggestion = FALLBACK_LOCATIONS[0];
-
+/** Hydrate a location from a URL city string (not used as a suggestion source). */
 export function toLocationSuggestion(city: string): LocationSuggestion {
-  const match = FALLBACK_LOCATIONS.find(
-    (loc) =>
-      loc.city.toLowerCase() === city.toLowerCase() ||
-      loc.label.toLowerCase().includes(city.toLowerCase())
-  );
-
-  if (match) return match;
-
+  const trimmed = city.trim();
   return {
-    id: `query-${city}`,
-    city,
+    id: trimmed,
+    city: trimmed,
     country: "",
-    label: city,
+    label: trimmed,
   };
 }
 
 export function buildSearchParams(values: SearchFormValues): URLSearchParams {
   const params: Record<string, string> = {
-    location: values.location.city,
-    guests: values.guests,
     mode: values.mode,
   };
+
+  const locationLabel = values.location.city || values.location.label;
+  if (locationLabel) params.location = locationLabel;
+  if (values.guests) params.guests = values.guests;
+  if (values.rooms != null && values.rooms > 0) params.rooms = String(values.rooms);
+  if (values.adults != null && values.adults > 0) params.adults = String(values.adults);
+  if (values.children != null && values.children >= 0) {
+    params.children = String(values.children);
+  }
+
+  if (values.location.id) params.locationId = values.location.id;
+  if (values.location.type) params.locationType = values.location.type;
+  if (values.location.referenceId) params.referenceId = values.location.referenceId;
+  if (values.location.coordinates) {
+    params.lat = String(values.location.coordinates.lat);
+    params.lng = String(values.location.coordinates.long);
+  }
+  if (values.location.country) params.country = values.location.country;
+  if (values.location.state) params.state = values.location.state;
 
   if (values.mode === "stay") {
     if (values.checkIn) params.checkIn = values.checkIn.toISOString();
@@ -76,78 +60,34 @@ export function buildSearchParams(values: SearchFormValues): URLSearchParams {
   return new URLSearchParams(params);
 }
 
-function formatSuggestion(result: NominatimResult): LocationSuggestion | null {
-  const address = result.address;
-  if (!address?.country) return null;
+function mapZentrumSuggestion(item: LocationSuggestionZh): LocationSuggestion | null {
+  const label = item.fullName || item.name;
+  if (!label) return null;
 
-  const city =
-    address.city ??
-    address.town ??
-    address.village ??
-    result.name ??
-    result.display_name.split(",")[0]?.trim();
-
-  if (!city) return null;
-
-  const state = address.state ?? address.region;
-  const country = address.country;
-  const label = [city, state, country].filter(Boolean).join(", ");
-
-  return { id: String(result.place_id), city, state, country, label };
+  return {
+    id: item.id || item.referenceId || label,
+    label,
+    city: item.city || item.name || label,
+    state: item.state ?? undefined,
+    country: item.country || "",
+    type: item.type as LocationType | undefined,
+    referenceId: item.referenceId,
+    coordinates: item.coordinates,
+  };
 }
 
-function filterFallback(query: string): LocationSuggestion[] {
-  const q = query.trim().toLowerCase();
-  if (q.length < 2) return [];
-
-  return FALLBACK_LOCATIONS.filter(
-    (loc) =>
-      loc.city.toLowerCase().includes(q) ||
-      loc.state?.toLowerCase().includes(q) ||
-      loc.country.toLowerCase().includes(q) ||
-      loc.label.toLowerCase().includes(q)
-  );
-}
-
+/** Location suggestions come only from ZentrumHub autosuggest. */
 export async function searchLocations(query: string): Promise<LocationSuggestion[]> {
   const trimmed = query.trim();
-  if (trimmed.length < 2) return [];
+  if (trimmed.length < 3) return [];
 
-  const fallback = filterFallback(trimmed);
-
-  try {
-    const params = new URLSearchParams({
-      q: trimmed,
-      format: "json",
-      addressdetails: "1",
-      limit: "8",
-    });
-
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?${params.toString()}`,
-      { headers: { "Accept-Language": "en" } }
-    );
-
-    if (!response.ok) return fallback;
-
-    const data = (await response.json()) as NominatimResult[];
-    const remote = data
-      .map(formatSuggestion)
-      .filter((item): item is LocationSuggestion => item !== null);
-
-    const seen = new Set<string>();
-    const merged: LocationSuggestion[] = [];
-
-    for (const item of [...fallback, ...remote]) {
-      const key = item.label.toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
-        merged.push(item);
-      }
-    }
-
-    return merged.slice(0, 8);
-  } catch {
-    return fallback;
+  if (!isZentrumConfigured()) {
+    throw new Error("ZentrumHub credentials are required for location search");
   }
+
+  const { data } = await autosuggest(trimmed, { size: 10 });
+  return (data.locationSuggestions ?? [])
+    .map(mapZentrumSuggestion)
+    .filter((item): item is LocationSuggestion => item !== null)
+    .slice(0, 10);
 }

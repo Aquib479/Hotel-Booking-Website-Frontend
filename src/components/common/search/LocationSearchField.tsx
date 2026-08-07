@@ -11,7 +11,7 @@ import { searchLocations } from "./location-api";
 import type { LocationSuggestion, SearchPanelVariant } from "./types";
 
 interface LocationSearchFieldProps {
-  value: LocationSuggestion;
+  value: LocationSuggestion | null;
   onChange: (location: LocationSuggestion) => void;
   variant?: SearchPanelVariant;
   label?: string;
@@ -20,8 +20,10 @@ interface LocationSearchFieldProps {
 const fieldStyles: Record<SearchPanelVariant, string> = {
   hero: "rounded-2xl px-4 py-3 hover:bg-black/5 sm:px-5",
   page: "px-4 py-3 hover:bg-muted/50 sm:px-5",
-  landing: "w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-left hover:border-brand/30",
+  landing: "w-full rounded-xl bg-muted/50 px-3 py-3 text-left hover:bg-muted/80",
 };
+
+const MIN_QUERY_LENGTH = 3;
 
 export function LocationSearchField({
   value,
@@ -33,27 +35,38 @@ export function LocationSearchField({
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debouncedQuery = useDebounce(query, 350);
 
   useEffect(() => {
     if (!open) return;
 
-    if (debouncedQuery.trim().length < 2) {
+    if (debouncedQuery.trim().length < MIN_QUERY_LENGTH) {
       setSuggestions([]);
       setLoading(false);
+      setError(null);
       return;
     }
 
     let cancelled = false;
     setLoading(true);
+    setError(null);
 
-    searchLocations(debouncedQuery).then((results) => {
-      if (!cancelled) {
-        setSuggestions(results);
-        setLoading(false);
-      }
-    });
+    searchLocations(debouncedQuery)
+      .then((results) => {
+        if (!cancelled) {
+          setSuggestions(results);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setSuggestions([]);
+          setLoading(false);
+          setError(err instanceof Error ? err.message : "Failed to load locations");
+        }
+      });
 
     return () => {
       cancelled = true;
@@ -65,6 +78,7 @@ export function LocationSearchField({
     if (next) {
       setQuery("");
       setSuggestions([]);
+      setError(null);
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   };
@@ -74,7 +88,11 @@ export function LocationSearchField({
     setOpen(false);
     setQuery("");
     setSuggestions([]);
+    setError(null);
   };
+
+  const trimmedQuery = query.trim();
+  const showLabel = Boolean(label);
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -82,21 +100,29 @@ export function LocationSearchField({
         <button
           type="button"
           className={cn(
-            "flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left transition-colors",
+            "flex min-w-0 w-full max-w-full flex-1 overflow-hidden text-left transition-colors",
+            showLabel ? "flex-col items-start gap-0.5" : "flex-row items-center gap-2",
             fieldStyles[variant],
           )}
         >
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="size-3.5" />
-            {label}
-          </span>
+          {showLabel ? (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="size-3.5 shrink-0" />
+              {label}
+            </span>
+          ) : (
+            <MapPin className="size-4 shrink-0 text-muted-foreground" />
+          )}
           <span
             className={cn(
-              "truncate font-semibold text-foreground",
+              "min-w-0 flex-1 truncate",
               variant === "hero" ? "text-sm sm:text-base" : "text-sm",
+              value?.city || value?.label
+                ? "font-semibold text-foreground"
+                : "font-medium text-muted-foreground"
             )}
           >
-            {value.city}
+            {value?.label || value?.city || "Where to?"}
           </span>
         </button>
       </PopoverTrigger>
@@ -110,7 +136,7 @@ export function LocationSearchField({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search city, state or country..."
+              placeholder="Type at least 3 characters..."
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             {loading && (
@@ -120,17 +146,24 @@ export function LocationSearchField({
         </div>
 
         <ul className="max-h-64 overflow-y-auto p-1">
-          {query.trim().length < 2 && (
+          {trimmedQuery.length < MIN_QUERY_LENGTH && (
             <li className="p-3 text-center text-sm text-muted-foreground">
-              Search location by city, state or country.
+              Type at least {MIN_QUERY_LENGTH} characters to search locations.
             </li>
           )}
 
-          {query.trim().length >= 2 && !loading && suggestions.length === 0 && (
-            <li className="px-3 py-6 text-center text-sm text-muted-foreground">
-              No locations found. Try a different spelling.
-            </li>
+          {error && (
+            <li className="px-3 py-6 text-center text-sm text-red-600">{error}</li>
           )}
+
+          {!error &&
+            trimmedQuery.length >= MIN_QUERY_LENGTH &&
+            !loading &&
+            suggestions.length === 0 && (
+              <li className="px-3 py-6 text-center text-sm text-muted-foreground">
+                No locations found. Try a different spelling.
+              </li>
+            )}
 
           {suggestions.map((item) => (
             <li key={item.id}>
@@ -139,14 +172,14 @@ export function LocationSearchField({
                 onClick={() => handleSelect(item)}
                 className={cn(
                   "flex w-full flex-col items-start rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted",
-                  value.id === item.id && "bg-muted",
+                  value?.id === item.id && "bg-muted",
                 )}
               >
                 <span className="text-sm font-medium text-foreground">
-                  {item.city}
+                  {item.label || item.city}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {[item.state, item.country].filter(Boolean).join(", ")}
+                  {[item.type, item.state, item.country].filter(Boolean).join(" · ")}
                 </span>
               </button>
             </li>

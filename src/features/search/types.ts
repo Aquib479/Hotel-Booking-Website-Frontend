@@ -29,11 +29,18 @@ export interface Property {
   rating: number;
   starRating: number;
   lane: BookingLane;
-  /** Cached guest USD rate; wholesale values are derived from supplier quote + markup */
+  /**
+   * Nightly (or slot) amount in `priceCurrency` when set by the supplier/API.
+   * For ZentrumHub wholesale, this is the live amount in the search currency — do not FX-convert for display.
+   */
+  priceAmount?: number;
+  /** ISO currency for `priceAmount` (from ZentrumHub / supplier). */
+  priceCurrency?: string;
+  /** Legacy/cached USD estimate — used for RestHalf-direct fallbacks and older paths */
   priceUsd: number;
   /** Direct slot rate in IDR (12h base) */
   priceIdr: number;
-  /** Supplier quote used to derive wholesale guest price (FX → markup → display) */
+  /** Supplier quote used to derive wholesale guest price (FX → markup → display) — prefer priceAmount when present */
   wholesalePricing?: WholesaleQuote;
   roomType: RoomType;
   maxOccupancy: number;
@@ -59,13 +66,27 @@ export interface SearchQuery {
   restDate?: Date;
   slot?: RestSlot;
   guests: string;
+  rooms?: number;
+  adults?: number;
+  children?: number;
+  /** ZentrumHub destination metadata from URL */
+  locationId?: string;
+  locationType?: string;
+  referenceId?: string;
+  lat?: number;
+  lng?: number;
+  country?: string;
+  state?: string;
 }
 
 export interface FilterState {
   priceMin: number;
   priceMax: number;
   lane: LaneFilter;
-  starRating: CountFilter;
+  /** Empty = any. Multi-select OR of exact star counts (2–5). */
+  starRatings: number[];
+  /** Minimum guest review score; "any" = no filter. */
+  guestRatingMin: number | "any";
   roomType: RoomType | "any";
   maxOccupancy: CountFilter;
   amenities: AmenityFilter[];

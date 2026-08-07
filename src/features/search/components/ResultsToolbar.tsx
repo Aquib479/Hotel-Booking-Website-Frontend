@@ -35,9 +35,17 @@ export function ResultsToolbar({
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <h2 className="text-lg font-semibold text-foreground sm:text-xl">
-        Found {totalResults} {mode === "rest" ? "rest slots" : "stays"} near{" "}
-        <span className="font-bold">{location}</span>
+      <h2 className="min-w-0 flex-1 text-lg font-semibold text-foreground sm:text-xl">
+        {location.trim()
+          ? (
+              <>
+                Found {totalResults} {mode === "rest" ? "rest slots" : "stays"} near{" "}
+                <span className="inline max-w-full font-bold [overflow-wrap:anywhere] sm:truncate sm:inline-block sm:max-w-[min(100%,28rem)] sm:align-bottom sm:[overflow-wrap:normal]">
+                  {location}
+                </span>
+              </>
+            )
+          : "Search hotels"}
       </h2>
 
       <div className="flex flex-wrap items-center gap-3">

@@ -1,30 +1,50 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Loader2, Search, Users } from "lucide-react";
+import { addMonths, startOfDay } from "date-fns";
+import {
+  CalendarDays,
+  ChevronDown,
+  Loader2,
+  Search,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { RestStayToggle } from "@/components/common/RestStayToggle";
+import { BookingDateRangeCalendar } from "@/components/common/BookingDateRangeCalendar";
 import { SlotPicker } from "@/components/common/SlotPicker";
-import { TravellerPicker, formatTravellersLabel, DEFAULT_TRAVELLER_SELECTION } from "@/components/common/travellers";
+import {
+  OccupancyPicker,
+  formatOccupancyLabel,
+  parseOccupancyLabel,
+  type OccupancySelection,
+} from "@/components/common/OccupancyPicker";
 import {
   getAvailableSlots,
   resolveSlotSelection,
   slotUnavailableMessage,
 } from "@/lib/booking/availability";
 import type { BookingMode, RestSlot } from "@/lib/booking/types";
-import { getTimezoneForCity, getEarliestSelectableRestDate } from "@/lib/booking/timezone";
+import {
+  getTimezoneForCity,
+  getEarliestSelectableRestDate,
+} from "@/lib/booking/timezone";
 import { cn } from "@/lib/utils";
 import { LocationSearchField } from "./LocationSearchField";
-import {
-  DEFAULT_LOCATION,
-  toLocationSuggestion,
-} from "./location-api";
-import type { LocationSuggestion, SearchFormValues, SearchPanelVariant } from "./types";
+import { toLocationSuggestion } from "./location-api";
+import type {
+  LocationSuggestion,
+  SearchFormValues,
+  SearchPanelVariant,
+} from "./types";
 
 interface SearchPanelProps {
   variant?: SearchPanelVariant;
   submitLabel?: string;
-  initialLocation?: string | LocationSuggestion;
+  initialLocation?: string | LocationSuggestion | null;
   initialMode?: BookingMode;
   initialCheckIn?: Date;
   initialCheckOut?: Date;
@@ -34,17 +54,22 @@ interface SearchPanelProps {
   onSubmit: (values: SearchFormValues) => void | Promise<void>;
 }
 
-const DEFAULT_GUESTS_LABEL = formatTravellersLabel(DEFAULT_TRAVELLER_SELECTION);
-
 const fieldStyles: Record<SearchPanelVariant, string> = {
   hero: "rounded-2xl px-4 py-3 hover:bg-black/5 sm:px-5",
   page: "px-4 py-3 hover:bg-muted/50 sm:px-5",
-  landing: "w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-left hover:border-brand/30",
+  landing:
+    "w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-left hover:border-brand/30",
 };
 
-function resolveLocation(initial?: string | LocationSuggestion): LocationSuggestion {
-  if (!initial) return DEFAULT_LOCATION;
-  if (typeof initial === "string") return toLocationSuggestion(initial);
+function resolveLocation(
+  initial?: string | LocationSuggestion | null,
+): LocationSuggestion | null {
+  if (!initial) return null;
+  if (typeof initial === "string") {
+    if (!initial.trim()) return null;
+    return toLocationSuggestion(initial);
+  }
+  if (!initial.city?.trim() && !initial.label?.trim()) return null;
   return initial;
 }
 
@@ -60,10 +85,11 @@ function DateField({
   value: string;
   selected?: Date;
   onSelect: (date: Date | undefined) => void;
-  disabled?: { before: Date };
+  disabled?: { before: Date; after?: Date };
   variant: SearchPanelVariant;
 }) {
   const [open, setOpen] = useState(false);
+  const isPlaceholder = value === "Add date";
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -72,7 +98,7 @@ function DateField({
           type="button"
           className={cn(
             "flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left transition-colors",
-            fieldStyles[variant]
+            fieldStyles[variant],
           )}
         >
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -81,8 +107,11 @@ function DateField({
           </span>
           <span
             className={cn(
-              "truncate font-semibold text-foreground",
-              variant === "hero" ? "text-sm sm:text-base" : "text-sm"
+              "truncate",
+              variant === "hero" ? "text-sm sm:text-base" : "text-sm",
+              isPlaceholder
+                ? "font-medium text-muted-foreground"
+                : "font-semibold text-foreground",
             )}
           >
             {value}
@@ -104,40 +133,56 @@ function DateField({
   );
 }
 
-function GuestField({
-  label,
-  value,
+function StayDateRangeField({
+  checkIn,
+  checkOut,
   onChange,
   variant,
 }: {
-  label: string;
-  value: string;
-  onChange: (guests: string) => void;
+  checkIn?: Date;
+  checkOut?: Date;
+  onChange: (range: { checkIn?: Date; checkOut?: Date }) => void;
   variant: SearchPanelVariant;
 }) {
+  const label =
+    checkIn && checkOut
+      ? `${checkIn.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })} - ${checkOut.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}`
+      : checkIn
+        ? `${checkIn.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })} - Add checkout`
+        : "Add dates";
+
   return (
-    <TravellerPicker value={value} onChange={onChange}>
-      <button
-        type="button"
-        className={cn(
-          "flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left transition-colors",
-          fieldStyles[variant]
-        )}
-      >
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Users className="size-3.5" />
-          {label}
-        </span>
-        <span
+    <BookingDateRangeCalendar
+      checkIn={checkIn}
+      checkOut={checkOut}
+      onChange={onChange}
+      className="min-w-0 flex-[1.4]"
+      trigger={
+        <button
+          type="button"
           className={cn(
-            "truncate font-semibold text-foreground",
-            variant === "hero" ? "text-sm sm:text-base" : "text-sm"
+            "flex w-full min-w-0 flex-col items-start gap-0.5 overflow-hidden text-left transition-colors",
+            fieldStyles[variant]
           )}
         >
-          {value}
-        </span>
-      </button>
-    </TravellerPicker>
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CalendarDays className="size-3.5" />
+            Dates
+          </span>
+          <span
+            className={cn(
+              "w-full truncate",
+              variant === "hero" ? "text-sm sm:text-base" : "text-sm",
+              checkIn && checkOut
+                ? "font-semibold text-foreground"
+                : "font-medium text-muted-foreground"
+            )}
+          >
+            {label}
+          </span>
+        </button>
+      }
+    />
   );
 }
 
@@ -153,30 +198,31 @@ export function SearchPanel({
   initialGuests,
   onSubmit,
 }: SearchPanelProps) {
-  const [location, setLocation] = useState<LocationSuggestion>(() =>
-    resolveLocation(initialLocation)
+  const [location, setLocation] = useState<LocationSuggestion | null>(() =>
+    resolveLocation(initialLocation),
   );
   const [mode, setMode] = useState<BookingMode>(initialMode ?? "stay");
-  const [checkIn, setCheckIn] = useState<Date | undefined>(
-    initialCheckIn ?? new Date(2025, 11, 19)
-  );
-  const [checkOut, setCheckOut] = useState<Date | undefined>(
-    initialCheckOut ?? new Date(2026, 0, 2)
-  );
-  const [restDate, setRestDate] = useState<Date | undefined>(
-    initialRestDate ?? new Date()
-  );
+  const [checkIn, setCheckIn] = useState<Date | undefined>(initialCheckIn);
+  const [checkOut, setCheckOut] = useState<Date | undefined>(initialCheckOut);
+  const [restDate, setRestDate] = useState<Date | undefined>(initialRestDate);
   const [slot, setSlot] = useState<RestSlot>(initialSlot ?? "12-24");
-  const [guests, setGuests] = useState<string>(initialGuests ?? DEFAULT_GUESTS_LABEL);
+  const [occupancy, setOccupancy] = useState<OccupancySelection>(() =>
+    initialGuests
+      ? parseOccupancyLabel(initialGuests)
+      : { rooms: 1, adults: 2, children: 0 },
+  );
   const [isLoading, setIsLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [slotError, setSlotError] = useState<string | null>(null);
 
   const isHero = variant === "hero";
   const isLanding = variant === "landing";
   const locationLabel = isHero || isLanding ? "Location" : "Where";
-  const guestLabel = isHero || isLanding ? "Guests" : "Guests";
   const isRest = mode === "rest";
-  const searchTimezone = getTimezoneForCity(location.city, location.country);
+  const searchTimezone = getTimezoneForCity(
+    location?.city ?? "",
+    location?.country ?? "",
+  );
 
   useEffect(() => {
     if (mode !== "rest" || !restDate) return;
@@ -187,11 +233,11 @@ export function SearchPanel({
   useEffect(() => {
     setLocation(resolveLocation(initialLocation));
     if (initialMode) setMode(initialMode);
-    if (initialCheckIn) setCheckIn(initialCheckIn);
-    if (initialCheckOut) setCheckOut(initialCheckOut);
-    if (initialRestDate) setRestDate(initialRestDate);
+    setCheckIn(initialCheckIn);
+    setCheckOut(initialCheckOut);
+    setRestDate(initialRestDate);
     if (initialSlot) setSlot(initialSlot);
-    if (initialGuests) setGuests(initialGuests);
+    if (initialGuests) setOccupancy(parseOccupancyLabel(initialGuests));
   }, [
     initialLocation,
     initialMode,
@@ -204,17 +250,35 @@ export function SearchPanel({
 
   const formatDate = (date?: Date) =>
     date
-      ? date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })
-      : "Select date";
+      ? date.toLocaleDateString(undefined, {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : "Add date";
 
   const handleSubmit = async () => {
     if (isLoading) return;
 
+    if (!location || !(location.city || location.label).trim()) {
+      setFormError("Please select a location");
+      return;
+    }
+    if (occupancy.adults < 1) {
+      setFormError("Please add guests");
+      return;
+    }
+
     if (isRest) {
-      if (!restDate) return;
+      if (!restDate) {
+        setFormError("Please select a rest date");
+        return;
+      }
       const available = getAvailableSlots(restDate, searchTimezone);
       if (available.length === 0) {
-        setSlotError("No bookable slots on this date. Please choose another day.");
+        setSlotError(
+          "No bookable slots on this date. Please choose another day.",
+        );
         return;
       }
       const resolved = resolveSlotSelection(slot, restDate, searchTimezone);
@@ -224,8 +288,18 @@ export function SearchPanel({
       }
       if (resolved !== slot) setSlot(resolved);
       setSlotError(null);
+    } else {
+      if (!checkIn || !checkOut) {
+        setFormError("Please select check-in and check-out dates");
+        return;
+      }
+      if (checkOut <= checkIn) {
+        setFormError("Check-out must be after check-in");
+        return;
+      }
     }
 
+    setFormError(null);
     setIsLoading(true);
 
     try {
@@ -233,106 +307,88 @@ export function SearchPanel({
         onSubmit({
           location,
           mode,
-          guests,
+          guests: formatOccupancyLabel(occupancy),
+          rooms: occupancy.rooms,
+          adults: occupancy.adults,
+          children: occupancy.children,
           ...(isRest
-            ? { restDate, slot: resolveSlotSelection(slot, restDate!, searchTimezone) ?? slot }
+            ? {
+                restDate,
+                slot:
+                  resolveSlotSelection(slot, restDate!, searchTimezone) ?? slot,
+              }
             : { checkIn, checkOut }),
-        })
+        }),
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <div className={cn("flex w-full flex-col gap-3", isHero ? "mx-auto max-w-5xl" : "")}>
-      <div className={cn("flex", isHero || isLanding ? "justify-start" : "justify-start")}>
-        <RestStayToggle value={mode} onChange={setMode} size={isHero ? "md" : "sm"} />
-      </div>
+  const peopleButton = (
+    <OccupancyPicker value={occupancy} onChange={setOccupancy}>
+      <button
+        type="button"
+        className={cn(
+          "flex min-w-0 flex-1 flex-col items-start gap-0.5 overflow-hidden text-left transition-colors",
+          fieldStyles[variant],
+        )}
+      >
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Users className="size-3.5" />
+          People
+        </span>
+        <span
+          className={cn(
+            "flex w-full items-center gap-1 truncate",
+            variant === "hero" ? "text-sm sm:text-base" : "text-sm",
+            "font-semibold text-foreground",
+          )}
+        >
+          <span className="truncate">{formatOccupancyLabel(occupancy)}</span>
+          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+        </span>
+      </button>
+    </OccupancyPicker>
+  );
 
+  return (
+    <div
+      className={cn(
+        "flex w-full flex-col gap-3",
+        isHero ? "mx-auto max-w-5xl" : "",
+      )}
+    >
       <div
         className={cn(
           isLanding
             ? "flex w-full flex-col gap-3"
             : cn(
-                "flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-0",
+                "flex w-full min-w-0 flex-col gap-3 overflow-visible sm:flex-row sm:items-center sm:gap-0",
                 isHero
                   ? "rounded-full bg-white p-2 shadow-2xl shadow-black/10 sm:p-2.5"
-                  : "rounded-2xl border border-border bg-white p-2 shadow-sm lg:flex-row lg:items-center"
-              )
+                  : "rounded-xl border border-border bg-white p-2 shadow-sm lg:flex-row lg:items-center",
+              ),
         )}
       >
-        {isLanding ? (
-          <>
-            <LocationSearchField
-              value={location}
-              onChange={setLocation}
-              variant={variant}
-              label={locationLabel}
-            />
-            {isRest ? (
-              <>
-                <DateField
-                  label="Rest date"
-                  value={formatDate(restDate)}
-                  selected={restDate}
-                  onSelect={(date) => {
-                    setRestDate(date);
-                    setSlotError(null);
-                  }}
-                  disabled={{ before: getEarliestSelectableRestDate(searchTimezone) }}
-                  variant={variant}
-                />
-                <SlotPicker
-                  value={slot}
-                  onChange={(next) => {
-                    setSlot(next);
-                    setSlotError(null);
-                  }}
-                  restDate={restDate}
-                  hotelTimezone={searchTimezone}
-                  triggerClassName={fieldStyles[variant]}
-                />
-              </>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <DateField
-                  label="Check-in"
-                  value={formatDate(checkIn)}
-                  selected={checkIn}
-                  onSelect={setCheckIn}
-                  variant={variant}
-                />
-                <DateField
-                  label="Check-out"
-                  value={formatDate(checkOut)}
-                  selected={checkOut}
-                  onSelect={setCheckOut}
-                  disabled={{ before: checkIn ?? new Date() }}
-                  variant={variant}
-                />
-              </div>
-            )}
-            <GuestField label={guestLabel} value={guests} onChange={setGuests} variant={variant} />
-            <Button
-              onClick={handleSubmit}
-              disabled={isLoading}
-              className="mt-1 h-12 w-full rounded-xl bg-brand text-base font-semibold text-white hover:bg-brand/90"
-            >
-              {isLoading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-              {isLoading ? "Searching..." : submitLabel}
-            </Button>
-          </>
-        ) : (
-          <>
         <LocationSearchField
           value={location}
-          onChange={setLocation}
+          onChange={(next) => {
+            setLocation(next);
+            setFormError(null);
+          }}
           variant={variant}
           label={locationLabel}
         />
 
-        <div className={cn("hidden w-px bg-border", isHero ? "h-10 sm:block" : "h-12 lg:block")} />
+        {!isLanding && (
+          <div
+            className={cn(
+              "hidden w-px bg-border",
+              isHero ? "h-10 sm:block" : "h-12 lg:block",
+            )}
+          />
+        )}
 
         {isRest ? (
           <>
@@ -343,15 +399,22 @@ export function SearchPanel({
               onSelect={(date) => {
                 setRestDate(date);
                 setSlotError(null);
+                setFormError(null);
               }}
-              disabled={{ before: getEarliestSelectableRestDate(searchTimezone) }}
+              disabled={{
+                before: getEarliestSelectableRestDate(searchTimezone),
+                after: addMonths(startOfDay(new Date()), 6),
+              }}
               variant={variant}
             />
-
-            <div
-              className={cn("hidden w-px bg-border", isHero ? "h-10 sm:block" : "h-12 lg:block")}
-            />
-
+            {!isLanding && (
+              <div
+                className={cn(
+                  "hidden w-px bg-border",
+                  isHero ? "h-10 sm:block" : "h-12 lg:block",
+                )}
+              />
+            )}
             <SlotPicker
               value={slot}
               onChange={(next) => {
@@ -364,56 +427,60 @@ export function SearchPanel({
             />
           </>
         ) : (
-          <>
-            <DateField
-              label={isHero ? "Check in" : "Check-in"}
-              value={formatDate(checkIn)}
-              selected={checkIn}
-              onSelect={setCheckIn}
-              variant={variant}
-            />
-
-            <div
-              className={cn("hidden w-px bg-border", isHero ? "h-10 sm:block" : "h-12 lg:block")}
-            />
-
-            <DateField
-              label={isHero ? "Check out" : "Check-out"}
-              value={formatDate(checkOut)}
-              selected={checkOut}
-              onSelect={setCheckOut}
-              disabled={{ before: checkIn ?? new Date() }}
-              variant={variant}
-            />
-          </>
+          <StayDateRangeField
+            checkIn={checkIn}
+            checkOut={checkOut}
+            onChange={({ checkIn: nextIn, checkOut: nextOut }) => {
+              setCheckIn(nextIn);
+              setCheckOut(nextOut);
+              setFormError(null);
+            }}
+            variant={variant}
+          />
         )}
 
-        <div className={cn("hidden w-px bg-border", isHero ? "h-10 sm:block" : "h-12 lg:block")} />
+        {!isLanding && (
+          <div
+            className={cn(
+              "hidden w-px bg-border",
+              isHero ? "h-10 sm:block" : "h-12 lg:block",
+            )}
+          />
+        )}
 
-        <GuestField label={guestLabel} value={guests} onChange={setGuests} variant={variant} />
+        {peopleButton}
 
         <Button
           onClick={handleSubmit}
           disabled={isLoading}
           className={cn(
-            "h-12 shrink-0 px-6 text-base font-medium sm:ml-1 sm:h-14",
-            isHero
-              ? "rounded-full bg-foreground text-background hover:bg-foreground/90 sm:px-10"
-              : "rounded-xl bg-brand text-white hover:bg-brand/90 lg:px-8"
+            isLanding
+              ? "mt-1 h-12 w-full rounded-xl bg-brand text-base font-semibold text-white hover:bg-brand/90"
+              : cn(
+                  "h-12 shrink-0 px-6 text-base font-medium sm:ml-1 sm:h-14",
+                  isHero
+                    ? "rounded-full bg-foreground text-background hover:bg-foreground/90 sm:px-10"
+                    : "rounded-xl bg-brand text-white hover:bg-brand/90 lg:px-8",
+                ),
           )}
         >
           {isLoading ? (
             <Loader2 className="mr-2 size-4 animate-spin" />
-          ) : !isHero ? (
+          ) : !isHero && !isLanding ? (
             <Search className="mr-2 size-4" />
           ) : null}
           {isLoading ? "Searching..." : submitLabel}
         </Button>
-          </>
-        )}
       </div>
+      {formError && (
+        <p className="px-2 text-center text-xs text-red-600 sm:text-left">
+          {formError}
+        </p>
+      )}
       {slotError && isRest && (
-        <p className="px-2 text-center text-xs text-red-600 sm:text-left">{slotError}</p>
+        <p className="px-2 text-center text-xs text-red-600 sm:text-left">
+          {slotError}
+        </p>
       )}
     </div>
   );

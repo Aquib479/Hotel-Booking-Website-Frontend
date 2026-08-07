@@ -6,6 +6,7 @@ import { ExternalLink, Heart, MapPin, Star, X, Zap } from "lucide-react";
 import { LaneBadge } from "@/components/common/LaneBadge";
 import { PriceDisplay } from "@/components/common/PriceDisplay";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useFavoritesStore } from "@/store";
 import { cn } from "@/lib/utils";
 import { resolvePropertyCoordinates } from "../map-coordinates";
 import type { Property } from "../types";
@@ -16,8 +17,6 @@ interface SearchMapViewProps {
   searchParams: string;
   mode: "rest" | "stay";
   nights: number;
-  favorites: Set<string>;
-  onToggleFavorite: (id: string) => void;
 }
 
 interface MappedProperty extends Property {
@@ -133,19 +132,17 @@ function MapHotelCard({
   property,
   mode,
   nights,
-  isFavorite,
   searchParams,
   onClose,
-  onToggleFavorite,
 }: {
   property: MappedProperty;
   mode: "rest" | "stay";
   nights: number;
-  isFavorite: boolean;
   searchParams: string;
   onClose: () => void;
-  onToggleFavorite: (id: string) => void;
 }) {
+  const isFavorite = useFavoritesStore((s) => Boolean(s.items[property.id]));
+  const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const isDirect = property.lane === "direct";
   const detailUrl = `/properties/${property.id}${searchParams ? `?${searchParams}` : ""}`;
   const hasFreeCancellation = property.amenities.includes("Free cancellation");
@@ -174,11 +171,11 @@ function MapHotelCard({
       <div className="absolute right-2.5 top-2.5 z-20 flex items-center gap-1.5">
         <button
           type="button"
-          aria-label={isFavorite ? "Remove from wishlist" : "Add to wishlist"}
+          aria-label={isFavorite ? "Remove from favourites" : "Add to favourites"}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            onToggleFavorite(property.id);
+            toggleFavorite(property);
           }}
           className="flex size-8 items-center justify-center rounded-full bg-white/95 text-foreground shadow-[0_2px_8px_rgba(15,23,42,0.12)] backdrop-blur-sm transition hover:scale-105 hover:bg-white"
         >
@@ -253,6 +250,8 @@ function MapHotelCard({
               priceUsd={property.priceUsd}
               priceIdr={property.priceIdr}
               wholesalePricing={property.wholesalePricing}
+              priceAmount={property.priceAmount}
+              priceCurrency={property.priceCurrency}
               mode={mode}
               slotDuration={property.slotDuration}
               showUnit={false}
@@ -323,8 +322,6 @@ export function SearchMapView({
   searchParams,
   mode,
   nights,
-  favorites,
-  onToggleFavorite,
 }: SearchMapViewProps) {
   const { formatLanePrice } = useCurrency();
   const [selectedId, setSelectedId] = useState<string>("");
@@ -461,10 +458,8 @@ export function SearchMapView({
             property={selectedProperty}
             mode={mode}
             nights={nights}
-            isFavorite={favorites.has(selectedProperty.id)}
             searchParams={searchParams}
             onClose={() => setSelectedId("")}
-            onToggleFavorite={onToggleFavorite}
           />
         </div>
       ) : null}

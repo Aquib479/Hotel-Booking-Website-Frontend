@@ -1,6 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCurrency } from "@/context/CurrencyContext";
+import { convertBetween } from "@/lib/currency/format";
+import type { CurrencyCode } from "@/lib/currency/types";
+import { CURRENCIES } from "@/lib/currency/types";
 import { useAuth } from "@/features/auth/context/AuthProvider";
 import { confirmBooking, releaseBooking as releaseBookingHold } from "../api";
 import { useCheckoutDraft } from "../hooks/useCheckoutDraft";
@@ -19,6 +22,11 @@ import { usePaymentMethodSelection } from "../components/DirectPaymentMethods";
 
 const GUEST_CHECKOUT_KEY = "resthalf-checkout-guest-mode";
 
+function toCurrencyCode(code: string | undefined): CurrencyCode {
+  const upper = (code || "USD").toUpperCase();
+  return CURRENCIES.some((c) => c.code === upper) ? (upper as CurrencyCode) : "USD";
+}
+
 function readGuestMode(): boolean {
   try {
     return sessionStorage.getItem(GUEST_CHECKOUT_KEY) === "1";
@@ -30,8 +38,8 @@ function readGuestMode(): boolean {
 export function CheckoutPage() {
   const [searchParams] = useSearchParams();
   const { isAuthenticated, user } = useAuth();
-  const { draft, isExpired, clearDraft } = useCheckoutDraft();
-  const { format: formatCurrency } = useCurrency();
+  const { draft, isExpired, clearDraft, saveDraft } = useCheckoutDraft();
+  const { currency, format: formatCurrency } = useCurrency();
   const form = useCheckoutForm(
     user
       ? {
@@ -51,7 +59,10 @@ export function CheckoutPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [guestMode, setGuestMode] = useState(() => readGuestMode() || isAuthenticated);
 
-  const totalPrice = draft?.totalPrice ?? 0;
+  const totalPrice =
+    draft?.totalPrice != null && draft.totalPrice > 0
+      ? convertBetween(draft.totalPrice, toCurrencyCode(draft.currency), currency)
+      : 0;
   const payAmountLabel = formatCurrency(totalPrice);
 
   const disabledReason = useMemo(() => {
@@ -123,12 +134,90 @@ export function CheckoutPage() {
   const handleWholesaleContinue = useCallback(async () => {
     if (!form.validateForm() || !termsAccepted || !draft) return;
     setIsSubmitting(true);
+    setPaymentError(null);
     try {
+      if (draft.source === "zentrumhub") {
+        const { useBookingStore, useHotelStore } = await import("@/store");
+        const booking = useBookingStore.getState();
+
+        const priced = await booking.runPricing();
+        if (!priced && useBookingStore.getState().status === "error") {
+          setPaymentError(useBookingStore.getState().error ?? "Pricing failed");
+          return;
+        }
+
+        const [firstName, ...rest] = form.values.fullName.trim().split(/\s+/);
+        const lastName = rest.join(" ") || firstName;
+        const guest = {
+          type: "Adult",
+          firstName,
+          lastName,
+          email: form.values.email,
+          contactNumber: `${form.values.phoneCountryCode}${form.values.phoneNumber}`,
+        };
+
+        const roomId =
+          draft.roomId ||
+          useHotelStore.getState().selected?.roomId ||
+          "";
+        if (!roomId) {
+          setPaymentError(
+            "Missing roomId for this rate. Please go back and select the room again."
+          );
+          return;
+        }
+
+        const rateId = draft.rateIds?.[0] || useHotelStore.getState().selected?.rateIds?.[0];
+        if (!rateId) {
+          setPaymentError("Missing rateId. Please go back and select a rate again.");
+          return;
+        }
+
+        const bookBody = {
+          rateIds: draft.rateIds ?? [rateId],
+          roomsAllocations: [
+            {
+              roomId,
+              rateId,
+              guests: [guest],
+            },
+          ],
+          billingContact: guest,
+          totalRate: useBookingStore.getState().price?.totalRate ?? draft.totalPrice ?? 0,
+          loggedInUserEmail: form.values.email,
+          guestNames: form.values.fullName,
+          specialRequests: form.values.specialRequests
+            ? [form.values.specialRequests]
+            : undefined,
+          travelPurpose: "Leisure" as const,
+        };
+
+        await booking.runBookInit(bookBody);
+        const confirmation = await booking.runBook(bookBody);
+        const bookingId =
+          confirmation?.bookingId ||
+          useBookingStore.getState().details?.bookingId ||
+          useBookingStore.getState().hold?.bookingId;
+
+        if (!bookingId) {
+          setPaymentError(
+            useBookingStore.getState().error ?? "Booking completed without an ID. Check Kibana logs."
+          );
+          return;
+        }
+
+        clearDraft();
+        navigate(`/bookings/${bookingId}/confirmation`);
+        return;
+      }
+
       await new Promise((r) => setTimeout(r, 800));
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Booking failed");
     } finally {
       setIsSubmitting(false);
     }
-  }, [draft, form, termsAccepted]);
+  }, [draft, form, termsAccepted, clearDraft, navigate]);
 
   const handleCtaClick = useCallback(() => {
     if (draft?.lane === "direct" && selectedMethod) {
@@ -161,7 +250,13 @@ export function CheckoutPage() {
 
   return (
     <CheckoutLayout
-      summary={<BookingSummaryCard draft={draft} onHoldExpire={handleHoldExpire} />}
+      summary={
+        <BookingSummaryCard
+          draft={draft}
+          onHoldExpire={handleHoldExpire}
+          onDraftChange={saveDraft}
+        />
+      }
       stickyCta={
         showGuestPrompt ? undefined : (
         <CheckoutCTA

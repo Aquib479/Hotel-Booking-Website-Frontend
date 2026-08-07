@@ -34,7 +34,7 @@ export function SectionCard({
   titleClassName,
 }: SectionCardProps) {
   return (
-    <Card size={size} className={cn("shadow-sm", className)}>
+    <Card size={size} className={cn("shadow-xs rounded-xl", className)}>
       <CardHeader>
         <CardTitle
           className={cn(

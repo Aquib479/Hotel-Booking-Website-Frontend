@@ -12,7 +12,7 @@ import type { BookingLane, SlotDuration } from "@/lib/booking/types";
 import { formatPrice, type WholesaleQuote } from "@/lib/currency/format";
 import { getDisplayAmount, getPriceUnit } from "@/lib/currency/pricing";
 import type { CurrencyCode } from "@/lib/currency/types";
-import { CURRENCIES } from "@/lib/currency/types";
+import { CURRENCIES, DEFAULT_CURRENCY } from "@/lib/currency/types";
 
 const STORAGE_KEY = "resthalf-currency";
 
@@ -27,7 +27,9 @@ interface CurrencyContextValue {
     priceIdr: number,
     mode?: "rest" | "stay",
     wholesalePricing?: WholesaleQuote,
-    slotDuration?: SlotDuration
+    slotDuration?: SlotDuration,
+    priceAmount?: number,
+    priceCurrency?: string
   ) => { amount: string; unit: string };
 }
 
@@ -40,7 +42,7 @@ function readStoredCurrency(): CurrencyCode {
   } catch {
     /* ignore */
   }
-  return "USD";
+  return DEFAULT_CURRENCY;
 }
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
@@ -89,17 +91,28 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         priceIdr,
         mode = "stay",
         wholesalePricing,
-        slotDuration = "12h"
+        slotDuration = "12h",
+        priceAmount,
+        priceCurrency
       ) => {
         const display = getDisplayAmount(
           lane,
           priceUsd,
           priceIdr,
           currency,
-          wholesalePricing
+          wholesalePricing,
+          priceAmount,
+          priceCurrency
         );
+        // When API already returned the guest currency, format in that currency.
+        const formatAs =
+          priceAmount != null &&
+          priceCurrency &&
+          priceCurrency.toUpperCase() === currency
+            ? currency
+            : currency;
         return {
-          amount: formatPrice(display, currency),
+          amount: formatPrice(display, formatAs),
           unit: getPriceUnit(lane, mode, slotDuration),
         };
       },

@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Home from "@/pages/Home";
 import SearchResults from "@/pages/SearchResults";
 import HotelDetails from "@/pages/HotelDetails";
+import Favourites from "@/pages/Favourites";
 import { Checkout } from "@/pages/Checkout";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
@@ -49,6 +50,7 @@ export default function App() {
               <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/search" element={<SearchResults />} />
+              <Route path="/favourites" element={<Favourites />} />
               <Route path="/properties/:id" element={<HotelDetails />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/bookings" element={<Bookings />} />

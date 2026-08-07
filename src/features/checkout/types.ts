@@ -15,6 +15,8 @@ export interface CheckoutHotelMeta {
   country: string;
   imageUrl: string;
   starRating: number;
+  rating?: number;
+  reviewCount?: number;
 }
 
 export interface CheckoutDraft {
@@ -37,6 +39,21 @@ export interface CheckoutDraft {
   totalPrice?: number;
   hotelMeta?: CheckoutHotelMeta;
   createdAt: string;
+  /** ZentrumHub booking session */
+  source?: "resthalf" | "zentrumhub";
+  recommendationId?: string;
+  rateIds?: string[];
+  roomName?: string;
+  boardBasis?: string | null;
+  refundable?: boolean | null;
+  cancellationText?: string | null;
+  bedSummary?: string | null;
+  maxGuests?: number | null;
+  roomTypeLabel?: string | null;
+  /** Number of rooms booked (1–9). */
+  rooms?: number;
+  roomFacilities?: string[];
+  roomImageUrl?: string | null;
 }
 
 export interface GuestDetailsValues {

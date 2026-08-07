@@ -85,7 +85,7 @@ export function SearchPagination({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {[6, 9, 12, 18].map((n) => (
+            {[10, 20, 30, 40].map((n) => (
               <SelectItem key={n} value={String(n)}>
                 {n}
               </SelectItem>

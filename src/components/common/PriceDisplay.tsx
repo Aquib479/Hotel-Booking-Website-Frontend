@@ -8,6 +8,9 @@ interface PriceDisplayProps {
   priceUsd: number;
   priceIdr: number;
   wholesalePricing?: WholesaleQuote;
+  /** Live API nightly/slot amount (preferred over FX conversion). */
+  priceAmount?: number;
+  priceCurrency?: string;
   mode?: "rest" | "stay";
   slotDuration?: SlotDuration;
   className?: string;
@@ -21,6 +24,8 @@ export function PriceDisplay({
   priceUsd,
   priceIdr,
   wholesalePricing,
+  priceAmount,
+  priceCurrency,
   mode = "stay",
   slotDuration = "12h",
   className,
@@ -35,7 +40,9 @@ export function PriceDisplay({
     priceIdr,
     mode,
     wholesalePricing,
-    slotDuration
+    slotDuration,
+    priceAmount,
+    priceCurrency
   );
 
   return (

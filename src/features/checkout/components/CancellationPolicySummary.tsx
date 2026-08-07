@@ -18,7 +18,7 @@ export function CancellationPolicySummary({ lane, supplierName }: CancellationPo
   const { headline, bullets } = getCancellationPolicySummary(lane, supplierName);
 
   return (
-    <Card>
+    <Card className="rounded-xl shadow-xs">
       <CardHeader className="pb-0">
         <CardTitle className="text-sm">Cancellation policy</CardTitle>
         <p className="text-sm text-muted-foreground">{headline}</p>

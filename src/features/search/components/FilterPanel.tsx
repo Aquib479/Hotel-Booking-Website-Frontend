@@ -1,11 +1,20 @@
-import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useCurrency } from "@/context/CurrencyContext";
 import {
   COUNT_OPTIONS,
   ROOM_TYPE_OPTIONS,
   SLOT_DURATION_OPTIONS,
   STAR_RATING_OPTIONS,
 } from "../constants";
-import type { CountFilter, FilterState } from "../types";
+import type { FilterState, LaneFilter } from "../types";
+import type { RoomType, SlotDuration } from "@/lib/booking/types";
 
 interface FilterPanelProps {
   filters: FilterState;
@@ -15,39 +24,88 @@ interface FilterPanelProps {
   onClear: () => void;
 }
 
-function CountSelector({
+function FilterSelect({
   label,
   value,
   onChange,
+  options,
 }: {
   label: string;
-  value: CountFilter;
-  onChange: (value: CountFilter) => void;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
 }) {
   return (
-    <div>
-      <p className="mb-2 text-sm font-medium text-foreground">{label}</p>
-      <div className="flex flex-wrap gap-2">
-        {COUNT_OPTIONS.map((option) => {
-          const parsed = option === "any" ? "any" : option === "5+" ? 5 : Number(option);
-          const isActive = value === parsed;
-          return (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onChange(parsed as CountFilter)}
-              className={cn(
-                "size-9 rounded-full border text-sm font-medium transition-colors",
-                isActive
-                  ? "border-brand bg-brand/10 text-brand"
-                  : "border-border bg-white text-muted-foreground hover:border-brand/40"
-              )}
-            >
-              {option}
-            </button>
-          );
-        })}
-      </div>
+    <div className="min-w-[140px] flex-1">
+      <p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-10 w-full rounded-lg border-border bg-white">
+          <SelectValue placeholder={label} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+/** Editable number field that allows clearing "0" while typing. */
+function PriceInput({
+  label,
+  value,
+  min,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  min?: number;
+  onCommit: (next: number) => void;
+}) {
+  const [text, setText] = useState(String(value));
+
+  useEffect(() => {
+    setText(String(value));
+  }, [value]);
+
+  return (
+    <div className="min-w-[120px] flex-1">
+      <p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={text}
+        onChange={(e) => {
+          const raw = e.target.value.replace(/[^\d.]/g, "");
+          if (raw === "" || raw === ".") {
+            setText(raw);
+            return;
+          }
+          if (!/^\d*\.?\d*$/.test(raw)) return;
+          setText(raw);
+          const n = Number(raw);
+          if (!Number.isFinite(n)) return;
+          const clamped = min != null ? Math.max(min, n) : Math.max(0, n);
+          onCommit(clamped);
+        }}
+        onBlur={() => {
+          if (text === "" || text === "." || !Number.isFinite(Number(text))) {
+            const fallback = min ?? 0;
+            setText(String(fallback));
+            onCommit(fallback);
+            return;
+          }
+          const n = Number(text);
+          const clamped = min != null ? Math.max(min, n) : Math.max(0, n);
+          setText(String(clamped));
+          onCommit(clamped);
+        }}
+        className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm font-medium outline-none focus:border-brand"
+      />
     </div>
   );
 }
@@ -59,10 +117,28 @@ export function FilterPanel({
   onUpdate,
   onClear,
 }: FilterPanelProps) {
+  const { currency, currencies } = useCurrency();
+  const currencyMeta = currencies.find((c) => c.code === currency);
+  const currencyLabel = `${currencyMeta?.code ?? currency}${
+    currencyMeta?.symbol ? ` (${currencyMeta.symbol})` : ""
+  }`;
+
+  const laneOptions =
+    mode === "stay"
+      ? [
+          { value: "all", label: "All" },
+          { value: "wholesale", label: "Partner rates" },
+        ]
+      : [
+          { value: "all", label: "All" },
+          { value: "direct", label: "RestHalf Exclusive" },
+          { value: "wholesale", label: "Partner rates" },
+        ];
+
   return (
-    <aside className="rounded-2xl border border-border bg-[#f9f9fb] p-5">
-      <div className="mb-5 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">Filters</h3>
+    <div className="mt-4 rounded-2xl border border-border bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-foreground">Filters</h3>
         {activeFilterCount > 0 && (
           <button
             type="button"
@@ -74,150 +150,84 @@ export function FilterPanel({
         )}
       </div>
 
-      <div className="space-y-6">
-        <section>
-          <h4 className="mb-3 text-sm font-semibold text-foreground">Booking lane</h4>
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                { value: "all" as const, label: "All" },
-                { value: "direct" as const, label: "RestHalf Exclusive" },
-                { value: "wholesale" as const, label: "Partner rates" },
-              ] as const
-            ).map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => onUpdate({ lane: option.value })}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                  filters.lane === option.value
-                    ? "border-brand bg-brand/10 text-brand"
-                    : "border-border bg-white text-muted-foreground hover:border-brand/40"
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </section>
+      <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
+        <FilterSelect
+          label="Booking lane"
+          value={filters.lane}
+          onChange={(v) => onUpdate({ lane: v as LaneFilter })}
+          options={laneOptions}
+        />
 
-        <section>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Min price (USD)
-              </label>
-              <input
-                type="number"
-                value={filters.priceMin}
-                min={0}
-                onChange={(e) => onUpdate({ priceMin: Number(e.target.value) })}
-                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Max price (USD)
-              </label>
-              <input
-                type="number"
-                value={filters.priceMax}
-                min={filters.priceMin}
-                onChange={(e) => onUpdate({ priceMax: Number(e.target.value) })}
-                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium outline-none"
-              />
-            </div>
-          </div>
-        </section>
+        <PriceInput
+          label={`Min price (${currencyLabel})`}
+          value={filters.priceMin}
+          onCommit={(priceMin) => onUpdate({ priceMin })}
+        />
 
-        <section>
-          <h4 className="mb-3 text-sm font-semibold text-foreground">Star rating</h4>
-          <div className="flex flex-wrap gap-2">
-            {STAR_RATING_OPTIONS.map((option) => {
-              const parsed = option === "any" ? "any" : Number(option);
-              const isActive = filters.starRating === parsed;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => onUpdate({ starRating: parsed as CountFilter })}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                    isActive
-                      ? "border-brand bg-brand/10 text-brand"
-                      : "border-border bg-white text-muted-foreground hover:border-brand/40"
-                  )}
-                >
-                  {option === "any" ? "Any" : `${option}+ stars`}
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <PriceInput
+          label={`Max price (${currencyLabel})`}
+          value={filters.priceMax}
+          min={filters.priceMin}
+          onCommit={(priceMax) => onUpdate({ priceMax })}
+        />
 
-        <section>
-          <h4 className="mb-3 text-sm font-semibold text-foreground">Room type</h4>
-          <div className="flex flex-wrap gap-2">
-            {ROOM_TYPE_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => onUpdate({ roomType: option.value })}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-xs font-medium capitalize transition-colors",
-                  filters.roomType === option.value
-                    ? "border-brand bg-brand/10 text-brand"
-                    : "border-border bg-white text-muted-foreground hover:border-brand/40"
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </section>
+        <FilterSelect
+          label="Star rating"
+          value={
+            filters.starRatings.length === 1
+              ? String(filters.starRatings[0])
+              : "any"
+          }
+          onChange={(v) =>
+            onUpdate({
+              starRatings: v === "any" ? [] : [Number(v)],
+            })
+          }
+          options={STAR_RATING_OPTIONS.map((option) => ({
+            value: option,
+            label: option === "any" ? "Any" : `${option}+ stars`,
+          }))}
+        />
 
-        <CountSelector
+        <FilterSelect
+          label="Room type"
+          value={filters.roomType}
+          onChange={(v) => onUpdate({ roomType: v as RoomType | "any" })}
+          options={ROOM_TYPE_OPTIONS.map((option) => ({
+            value: option.value,
+            label: option.label,
+          }))}
+        />
+
+        <FilterSelect
           label="Max occupancy"
-          value={filters.maxOccupancy}
-          onChange={(maxOccupancy) => onUpdate({ maxOccupancy })}
+          value={String(filters.maxOccupancy)}
+          onChange={(v) =>
+            onUpdate({
+              maxOccupancy: (v === "any" ? "any" : v === "5" ? 5 : Number(v)) as FilterState["maxOccupancy"],
+            })
+          }
+          options={COUNT_OPTIONS.map((option) => ({
+            value: option === "5+" ? "5" : option,
+            label: option === "any" ? "Any" : option,
+          }))}
         />
 
         {mode === "rest" && (
-          <section>
-            <h4 className="mb-3 text-sm font-semibold text-foreground">Slot duration</h4>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => onUpdate({ slotDuration: "any" })}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                  filters.slotDuration === "any"
-                    ? "border-brand bg-brand/10 text-brand"
-                    : "border-border bg-white text-muted-foreground hover:border-brand/40"
-                )}
-              >
-                Any
-              </button>
-              {SLOT_DURATION_OPTIONS.map((duration) => (
-                <button
-                  key={duration}
-                  type="button"
-                  onClick={() => onUpdate({ slotDuration: duration })}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                    filters.slotDuration === duration
-                      ? "border-brand bg-brand/10 text-brand"
-                      : "border-border bg-white text-muted-foreground hover:border-brand/40"
-                  )}
-                >
-                  {duration}
-                </button>
-              ))}
-            </div>
-          </section>
+          <FilterSelect
+            label="Slot duration"
+            value={filters.slotDuration}
+            onChange={(v) => onUpdate({ slotDuration: v as SlotDuration | "any" })}
+            options={[
+              { value: "any", label: "Any" },
+              ...SLOT_DURATION_OPTIONS.map((duration) => ({
+                value: duration,
+                label: duration,
+              })),
+            ]}
+          />
         )}
       </div>
-    </aside>
+    </div>
   );
 }

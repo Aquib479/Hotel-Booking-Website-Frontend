@@ -1,6 +1,6 @@
 export const SITE_NAV_LINKS = [
   { label: "Home", href: "/" },
-  { label: "Find Hotels", href: "/search" },
+  { label: "Favourites", href: "/favourites" },
   { label: "Help", href: "/faq" },
   { label: "Contact", href: "/contact" },
 ] as const;

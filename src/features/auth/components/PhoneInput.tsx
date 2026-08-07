@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/context/CurrencyContext";
 import { PHONE_COUNTRY_CODES, getDefaultPhoneCountryCode } from "@/lib/phone/constants";
-import { FormMessage } from "@/components/common/form";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -69,7 +68,6 @@ export function PhoneInput({
           Used for WhatsApp booking confirmations
         </p>
       )}
-      {touched && error && <FormMessage error={error} />}
     </div>
   );
 }

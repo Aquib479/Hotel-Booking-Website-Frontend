@@ -11,9 +11,19 @@ export function LocationMap({ latitude, longitude, address }: LocationMapProps) 
   const osmLink = `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=15/${latitude}/${longitude}`;
 
   return (
-    <section className="mt-10 space-y-4">
-      <h2 className="text-lg font-semibold text-foreground">Where you&apos;ll be</h2>
-      <div className="overflow-hidden rounded-2xl border border-border">
+    <section className="space-y-3">
+      <div className="flex items-end justify-between gap-3">
+        <h2 className="text-lg font-semibold text-foreground">Where you&apos;ll be</h2>
+        <a
+          href={osmLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm font-medium text-brand hover:underline"
+        >
+          View on map
+        </a>
+      </div>
+      <div className="overflow-hidden rounded-2xl border border-border shadow-sm shadow-black/[0.03]">
         <iframe
           title={`Map showing ${address}`}
           src={src}
@@ -22,17 +32,7 @@ export function LocationMap({ latitude, longitude, address }: LocationMapProps) 
           referrerPolicy="no-referrer"
         />
       </div>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{address}</p>
-        <a
-          href={osmLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-primary hover:underline"
-        >
-          View larger map
-        </a>
-      </div>
+      <p className="text-sm text-muted-foreground">{address}</p>
     </section>
   );
 }
