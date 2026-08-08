@@ -1,7 +1,6 @@
 import type { BookingLane, SlotDuration } from "@/lib/booking/types";
 import type { WholesaleQuote } from "@/lib/currency/format";
 import {
-  convertBetween,
   convertFromIdrPrecise,
   convertFromUsd,
   convertFromUsdPrecise,
@@ -19,8 +18,9 @@ export function toSupportedCurrency(code: string | undefined | null): CurrencyCo
 
 /**
  * Guest-facing amount in `currency`.
- * Prefer live API `priceAmount`+`priceCurrency` (no manual FX) when present.
- * RestHalf-direct still converts from IDR with local rates.
+ * Prefer live API `priceAmount`+`priceCurrency` (never client-FX those amounts —
+ * callers should format with `priceCurrency`).
+ * RestHalf-direct still converts from IDR with local rates when no API amount.
  */
 export function getDisplayAmount(
   lane: BookingLane,
@@ -31,16 +31,8 @@ export function getDisplayAmount(
   priceAmount?: number,
   priceCurrency?: string
 ): number {
-  if (
-    priceAmount != null &&
-    priceAmount > 0 &&
-    priceCurrency &&
-    (lane === "wholesale" || Boolean(priceCurrency))
-  ) {
-    const from = toSupportedCurrency(priceCurrency);
-    if (from === currency) return roundForDisplay(priceAmount);
-    // Mismatch should be rare after currency-scoped search; convert only as safety net.
-    return convertBetween(priceAmount, from, currency);
+  if (priceAmount != null && priceAmount > 0 && priceCurrency) {
+    return roundForDisplay(priceAmount);
   }
 
   if (lane === "direct") {

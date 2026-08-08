@@ -173,7 +173,7 @@ export function BookingSidebar({
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-white p-5 shadow-lg shadow-black/5">
+    <div className="rounded-md border border-border bg-white p-5 shadow-lg shadow-black/5">
       {isDualMode && onModeChange && (
         <div className="mb-4">
           <RestStayToggle value={mode} onChange={onModeChange} size="sm" />

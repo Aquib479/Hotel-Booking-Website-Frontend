@@ -4,7 +4,7 @@ export function BookingDetailSkeleton() {
       <div className="h-4 w-32 rounded bg-muted" />
       <div className="h-8 w-2/3 rounded bg-muted" />
       <div className="h-16 rounded-xl bg-muted" />
-      <div className="rounded-2xl border border-border p-5">
+      <div className="rounded-md border border-border p-5">
         <div className="flex gap-4">
           <div className="size-20 rounded-xl bg-muted" />
           <div className="flex-1 space-y-2">

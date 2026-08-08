@@ -10,7 +10,7 @@ import {
 import { useSearchParams } from "react-router-dom";
 import type { BookingLane, SlotDuration } from "@/lib/booking/types";
 import { formatPrice, type WholesaleQuote } from "@/lib/currency/format";
-import { getDisplayAmount, getPriceUnit } from "@/lib/currency/pricing";
+import { getDisplayAmount, getPriceUnit, toSupportedCurrency } from "@/lib/currency/pricing";
 import type { CurrencyCode } from "@/lib/currency/types";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@/lib/currency/types";
 
@@ -104,12 +104,10 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
           priceAmount,
           priceCurrency
         );
-        // When API already returned the guest currency, format in that currency.
+        // API amounts must be formatted in the API currency (no client FX).
         const formatAs =
-          priceAmount != null &&
-          priceCurrency &&
-          priceCurrency.toUpperCase() === currency
-            ? currency
+          priceAmount != null && priceAmount > 0 && priceCurrency
+            ? toSupportedCurrency(priceCurrency)
             : currency;
         return {
           amount: formatPrice(display, formatAs),

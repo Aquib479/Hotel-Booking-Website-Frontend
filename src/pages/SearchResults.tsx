@@ -49,6 +49,8 @@ export default function SearchResults() {
         }),
   }).toString();
 
+  // Reset window only when the search/filter context changes — not when
+  // more hotels stream in from availability polling.
   useEffect(() => {
     setVisibleCount(INFINITE_SCROLL_PAGE_SIZE);
     setLoadingMore(false);
@@ -57,31 +59,68 @@ export default function SearchResults() {
     lastScrollTop.current = 0;
   }, [
     search.filters,
+    search.nameQuery,
     search.sort,
     search.query.location,
     search.query.checkIn,
     search.query.checkOut,
     search.query.restDate,
     search.query.mode,
-    search.totalResults,
   ]);
 
+  // Keep visible window valid as the loaded list grows (without resetting to page 1).
+  useEffect(() => {
+    setVisibleCount((count) => {
+      if (search.loadedResults === 0) return INFINITE_SCROLL_PAGE_SIZE;
+      return Math.min(
+        Math.max(count, INFINITE_SCROLL_PAGE_SIZE),
+        search.loadedResults,
+      );
+    });
+  }, [search.loadedResults]);
+
   const visibleProperties = search.filteredProperties.slice(0, visibleCount);
-  const hasMore = visibleCount < search.filteredProperties.length;
+  const hasMoreLoaded = visibleCount < search.loadedResults;
+  const waitingForStream =
+    search.isStreamingResults && visibleCount >= search.loadedResults;
+  const hasMore = hasMoreLoaded || search.isStreamingResults;
 
   const loadMore = useCallback(() => {
-    if (!hasMore || loadingMore) return;
-    setLoadingMore(true);
-    window.setTimeout(() => {
-      setVisibleCount((count) =>
-        Math.min(
-          count + INFINITE_SCROLL_PAGE_SIZE,
-          search.filteredProperties.length
-        )
-      );
+    if (loadingMore) return;
+
+    if (hasMoreLoaded) {
+      setLoadingMore(true);
+      window.setTimeout(() => {
+        setVisibleCount((count) =>
+          Math.min(count + INFINITE_SCROLL_PAGE_SIZE, search.loadedResults),
+        );
+        setLoadingMore(false);
+      }, 280);
+      return;
+    }
+
+    // At end of currently loaded hotels while suppliers are still streaming —
+    // keep skeleton visible; new hotels append into the list below.
+    if (waitingForStream) {
+      setLoadingMore(true);
+    }
+  }, [
+    hasMoreLoaded,
+    loadingMore,
+    search.loadedResults,
+    waitingForStream,
+  ]);
+
+  // Clear "waiting for stream" skeleton once more hotels arrive or search ends.
+  useEffect(() => {
+    if (!search.isStreamingResults) {
       setLoadingMore(false);
-    }, 350);
-  }, [hasMore, loadingMore, search.filteredProperties.length]);
+      return;
+    }
+    if (search.loadedResults > visibleCount) {
+      setLoadingMore(false);
+    }
+  }, [search.isStreamingResults, search.loadedResults, visibleCount]);
 
   useEffect(() => {
     const node = sentinelRef.current;
@@ -94,7 +133,7 @@ export default function SearchResults() {
           loadMore();
         }
       },
-      { root, rootMargin: "240px", threshold: 0 }
+      { root, rootMargin: "240px", threshold: 0 },
     );
 
     observer.observe(node);
@@ -125,6 +164,20 @@ export default function SearchResults() {
     return () => root.removeEventListener("scroll", onScroll);
   }, []);
 
+  const showTrailingSkeleton =
+    loadingMore || waitingForStream || (search.isLoading && search.totalResults > 0);
+
+  const skeletonCount = (() => {
+    if (search.isLoading && search.loadedResults === 0) {
+      return Math.min(9, Math.max(6, search.totalResults || 9));
+    }
+    const remaining =
+      search.totalResults > search.loadedResults
+        ? search.totalResults - Math.max(visibleCount, search.loadedResults)
+        : 0;
+    return Math.min(3, Math.max(remaining || 3, 3));
+  })();
+
   const filterSidebar = (
     <SearchFilterSidebar
       filters={search.filters}
@@ -144,7 +197,7 @@ export default function SearchResults() {
         <div
           className={cn(
             "overflow-hidden transition-[max-height,opacity] duration-300 ease-out",
-            hideNavbar ? "max-h-0 opacity-0" : "max-h-20 opacity-100"
+            hideNavbar ? "max-h-0 opacity-0" : "max-h-20 opacity-100",
           )}
         >
           <SiteNavbar variant="inline" />
@@ -175,9 +228,12 @@ export default function SearchResults() {
                 <ResultsToolbar
                   location={search.query.location}
                   totalResults={search.totalResults}
+                  isStreaming={search.isStreamingResults || search.isLoading}
                   mode={search.query.mode}
                   sort={search.sort}
                   view={search.view}
+                  nameQuery={search.nameQuery}
+                  onNameQueryChange={search.setNameQuery}
                   onSortChange={search.setSort}
                   onViewChange={search.setView}
                 />
@@ -215,7 +271,7 @@ export default function SearchResults() {
 
             <div className="pb-10">
               {!search.hasSearchCriteria ? (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-white py-20 text-center">
+                <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border bg-white py-20 text-center">
                   <p className="text-lg font-semibold text-foreground">
                     Start your search
                   </p>
@@ -224,18 +280,8 @@ export default function SearchResults() {
                     hotels.
                   </p>
                 </div>
-              ) : search.isLoading ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="size-4 animate-spin text-brand" />
-                    {search.useZentrum
-                      ? "Searching hotels across suppliers..."
-                      : "Loading hotels..."}
-                  </div>
-                  <PropertyGridSkeleton count={9} />
-                </div>
-              ) : search.error ? (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-white py-20 text-center">
+              ) : search.error && search.loadedResults === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border bg-white py-20 text-center">
                   <p className="text-lg font-semibold text-foreground">
                     Unable to load hotels
                   </p>
@@ -251,42 +297,67 @@ export default function SearchResults() {
                   </Button>
                 </div>
               ) : search.view === "card" ? (
-                visibleProperties.length > 0 ? (
-                  <>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                      {visibleProperties.map((property) => (
-                        <PropertyCard
-                          key={property.id}
-                          property={property}
-                          mode={search.query.mode}
-                          nights={search.nights}
-                          searchParams={detailSearchParams}
-                          compact
-                        />
-                      ))}
+                search.isLoading && search.loadedResults === 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="size-4 animate-spin text-brand" />
+                      {search.useZentrum
+                        ? search.totalResults > 0
+                          ? `Loading ${search.totalResults} hotels…`
+                          : "Searching hotels across suppliers…"
+                        : "Loading hotels..."}
                     </div>
+                    <PropertyGridSkeleton count={skeletonCount} />
+                  </div>
+                ) : visibleProperties.length > 0 || showTrailingSkeleton ? (
+                  <>
+                    {visibleProperties.length > 0 ? (
+                      <div className="flex flex-col gap-4">
+                        {visibleProperties.map((property) => (
+                          <PropertyCard
+                            key={property.id}
+                            property={property}
+                            mode={search.query.mode}
+                            nights={search.nights}
+                            searchParams={detailSearchParams}
+                            guestsLabel={search.query.guests}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
 
-                    {loadingMore ? (
-                      <div className="mt-4">
-                        <PropertyGridSkeleton count={3} />
+                    {showTrailingSkeleton ? (
+                      <div className="mt-4 space-y-3">
+                        {(search.isStreamingResults || loadingMore) && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="size-4 animate-spin text-brand" />
+                            Loading more hotels…
+                          </div>
+                        )}
+                        <PropertyGridSkeleton count={skeletonCount} />
                       </div>
                     ) : null}
 
                     <div ref={sentinelRef} className="h-8 w-full" aria-hidden />
 
-                    {!hasMore ? (
+                    {!hasMore && search.loadedResults > 0 ? (
                       <p className="mt-2 text-center text-xs text-muted-foreground">
-                        Showing all {search.totalResults} results
+                        Showing all {search.loadedResults} results
+                        {search.totalResults > search.loadedResults
+                          ? ` of ${search.totalResults}`
+                          : ""}
                       </p>
                     ) : null}
                   </>
                 ) : (
-                  <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-white py-20 text-center">
+                  <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border bg-white py-20 text-center">
                     <p className="text-lg font-semibold text-foreground">
                       No hotels found
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Try adjusting your filters or search location.
+                      {search.nameQuery.trim()
+                        ? `No hotels match “${search.nameQuery.trim()}”. Try a different name or clear the search.`
+                        : "Try adjusting your filters or search location."}
                     </p>
                   </div>
                 )

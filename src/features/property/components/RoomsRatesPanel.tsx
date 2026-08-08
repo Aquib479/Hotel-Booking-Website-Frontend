@@ -1,20 +1,22 @@
 import { useState } from "react";
 import {
-  Bath,
   BedDouble,
   Camera,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Cigarette,
   CigaretteOff,
   Coffee,
   CreditCard,
+  Eye,
   Loader2,
   Maximize2,
+  ParkingSquare,
+  Tag,
   Users,
   Wifi,
-  Wind,
   XCircle,
   Zap,
   type LucideIcon,
@@ -32,28 +34,144 @@ import {
   type DisplayRoomGroup,
 } from "../utils/roomsRatesDisplay";
 
-type RateFilter = "all" | "breakfast" | "refundable" | "nonrefundable";
+/** Filters derived from rooms/rates payload — only shown when options exist. */
+type RoomFilterId =
+  | "breakfast"
+  | "roomOnly"
+  | "refundable"
+  | "parking"
+  | "wifi"
+  | "payAtHotel"
+  | "deal"
+  | "cityView"
+  | "twinBed"
+  | "doubleBed"
+  | "nonSmoking";
 
-const FILTERS: Array<{ id: RateFilter; label: string }> = [
-  { id: "all", label: "All options" },
-  { id: "breakfast", label: "Breakfast included" },
-  { id: "refundable", label: "Free cancellation" },
+type RoomFilterDef = {
+  id: RoomFilterId;
+  label: string;
+  /** Rate-level vs room-level */
+  scope: "rate" | "room";
+};
+
+const FILTER_DEFS: RoomFilterDef[] = [
+  { id: "breakfast", label: "Breakfast included", scope: "rate" },
+  { id: "roomOnly", label: "Room only", scope: "rate" },
+  { id: "refundable", label: "Free cancellation", scope: "rate" },
+  { id: "parking", label: "Free parking", scope: "rate" },
+  { id: "wifi", label: "Free WiFi", scope: "rate" },
+  { id: "payAtHotel", label: "Pay at hotel", scope: "rate" },
+  { id: "deal", label: "Deals & promotions", scope: "rate" },
+  { id: "cityView", label: "City view", scope: "room" },
+  { id: "twinBed", label: "Twin beds", scope: "room" },
+  { id: "doubleBed", label: "Double / Queen", scope: "room" },
+  { id: "nonSmoking", label: "Non-smoking", scope: "room" },
 ];
 
 const DEFAULT_VISIBLE_RATES = 2;
-
-function matchesFilter(option: DisplayRateOption, filter: RateFilter) {
-  if (filter === "all") return true;
-  const board = option.boardBasisLabel.toLowerCase();
-  if (filter === "breakfast") {
-    return /breakfast|bb|half.?board|full.?board|all.?inclusive/.test(board);
-  }
-  if (filter === "refundable") return option.refundable;
-  return !option.refundable;
-}
+const PREVIEW_FACILITY_COUNT = 8;
 
 function hasBreakfast(label: string) {
   return /breakfast|bb|half.?board|full.?board|all.?inclusive/i.test(label);
+}
+
+function isRoomOnly(option: DisplayRateOption) {
+  const type = (option.boardBasisType ?? "").toLowerCase();
+  if (type === "roomonly") return true;
+  const label = option.boardBasisLabel.toLowerCase();
+  return /room\s*only|roomonly/.test(label) && !hasBreakfast(label);
+}
+
+function includesMatch(option: DisplayRateOption, pattern: RegExp) {
+  return option.includes.some((item) => pattern.test(item));
+}
+
+function isTwinBed(group: DisplayRoomGroup) {
+  const text = `${group.bedSummary ?? ""} ${group.roomName}`.toLowerCase();
+  return /twin/.test(text);
+}
+
+function isDoubleBed(group: DisplayRoomGroup) {
+  const text = `${group.bedSummary ?? ""} ${group.roomName}`.toLowerCase();
+  return /queen|king|double/.test(text) && !/twin/.test(text);
+}
+
+function hasCityView(group: DisplayRoomGroup) {
+  return group.views.some((v) => /city|view/i.test(v));
+}
+
+function matchesRateFilter(option: DisplayRateOption, id: RoomFilterId) {
+  switch (id) {
+    case "breakfast":
+      return hasBreakfast(option.boardBasisLabel) || includesMatch(option, /breakfast/i);
+    case "roomOnly":
+      return isRoomOnly(option);
+    case "refundable":
+      return option.refundable;
+    case "parking":
+      return includesMatch(option, /park/i);
+    case "wifi":
+      return includesMatch(option, /wifi|wi-?fi/i);
+    case "payAtHotel":
+      return option.payAtHotel === true;
+    case "deal":
+      return option.offers.length > 0;
+    default:
+      return true;
+  }
+}
+
+function matchesRoomFilter(group: DisplayRoomGroup, id: RoomFilterId) {
+  switch (id) {
+    case "cityView":
+      return hasCityView(group);
+    case "twinBed":
+      return isTwinBed(group);
+    case "doubleBed":
+      return isDoubleBed(group);
+    case "nonSmoking":
+      return group.smokingAllowed === false;
+    default:
+      return true;
+  }
+}
+
+function optionMatchesActiveFilters(
+  group: DisplayRoomGroup,
+  option: DisplayRateOption,
+  active: Set<RoomFilterId>,
+) {
+  if (active.size === 0) return true;
+  for (const id of active) {
+    const def = FILTER_DEFS.find((f) => f.id === id);
+    if (!def) continue;
+    if (def.scope === "rate" && !matchesRateFilter(option, id)) return false;
+    if (def.scope === "room" && !matchesRoomFilter(group, id)) return false;
+  }
+  return true;
+}
+
+/** Only expose chips that meaningfully narrow results for this hotel. */
+function availableFilters(groups: DisplayRoomGroup[]): RoomFilterDef[] {
+  if (!groups.length) return [];
+
+  return FILTER_DEFS.filter((def) => {
+    if (def.scope === "room") {
+      const matchCount = groups.filter((g) => matchesRoomFilter(g, def.id)).length;
+      return matchCount > 0 && matchCount < groups.length;
+    }
+
+    let matchCount = 0;
+    let total = 0;
+    for (const group of groups) {
+      for (const option of group.options) {
+        total += 1;
+        if (matchesRateFilter(option, def.id)) matchCount += 1;
+      }
+    }
+    return matchCount > 0 && matchCount < total;
+  });
 }
 
 export function RoomsRatesPanel({
@@ -64,30 +182,46 @@ export function RoomsRatesPanel({
   /** Called when user taps Reserve — parent should navigate to checkout. */
   onReserve?: (recommendationId: string) => void;
 }) {
-  const { currency, format: formatCurrency } = useCurrency();
+  const { currency } = useCurrency();
   const status = useHotelStore((s) => s.status);
   const error = useHotelStore((s) => s.error);
   const roomsRates = useHotelStore((s) => s.roomsRates);
   const selected = useHotelStore((s) => s.selected);
-  const [filter, setFilter] = useState<RateFilter>("all");
+  const [activeFilters, setActiveFilters] = useState<Set<RoomFilterId>>(
+    () => new Set(),
+  );
 
   const formatRoomPrice = (amount: number, fromCurrency?: string) => {
-    const from = toSupportedCurrency(fromCurrency);
-    if (from === currency) return formatCurrency(amount);
-    return formatPrice(amount, from);
+    // Always format in the rate's API currency — never client-side FX.
+    return formatPrice(amount, toSupportedCurrency(fromCurrency || currency));
   };
 
   const groups = buildDisplayRoomGroups(roomsRates);
+  const filters = availableFilters(groups);
+
+  const toggleFilter = (id: RoomFilterId) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearFilters = () => setActiveFilters(new Set());
+
   const filteredGroups = groups
     .map((group) => ({
       ...group,
-      options: group.options.filter((o) => matchesFilter(o, filter)),
+      options: group.options.filter((o) =>
+        optionMatchesActiveFilters(group, o, activeFilters),
+      ),
     }))
     .filter((g) => g.options.length > 0);
 
   if (status === "loading" || status === "idle") {
     return (
-      <div className="flex items-center gap-2 rounded-2xl border border-dashed border-border bg-white px-4 py-10 text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 rounded-md border border-dashed border-border bg-white px-4 py-10 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
         Loading rooms &amp; rates…
       </div>
@@ -96,7 +230,7 @@ export function RoomsRatesPanel({
 
   if (status === "error") {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-white px-4 py-8 text-sm text-red-600">
+      <div className="rounded-md border border-dashed border-border bg-white px-4 py-8 text-sm text-red-600">
         {error ?? "Failed to load rooms and rates"}
       </div>
     );
@@ -104,7 +238,7 @@ export function RoomsRatesPanel({
 
   if (!groups.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-white px-4 py-8 text-sm text-muted-foreground">
+      <div className="rounded-md border border-dashed border-border bg-white px-4 py-8 text-sm text-muted-foreground">
         No room rates available for these dates.
       </div>
     );
@@ -117,31 +251,71 @@ export function RoomsRatesPanel({
           Select your room
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Compare choices, sleeps, and today&apos;s price side by side.
+          Compare room types, inclusions, and total stay price.
         </p>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {FILTERS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setFilter(item.id)}
-            className={cn(
-              "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition",
-              filter === item.id
-                ? "border-brand bg-brand text-white shadow-sm"
-                : "border-border bg-white text-foreground hover:border-brand/35",
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      {filters.length > 0 ? (
+        <div className="space-y-2">
+          <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className={cn(
+                "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition",
+                activeFilters.size === 0
+                  ? "border-brand bg-brand text-white shadow-sm"
+                  : "border-border bg-white text-foreground hover:border-brand/35",
+              )}
+            >
+              All options
+            </button>
+            {filters.map((item) => {
+              const on = activeFilters.has(item.id);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => toggleFilter(item.id)}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition",
+                    on
+                      ? "border-brand bg-brand text-white shadow-sm"
+                      : "border-border bg-white text-foreground hover:border-brand/35",
+                  )}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+          {activeFilters.size > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Showing {filteredGroups.length} of {groups.length} room type
+              {groups.length === 1 ? "" : "s"}
+              {" · "}
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="font-medium text-brand hover:underline"
+              >
+                Clear filters
+              </button>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {filteredGroups.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-white px-4 py-8 text-center text-sm text-muted-foreground">
-          No rates match this filter. Try another option.
+        <div className="rounded-md border border-dashed border-border bg-white px-4 py-8 text-center text-sm text-muted-foreground">
+          No rooms match these filters.{" "}
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="font-medium text-brand hover:underline"
+          >
+            Clear filters
+          </button>
         </div>
       ) : (
         <div className="space-y-5">
@@ -184,6 +358,10 @@ function RoomGroupCard({
       ? [fallbackImage]
       : [];
   const photo = photos[photoIndex] ?? photos[0];
+  const photoCaption =
+    group.images.length > 0
+      ? group.imageCaptions[photoIndex] || group.imageCaptions[0]
+      : undefined;
   const visibleOptions = showAllRates
     ? group.options
     : group.options.slice(0, DEFAULT_VISIBLE_RATES);
@@ -191,23 +369,39 @@ function RoomGroupCard({
   const cheapestHidden = group.options[DEFAULT_VISIBLE_RATES];
 
   const facilityItems = buildRoomFacilityRows(group);
+  const occupancyBits = [
+    group.maxGuests ? `Sleeps ${group.maxGuests}` : null,
+    group.maxAdults != null ? `${group.maxAdults} adults` : null,
+    group.maxChildren != null && group.maxChildren > 0
+      ? `${group.maxChildren} children`
+      : null,
+  ].filter(Boolean);
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+    <article className="overflow-hidden rounded-md border border-border bg-white shadow-sm">
       <div className="border-b border-border px-4 py-3.5 sm:px-5">
         <h4 className="text-lg font-semibold text-foreground">
           {group.roomName}
         </h4>
+        {group.roomTypeLabel && group.roomTypeLabel !== group.roomName ? (
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {group.roomTypeLabel}
+            {occupancyBits.length ? ` · ${occupancyBits.join(" · ")}` : ""}
+          </p>
+        ) : occupancyBits.length ? (
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {occupancyBits.join(" · ")}
+          </p>
+        ) : null}
       </div>
 
       <div className="grid lg:grid-cols-[260px_minmax(0,1fr)]">
-        {/* Left: room media + facts */}
         <div className="space-y-3 border-b border-border p-4 lg:border-b-0 lg:border-r sm:p-4">
-          <div className="relative overflow-hidden rounded-xl bg-muted">
+          <div className="relative overflow-hidden rounded-md bg-muted">
             {photo ? (
               <img
                 src={photo}
-                alt={group.roomName}
+                alt={photoCaption || group.roomName}
                 className="aspect-[4/3] w-full object-cover"
               />
             ) : (
@@ -240,9 +434,15 @@ function RoomGroupCard({
                 </button>
                 <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-white">
                   <Camera className="size-3" />
-                  {photos.length}
+                  {photoIndex + 1}/{photos.length}
                 </span>
               </>
+            ) : null}
+
+            {photoCaption ? (
+              <span className="absolute bottom-2 left-2 max-w-[60%] truncate rounded-md bg-black/55 px-1.5 py-0.5 text-[11px] text-white">
+                {photoCaption}
+              </span>
             ) : null}
           </div>
 
@@ -250,6 +450,13 @@ function RoomGroupCard({
             <p className="flex items-center gap-2 text-sm text-foreground">
               <BedDouble className="size-4 shrink-0 text-muted-foreground" />
               {group.bedSummary}
+            </p>
+          ) : null}
+
+          {group.views.length > 0 ? (
+            <p className="flex items-center gap-2 text-sm text-foreground">
+              <Eye className="size-4 shrink-0 text-muted-foreground" />
+              {group.views.join(", ")}
             </p>
           ) : null}
 
@@ -268,7 +475,9 @@ function RoomGroupCard({
             })}
           </div>
 
-          {(group.description || facilityItems.length > 0) && (
+          {(group.description ||
+            group.facilities.length > 0 ||
+            group.views.length > 0) && (
             <button
               type="button"
               onClick={() => setShowDetails((v) => !v)}
@@ -278,19 +487,41 @@ function RoomGroupCard({
             </button>
           )}
 
-          {showDetails && group.description ? (
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {group.description}
-            </p>
+          {showDetails ? (
+            <div className="space-y-3 border-t border-border/70 pt-3">
+              {group.description ? (
+                <p className="whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
+                  {group.description}
+                </p>
+              ) : null}
+
+              {group.facilities.length > 0 ? (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Room facilities
+                  </p>
+                  <ul className="mt-2 space-y-1.5">
+                    {group.facilities.map((facility) => (
+                      <li
+                        key={facility}
+                        className="flex items-start gap-2 text-xs text-foreground"
+                      >
+                        <Check className="mt-0.5 size-3 shrink-0 text-emerald-600" />
+                        {facility}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </div>
 
-        {/* Right: rate comparison table */}
         <div className="min-w-0">
           <div className="hidden grid-cols-[minmax(0,1.4fr)_72px_minmax(120px,1fr)_104px] gap-3 border-b border-border bg-muted/40 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:grid">
             <span>Your choices</span>
             <span className="text-center">Sleeps</span>
-            <span className="text-right">Today&apos;s price</span>
+            <span className="text-right">Total stay</span>
             <span />
           </div>
 
@@ -352,13 +583,22 @@ function RateOptionRow({
   formatRoomPrice: (amount: number, currency?: string) => string;
   onSelect: () => void;
 }) {
+  const [showPolicies, setShowPolicies] = useState(false);
   const breakfast = hasBreakfast(option.boardBasisLabel);
   const sleeps = Math.min(Math.max(maxGuests ?? 2, 1), 4);
+  const showPublished =
+    option.publishedRate != null &&
+    option.publishedRate > option.totalRate + 0.5;
+  const includeIcons: Array<{ match: RegExp; icon: LucideIcon }> = [
+    { match: /wifi|wi-?fi/i, icon: Wifi },
+    { match: /park/i, icon: ParkingSquare },
+    { match: /breakfast/i, icon: Coffee },
+  ];
 
   return (
     <div
       className={cn(
-        "grid gap-3 px-4 py-4 transition sm:grid-cols-[minmax(0,1.4fr)_72px_minmax(120px,1fr)_104px] sm:items-center",
+        "grid gap-3 px-4 py-4 transition sm:grid-cols-[minmax(0,1.4fr)_72px_minmax(120px,1fr)_104px] sm:items-start",
         isSelected && "bg-brand/[0.04]",
       )}
     >
@@ -380,16 +620,17 @@ function RateOptionRow({
           </span>
         ) : null}
 
-        <ul className="space-y-1.5 text-sm text-muted-foreground">
-          <li
-            className={cn(
-              "flex items-start gap-2",
-              breakfast && "text-emerald-700",
-            )}
+        {option.offers.map((offer) => (
+          <span
+            key={`${offer.title}-${offer.description}`}
+            className="mr-1.5 inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-800"
           >
-            <Coffee className="mt-0.5 size-3.5 shrink-0" />
-            {option.boardBasisLabel || "Room only"}
-          </li>
+            <Tag className="size-3" />
+            {[offer.title, offer.description].filter(Boolean).join(" · ")}
+          </span>
+        ))}
+
+        <ul className="space-y-1.5 text-sm text-muted-foreground">
           <li
             className={cn(
               "flex items-start gap-2",
@@ -401,19 +642,92 @@ function RateOptionRow({
             ) : (
               <XCircle className="mt-0.5 size-3.5 shrink-0" />
             )}
-            {option.refundable ? "Free cancellation" : "Non-refundable"}
+            {option.refundable
+              ? "Free cancellation"
+              : option.refundability?.replace(/([a-z])([A-Z])/g, "$1 $2") ||
+                "Non-refundable"}
           </li>
+
+          {option.includes.map((item) => {
+            const Icon =
+              includeIcons.find((i) => i.match.test(item))?.icon ?? Check;
+            return (
+              <li
+                key={item}
+                className="flex items-start gap-2 text-emerald-700"
+              >
+                <Icon className="mt-0.5 size-3.5 shrink-0" />
+                {item}
+              </li>
+            );
+          })}
+
           <li className="flex items-start gap-2 text-emerald-700">
             <Zap className="mt-0.5 size-3.5 shrink-0" />
             Instant confirmation
+            {option.needsPriceCheck ? " · price check at checkout" : ""}
           </li>
+
+          {option.payAtHotel === false ? (
+            <li className="flex items-start gap-2">
+              <CreditCard className="mt-0.5 size-3.5 shrink-0" />
+              {option.cardRequired
+                ? "Pay online · card required"
+                : "Pay online"}
+            </li>
+          ) : option.payAtHotel ? (
+            <li className="flex items-start gap-2">
+              <CreditCard className="mt-0.5 size-3.5 shrink-0" />
+              Pay at hotel
+            </li>
+          ) : null}
+
+          {option.specialRequestSupported ? (
+            <li className="flex items-start gap-2">
+              <Check className="mt-0.5 size-3.5 shrink-0" />
+              Special requests supported
+            </li>
+          ) : null}
+
+          {option.availability != null && option.availability <= 5 ? (
+            <li className="text-xs font-medium text-amber-700">
+              Only {option.availability} left at this price
+            </li>
+          ) : null}
+
           {option.cancellationText ? (
             <li className="line-clamp-2 text-xs">{option.cancellationText}</li>
           ) : null}
         </ul>
+
+        {option.policies.length > 0 ? (
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowPolicies((v) => !v)}
+              className="text-xs font-medium text-brand hover:underline"
+            >
+              {showPolicies ? "Hide rate policies" : "View rate policies"}
+            </button>
+            {showPolicies ? (
+              <div className="mt-2 space-y-2 rounded-lg border border-border/70 bg-muted/30 p-2.5">
+                {option.policies.map((policy) => (
+                  <div key={policy.type}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {policy.type}
+                    </p>
+                    <p className="mt-0.5 whitespace-pre-line text-xs leading-relaxed text-foreground">
+                      {policy.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
-      <div className="flex items-center gap-1 sm:justify-center">
+      <div className="flex items-center gap-1 sm:justify-center sm:pt-1">
         <span className="text-xs font-medium text-muted-foreground sm:hidden">
           Sleeps
         </span>
@@ -422,19 +736,32 @@ function RateOptionRow({
         ))}
       </div>
 
-      <div className="sm:text-right">
+      <div className="sm:pt-0.5 sm:text-right">
+        {showPublished ? (
+          <p className="text-xs text-muted-foreground line-through">
+            {formatRoomPrice(option.publishedRate!, option.currency)}
+          </p>
+        ) : null}
         <p className="text-xl font-bold tracking-tight text-brand">
           {formatRoomPrice(option.totalRate, option.currency)}
         </p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Total for stay · taxes may apply
+          Total for stay
+          {option.taxesAmount != null && option.taxesAmount > 0
+            ? ` · taxes ${formatRoomPrice(option.taxesAmount, option.currency)}`
+            : " · taxes may apply"}
         </p>
+        {option.baseRate != null && option.baseRate > 0 ? (
+          <p className="text-[11px] text-muted-foreground">
+            Base {formatRoomPrice(option.baseRate, option.currency)}
+          </p>
+        ) : null}
       </div>
 
       <Button
         type="button"
         size="sm"
-        className="w-full sm:w-auto"
+        className="w-full sm:w-auto rounded-md"
         onClick={onSelect}
       >
         Reserve
@@ -448,35 +775,30 @@ function buildRoomFacilityRows(
 ): Array<{ label: string; icon: LucideIcon }> {
   const rows: Array<{ label: string; icon: LucideIcon }> = [];
 
-  if (group.areaSqm) {
+  if (group.areaLabel) {
+    rows.push({ label: group.areaLabel, icon: Maximize2 });
+  } else if (group.areaSqm) {
     rows.push({ label: `${Math.round(group.areaSqm)} m²`, icon: Maximize2 });
   }
 
-  rows.push({ label: "Non-smoking", icon: CigaretteOff });
+  if (group.smokingAllowed === false) {
+    rows.push({ label: "Non-smoking", icon: CigaretteOff });
+  } else if (group.smokingAllowed === true) {
+    rows.push({ label: "Smoking allowed", icon: Cigarette });
+  }
 
   const fromApi = group.facilities.map((label) => ({
     label,
     icon: iconForAmenityLabel(label),
   }));
 
-  const defaults: Array<{ label: string; icon: LucideIcon; match: RegExp }> = [
-    { label: "Free Wi-Fi", icon: Wifi, match: /wifi|wi-?fi/i },
-    { label: "Private bathroom", icon: Bath, match: /bath/i },
-    { label: "Air conditioning", icon: Wind, match: /air|ac|cooling/i },
-  ];
-
-  for (const d of defaults) {
-    if (fromApi.some((f) => d.match.test(f.label))) continue;
-    if (rows.some((r) => d.match.test(r.label))) continue;
-    rows.push({ label: d.label, icon: d.icon });
-  }
-
   for (const f of fromApi) {
-    if (rows.some((r) => r.label.toLowerCase() === f.label.toLowerCase()))
+    if (rows.some((r) => r.label.toLowerCase() === f.label.toLowerCase())) {
       continue;
+    }
     rows.push(f);
-    if (rows.length >= 7) break;
+    if (rows.length >= PREVIEW_FACILITY_COUNT) break;
   }
 
-  return rows.slice(0, 7);
+  return rows.slice(0, PREVIEW_FACILITY_COUNT);
 }

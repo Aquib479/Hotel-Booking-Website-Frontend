@@ -19,6 +19,9 @@ interface BestPriceCardProps {
   maxGuests?: number | null;
   bedSummary?: string | null;
   imageUrl?: string | null;
+  includes?: string[] | null;
+  views?: string[] | null;
+  areaLabel?: string | null;
   priceLabel: string | null;
   onScrollToRooms?: () => void;
 }
@@ -30,6 +33,9 @@ export function BestPriceCard({
   maxGuests,
   bedSummary,
   imageUrl,
+  includes,
+  views,
+  areaLabel,
   priceLabel,
   onScrollToRooms,
 }: BestPriceCardProps) {
@@ -45,7 +51,7 @@ export function BestPriceCard({
     : "Today's best price";
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
+    <div className="overflow-hidden rounded-md border border-border bg-white shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
       <div className="bg-emerald-50 px-4 py-2.5 text-center text-sm font-semibold text-emerald-800">
         {banner}
       </div>
@@ -100,6 +106,14 @@ export function BestPriceCard({
                   {bedSummary}
                 </li>
               ) : null}
+              {areaLabel ? (
+                <li className="text-xs text-muted-foreground">{areaLabel}</li>
+              ) : null}
+              {views?.length ? (
+                <li className="text-xs text-muted-foreground">
+                  {views.join(", ")}
+                </li>
+              ) : null}
               {hasBreakfast ? (
                 <li className="flex items-start gap-2 text-emerald-700">
                   <Utensils className="mt-0.5 size-4 shrink-0" />
@@ -111,6 +125,15 @@ export function BestPriceCard({
                   {boardBasis || "Room only"}
                 </li>
               )}
+              {(includes ?? []).map((item) => (
+                <li
+                  key={item}
+                  className="flex items-start gap-2 text-emerald-700"
+                >
+                  <Check className="mt-0.5 size-4 shrink-0" />
+                  {item}
+                </li>
+              ))}
               <li
                 className={cn(
                   "flex items-start gap-2",

@@ -162,7 +162,7 @@ export function BookingDateRangeCalendar({
           role="dialog"
           aria-modal="false"
           className={cn(
-            "absolute left-0 top-[calc(100%+0.5rem)] z-50 w-[min(92vw,42rem)] overflow-hidden rounded-2xl border border-border/80 bg-white shadow-2xl shadow-brand/10",
+            "absolute left-0 top-[calc(100%+0.5rem)] z-50 w-[min(92vw,42rem)] overflow-hidden rounded-md border border-border/80 bg-white shadow-2xl shadow-brand/10",
             panelClassName
           )}
         >

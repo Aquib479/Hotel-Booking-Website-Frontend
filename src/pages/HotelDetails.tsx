@@ -24,6 +24,7 @@ import {
 import { BookingSidebar } from "@/features/property/components/BookingSidebar";
 import { HotelInfoCard } from "@/features/property/components/HotelInfoCard";
 import { RoomsRatesPanel } from "@/features/property/components/RoomsRatesPanel";
+import { extractRatePolicies } from "@/features/property/utils/roomsRatesDisplay";
 import type { DetailTab } from "@/features/property/types";
 import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -53,10 +54,12 @@ export default function HotelDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { currency, format: formatCurrency } = useCurrency();
+  const { currency } = useCurrency();
   const { property, isLoading, error, isZentrum } = usePropertyDetail(id);
   const selected = useHotelStore((s) => s.selected);
+  const roomsRates = useHotelStore((s) => s.roomsRates);
   const selectRecommendation = useHotelStore((s) => s.selectRecommendation);
+  const ratePolicies = extractRatePolicies(roomsRates);
   const isFavorite = useFavoritesStore((s) =>
     id ? Boolean(s.items[id]) : false,
   );
@@ -118,13 +121,10 @@ export default function HotelDetails() {
   };
 
   const selectedDisplayPrice = selected
-    ? (() => {
-        const rateCurrency = toSupportedCurrency(selected.currency);
-        if (rateCurrency === currency) {
-          return formatCurrency(selected.totalRate);
-        }
-        return formatPrice(selected.totalRate, rateCurrency);
-      })()
+    ? formatPrice(
+        selected.totalRate,
+        toSupportedCurrency(selected.currency || currency)
+      )
     : null;
 
   const goToCheckout = (rate: SelectedRateOption) => {
@@ -225,7 +225,10 @@ export default function HotelDetails() {
               />
             )}
             {activeTab === "policies" && (
-              <PoliciesContent policies={property.policies} />
+              <PoliciesContent
+                policies={property.policies}
+                ratePolicies={isZentrum ? ratePolicies : undefined}
+              />
             )}
             {activeTab === "reviews" && (
               <ReviewsContent
@@ -264,6 +267,9 @@ export default function HotelDetails() {
                 maxGuests={selected?.maxGuests}
                 bedSummary={selected?.bedSummary}
                 imageUrl={selected?.imageUrl || property.image}
+                includes={selected?.includes}
+                views={selected?.views}
+                areaLabel={selected?.areaLabel}
                 priceLabel={selectedDisplayPrice}
                 onScrollToRooms={() => {
                   setActiveTab("details");

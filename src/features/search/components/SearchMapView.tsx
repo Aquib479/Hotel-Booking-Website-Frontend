@@ -165,7 +165,7 @@ function MapHotelCard({
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl bg-white text-left shadow-[0_16px_40px_rgba(15,23,42,0.22)]"
+      className="relative overflow-hidden rounded-md bg-white text-left shadow-[0_16px_40px_rgba(15,23,42,0.22)]"
       style={{ width: CARD_WIDTH }}
     >
       <div className="absolute right-2.5 top-2.5 z-20 flex items-center gap-1.5">
@@ -399,7 +399,7 @@ export function SearchMapView({
 
   if (mappedProperties.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-white py-24 text-center">
+      <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border bg-white py-24 text-center">
         <MapPin className="mb-4 size-10 text-muted-foreground/40" />
         <p className="text-lg font-semibold text-foreground">No map data available</p>
         <p className="mt-2 max-w-sm text-sm text-muted-foreground">
@@ -416,7 +416,7 @@ export function SearchMapView({
     <div
       ref={shellRef}
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-border bg-white",
+        "relative overflow-hidden rounded-md border border-border bg-white",
         "[&_.leaflet-container]:h-[min(70vh,560px)] [&_.leaflet-container]:w-full [&_.leaflet-container]:bg-[#e8eef5]",
         "[&_.rh-price-marker]:border-0 [&_.rh-price-marker]:bg-transparent"
       )}

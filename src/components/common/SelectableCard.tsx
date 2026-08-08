@@ -19,7 +19,7 @@ export function SelectableCard({
   as = "button",
 }: SelectableCardProps) {
   const classes = cn(
-    "flex w-full flex-col items-start gap-2 rounded-2xl border p-5 text-left shadow-sm transition-all",
+    "flex w-full flex-col items-start gap-2 rounded-md border p-5 text-left shadow-sm transition-all",
     selected
       ? "border-brand bg-brand/5 ring-2 ring-brand/25"
       : "border-border bg-card hover:border-brand/40 hover:shadow-md",

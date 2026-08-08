@@ -64,24 +64,5 @@ export function PropertyHighlights({
   const visible = expanded ? unique.slice(0, 8) : unique.slice(0, 4);
   const remaining = Math.max(0, unique.length - visible.length);
 
-  return (
-    <div className="grid grid-cols-4 items-start">
-      {visible.map((label) => {
-        const Icon = iconForAmenityLabel(label);
-        return (
-          <div
-            key={label}
-            className="flex flex-col items-center gap-2 text-center"
-          >
-            <span className="flex size-12 items-center justify-center rounded-full border border-border bg-white text-foreground shadow-sm transition hover:border-brand/30 hover:text-brand">
-              <Icon className="size-5" strokeWidth={1.6} />
-            </span>
-            <span className="line-clamp-2 text-[11px] font-medium leading-snug text-foreground sm:text-xs">
-              {label}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
+  return <></>;
 }

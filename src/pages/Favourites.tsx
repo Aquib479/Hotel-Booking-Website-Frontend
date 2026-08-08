@@ -34,7 +34,7 @@ export default function Favourites() {
         </div>
 
         {favorites.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-white py-20 text-center">
+          <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border bg-white py-20 text-center">
             <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-red-50">
               <Heart className="size-7 text-red-400" />
             </div>
@@ -47,11 +47,16 @@ export default function Favourites() {
             </Button>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col gap-4">
             {favorites.map((property) => (
               <PropertyCard
                 key={property.id}
-                property={property}
+                property={{
+                  ...property,
+                  reviewCount: property.reviewCount ?? 0,
+                  amenityPills: property.amenityPills ?? [],
+                  highlightAttributes: property.highlightAttributes ?? [],
+                }}
                 mode="stay"
                 nights={1}
               />

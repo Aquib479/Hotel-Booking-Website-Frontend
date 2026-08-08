@@ -1,11 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
-import { convertBetween } from "@/lib/currency/format";
+import { formatPrice } from "@/lib/currency/format";
 import type { CurrencyCode } from "@/lib/currency/types";
 import { CURRENCIES } from "@/lib/currency/types";
 import { useAuth } from "@/features/auth/context/AuthProvider";
 import { confirmBooking, releaseBooking as releaseBookingHold } from "../api";
+import { useCheckoutCurrencyReprice } from "../hooks/useCheckoutCurrencyReprice";
 import { useCheckoutDraft } from "../hooks/useCheckoutDraft";
 import { useCheckoutForm } from "../hooks/useCheckoutForm";
 import type { PaymentMethod } from "../types";
@@ -38,8 +40,12 @@ function readGuestMode(): boolean {
 export function CheckoutPage() {
   const [searchParams] = useSearchParams();
   const { isAuthenticated, user } = useAuth();
+  const { currency } = useCurrency();
   const { draft, isExpired, clearDraft, saveDraft } = useCheckoutDraft();
-  const { currency, format: formatCurrency } = useCurrency();
+  const { isRefreshingPrice, priceRefreshError } = useCheckoutCurrencyReprice(
+    draft,
+    saveDraft
+  );
   const form = useCheckoutForm(
     user
       ? {
@@ -59,20 +65,21 @@ export function CheckoutPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [guestMode, setGuestMode] = useState(() => readGuestMode() || isAuthenticated);
 
+  const draftCurrency = toCurrencyCode(draft?.currency);
   const totalPrice =
-    draft?.totalPrice != null && draft.totalPrice > 0
-      ? convertBetween(draft.totalPrice, toCurrencyCode(draft.currency), currency)
-      : 0;
-  const payAmountLabel = formatCurrency(totalPrice);
+    draft?.totalPrice != null && draft.totalPrice > 0 ? draft.totalPrice : 0;
+  // Live API amount in the draft's (repriced) currency — no client FX.
+  const payAmountLabel = formatPrice(totalPrice, draftCurrency);
 
   const disabledReason = useMemo(() => {
+    if (isRefreshingPrice) return "Updating price for selected currency…";
     if (!termsAccepted) return "Accept the terms to continue";
     if (!form.isValid) return "Fill in your details to continue";
     if (draft?.lane === "direct" && !selectedMethod) return "Select a payment method";
     return undefined;
-  }, [termsAccepted, form.isValid, draft?.lane, selectedMethod]);
+  }, [isRefreshingPrice, termsAccepted, form.isValid, draft?.lane, selectedMethod]);
 
-  const isActionDisabled = Boolean(disabledReason) || isSubmitting;
+  const isActionDisabled = Boolean(disabledReason) || isSubmitting || isRefreshingPrice;
 
   const handleHoldExpire = useCallback(() => {
     if (draft?.bookingId) {
@@ -255,6 +262,7 @@ export function CheckoutPage() {
           draft={draft}
           onHoldExpire={handleHoldExpire}
           onDraftChange={saveDraft}
+          isRefreshingPrice={isRefreshingPrice}
         />
       }
       stickyCta={
@@ -264,7 +272,7 @@ export function CheckoutPage() {
           onClick={handleCtaClick}
           disabled={isActionDisabled}
           disabledReason={disabledReason}
-          isLoading={isSubmitting}
+          isLoading={isSubmitting || isRefreshingPrice}
         />
         )
       }
@@ -273,11 +281,18 @@ export function CheckoutPage() {
         <GuestCheckoutPrompt onContinueAsGuest={handleContinueAsGuest} />
       ) : (
         <>
-      {paymentError && (
+      {(paymentError || priceRefreshError) && (
         <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {paymentError}
+          {paymentError || priceRefreshError}
         </div>
       )}
+
+      {isRefreshingPrice ? (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin text-brand" />
+          Updating price for {currency}…
+        </div>
+      ) : null}
 
       <GuestDetailsForm
         values={form.values}
@@ -295,8 +310,8 @@ export function CheckoutPage() {
         onSelectMethod={setSelectedMethod}
         onSubmitPayment={handleSubmitPayment}
         onWholesaleContinue={handleWholesaleContinue}
-        isSubmitting={isSubmitting}
-        disabled={!termsAccepted || !form.isValid}
+        isSubmitting={isSubmitting || isRefreshingPrice}
+        disabled={!termsAccepted || !form.isValid || isRefreshingPrice}
         disabledReason={disabledReason}
       />
 

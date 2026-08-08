@@ -10,7 +10,7 @@ interface DetailTabsProps {
 export function DetailTabs({ activeTab, onTabChange }: DetailTabsProps) {
   return (
     <div className="sticky top-16 z-20 -mx-4 border-b border-border/80 bg-[#fafafa]/95 px-4 backdrop-blur-md sm:-mx-0 sm:px-0">
-      <div className="flex gap-1 overflow-x-auto py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex justify-between gap-1 overflow-x-auto py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {DETAIL_TABS.map((tab) => (
           <button
             key={tab.id}

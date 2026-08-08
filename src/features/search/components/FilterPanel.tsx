@@ -136,7 +136,7 @@ export function FilterPanel({
         ];
 
   return (
-    <div className="mt-4 rounded-2xl border border-border bg-white p-4 shadow-sm">
+    <div className="mt-4 rounded-md border border-border bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-foreground">Filters</h3>
         {activeFilterCount > 0 && (

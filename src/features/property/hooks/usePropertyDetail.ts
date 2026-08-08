@@ -1,15 +1,120 @@
 import { useEffect, useState } from "react";
 import { differenceInCalendarDays, parseISO } from "date-fns";
+import { useSearchParams } from "react-router-dom";
 import { useCurrency } from "@/context/CurrencyContext";
 import { getHotelById, getRoomsByHotel } from "@/features/hotels/api";
 import type { Hotel, Room } from "@/features/hotels/types";
-import type { PropertyDetail } from "../types";
+import type { PropertyDetail, Review } from "../types";
 import type { Property } from "@/features/search/types";
-import { getHotelContent, isZentrumConfigured } from "@/services/zentrumhub";
+import {
+  getGuestReviews,
+  getHotelContent,
+  isZentrumConfigured,
+  type HotelContentGuestReview,
+  type HotelContentItem,
+  type GuestReviewDetail,
+} from "@/services/zentrumhub";
 import { useHotelStore, useSearchStore } from "@/store";
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop";
+
+function mapContentGuestReviews(
+  snippets: HotelContentGuestReview[] | null | undefined
+): Review[] {
+  if (!snippets?.length) return [];
+  return snippets
+    .map((item, index) => {
+      const author =
+        item.ReviewerName?.trim() ||
+        item.reviewerName?.trim() ||
+        "Guest";
+      const title = item.Title?.trim() || item.title?.trim() || "";
+      const text = item.Text?.trim() || item.text?.trim() || "";
+      const comment = text || title;
+      if (!comment) return null;
+      const rating = Number(item.Rating ?? item.rating ?? 0) || 0;
+      const source = item.Source?.trim() || item.source?.trim() || undefined;
+      return {
+        id: `content-review-${index}`,
+        author,
+        date: source ? `Via ${source}` : "Guest review",
+        rating,
+        comment,
+        title: title && text ? title : undefined,
+        source,
+      } satisfies Review;
+    })
+    .filter((r): r is Review => Boolean(r));
+}
+
+function mapGuestReviewDetails(details: GuestReviewDetail[] | null | undefined): Review[] {
+  if (!details?.length) return [];
+  return details
+    .map((item, index) => {
+      const author = item.reviewer?.name?.trim() || "Guest";
+      const title = item.title?.trim() || "";
+      const summary = item.summary?.trim() || "";
+      const paragraphs = (item.text ?? [])
+        .map((line) => line?.trim())
+        .filter((line): line is string => Boolean(line));
+      const comment =
+        paragraphs.join("\n\n") || summary || title;
+      if (!comment && !title) return null;
+
+      const rating = Number(item.score ?? 0) || 0;
+      const date = item.dateSubmitted
+        ? formatReviewDate(item.dateSubmitted)
+        : "Guest review";
+
+      const managementResponses = (item.managementResponses ?? [])
+        .map((response) => {
+          const text = response.text?.trim();
+          if (!text) return null;
+          return {
+            text,
+            date: response.date ? formatReviewDate(response.date) : "",
+          };
+        })
+        .filter((r): r is { text: string; date: string } => Boolean(r));
+
+      return {
+        id: `guest-review-${index}-${item.dateSubmitted ?? index}`,
+        author,
+        date,
+        rating,
+        comment,
+        title: title || undefined,
+        summary: summary && summary !== comment ? summary : undefined,
+        paragraphs: paragraphs.length ? paragraphs : undefined,
+        source: item.verificationSource?.trim() || undefined,
+        country: item.reviewer?.country?.trim() || undefined,
+        travelPurpose: item.reviewer?.travelPurpose?.trim() || undefined,
+        travelerType: item.reviewer?.type?.trim() || undefined,
+        managementResponses: managementResponses.length
+          ? managementResponses
+          : undefined,
+      } satisfies Review;
+    })
+    .filter((r): r is Review => Boolean(r));
+}
+
+function formatReviewDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function reviewsFromContent(content: HotelContentItem | null | undefined): Review[] {
+  const reviewEntry = Array.isArray(content?.reviews)
+    ? content?.reviews[0]
+    : content?.reviews;
+  return mapContentGuestReviews(reviewEntry?.guestreviews);
+}
 
 function hotelToProperty(hotel: Hotel, rooms: Room[]): Property {
   const prices12h = rooms.map((r) => r.price12h).filter((p) => p > 0);
@@ -28,6 +133,7 @@ function hotelToProperty(hotel: Hotel, rooms: Room[]): Property {
     country: hotel.country ?? "",
     image: hotel.imageUrl ?? FALLBACK_IMAGE,
     rating: hotel.rating ?? 4.0,
+    reviewCount: 0,
     starRating: Math.round(hotel.rating ?? 4),
     lane: "direct",
     priceUsd: 0,
@@ -35,6 +141,8 @@ function hotelToProperty(hotel: Hotel, rooms: Room[]): Property {
     roomType: (roomTypes[0] ?? "double") as Property["roomType"],
     maxOccupancy,
     amenities: allAmenities as Property["amenities"],
+    amenityPills: allAmenities.slice(0, 6),
+    highlightAttributes: [],
     category: "all",
     latitude: hotel.latitude,
     longitude: hotel.longitude,
@@ -139,15 +247,20 @@ function buildZentrumPropertyDetail(
       address?.city?.name ? ` in ${address.city.name}` : ""
     }.`;
 
-  const reviewObj =
-    content?.reviews && !Array.isArray(content.reviews) ? content.reviews : null;
+  const reviewEntry = Array.isArray(content?.reviews)
+    ? content?.reviews[0]
+    : content?.reviews;
   const rating =
-    Number(reviewObj?.rating ?? 0) ||
-    Number(content?.starRating ?? 0) ||
+    Number(reviewEntry?.rating ?? reviewEntry?.Rating ?? 0) ||
     searchHotel?.rating ||
-    4;
-  const starRating = Math.round(Number(content?.starRating ?? rating) || rating);
-  const reviewCount = Number(reviewObj?.count ?? 0) || 0;
+    0;
+  const starRatingRaw = Number(content?.starRating ?? 0);
+  const starRating =
+    Number.isFinite(starRatingRaw) && starRatingRaw > 0
+      ? Math.min(5, starRatingRaw)
+      : searchHotel?.starRating || 0;
+  const reviewCount =
+    Number(reviewEntry?.count ?? 0) || searchHotel?.reviewCount || 0;
 
   const criteria = useSearchStore.getState().criteria;
   let nights = 1;
@@ -177,11 +290,26 @@ function buildZentrumPropertyDetail(
     lane: "wholesale",
     priceAmount: perNight,
     priceCurrency,
+    totalStayAmount: totalRate > 0 ? totalRate : undefined,
+    publishedStayAmount:
+      searchHotel?.publishedRate && searchHotel.publishedRate > totalRate
+        ? searchHotel.publishedRate
+        : undefined,
     priceUsd: perNight,
     priceIdr: 0,
     roomType: "double",
     maxOccupancy: 2,
-    amenities: facilities as Property["amenities"],
+    amenities: (searchHotel?.amenities?.length
+      ? searchHotel.amenities
+      : facilities) as Property["amenities"],
+    amenityPills: searchHotel?.amenityPills ?? facilities.slice(0, 6),
+    freeBreakfast: searchHotel?.freeBreakfast,
+    freeCancellation: searchHotel?.freeCancellation,
+    refundable: searchHotel?.refundable,
+    payAtHotel: searchHotel?.payAtHotel,
+    boardBasisLabel: searchHotel?.boardBasisLabel,
+    offerLabel: searchHotel?.offerLabel,
+    highlightAttributes: searchHotel?.highlightAttributes ?? [],
     category: "all",
     latitude: content?.geoCode?.lat ?? searchHotel?.latitude ?? null,
     longitude: content?.geoCode?.long ?? searchHotel?.longitude ?? null,
@@ -198,8 +326,13 @@ function buildZentrumPropertyDetail(
     description,
     highlights: [
       starRating ? `${starRating}-star property` : "Partner hotel",
-      searchHotel?.refundable ? "Refundable rates available" : "See rate policies at checkout",
-      searchHotel?.freeBreakfast ? "Free breakfast options" : "Multiple board bases",
+      searchHotel?.refundable || searchHotel?.freeCancellation
+        ? "Free cancellation available"
+        : "See rate policies at checkout",
+      searchHotel?.freeBreakfast || /breakfast/i.test(searchHotel?.boardBasisLabel ?? "")
+        ? "Free breakfast options"
+        : "Multiple board bases",
+      ...(searchHotel?.offerLabel ? [searchHotel.offerLabel] : []),
     ],
     detailAmenities: facilities.slice(0, 12).map((label) => ({
       icon: "sparkles",
@@ -210,14 +343,14 @@ function buildZentrumPropertyDetail(
       logo: uniqueImages[0],
       phone: content?.contact?.phones?.[0] ?? "",
       email: content?.contact?.emails?.[0] ?? "",
-      starRating,
+      starRating: Math.round(starRating) || starRating,
     },
     policies: [
       "Rates confirmed at pricing step before payment",
       "Cancellation rules vary by rate plan",
       "Valid ID required at check-in",
     ],
-    reviews: [],
+    reviews: reviewsFromContent(content),
     mapImage: "",
   };
 }
@@ -232,7 +365,16 @@ interface UsePropertyDetailResult {
 
 export function usePropertyDetail(id: string | undefined): UsePropertyDetailResult {
   const { currency } = useCurrency();
+  const [searchParams] = useSearchParams();
+  const urlCheckIn = searchParams.get("checkIn") ?? undefined;
+  const urlCheckOut = searchParams.get("checkOut") ?? undefined;
   const searchToken = useSearchStore((s) => s.token);
+  const searchStatus = useSearchStore((s) => s.status);
+  const searchCurrency = useSearchStore((s) => s.currency);
+  const hasSearchDates = useSearchStore((s) =>
+    Boolean(s.criteria?.checkIn && s.criteria?.checkOut)
+  );
+  const repriceHotel = useSearchStore((s) => s.repriceHotel);
   const loadRoomsAndRates = useHotelStore((s) => s.loadRoomsAndRates);
   const roomsRatesStatus = useHotelStore((s) => s.status);
 
@@ -241,7 +383,11 @@ export function usePropertyDetail(id: string | undefined): UsePropertyDetailResu
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const isZentrum = Boolean(id && isZentrumConfigured() && searchToken);
+  const isZentrum = Boolean(
+    id &&
+      isZentrumConfigured() &&
+      (searchToken || hasSearchDates || (urlCheckIn && urlCheckOut))
+  );
 
   useEffect(() => {
     if (!id) {
@@ -254,11 +400,41 @@ export function usePropertyDetail(id: string | undefined): UsePropertyDetailResu
     setError(null);
 
     async function load() {
-      const token = useSearchStore.getState().token;
-      const zentrumSession = Boolean(isZentrumConfigured() && token);
+      const searchState = useSearchStore.getState();
+      const checkIn = searchState.criteria?.checkIn || urlCheckIn;
+      const checkOut = searchState.criteria?.checkOut || urlCheckOut;
+      const hasZentrumSession = Boolean(
+        isZentrumConfigured() && (searchState.token || (checkIn && checkOut))
+      );
 
-      if (zentrumSession) {
-        const { contentById, hotels, correlationId } = useSearchStore.getState();
+      if (hasZentrumSession) {
+        // Search tokens are currency-scoped — re-init this hotel when currency changes.
+        const needsReprice =
+          searchState.currency !== currency ||
+          !searchState.token ||
+          searchState.status === "error";
+
+        if (needsReprice) {
+          await repriceHotel(id!, currency, { checkIn, checkOut });
+          if (cancelled) return;
+          const after = useSearchStore.getState();
+          if (after.status === "error") {
+            setError(after.error ?? "Failed to refresh prices");
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        const { contentById, hotels, correlationId, token } =
+          useSearchStore.getState();
+        if (!token) {
+          if (!cancelled) {
+            setError("No active search token. Run a hotel search first.");
+            setIsLoading(false);
+          }
+          return;
+        }
+
         let content: (typeof contentById)[string] | undefined = contentById[id!];
         if (!content) {
           try {
@@ -272,12 +448,36 @@ export function usePropertyDetail(id: string | undefined): UsePropertyDetailResu
         }
 
         const searchHotel = hotels.find((h) => h.id === id);
+        const detail = buildZentrumPropertyDetail(id!, content, searchHotel);
         if (!cancelled) {
-          setProperty(buildZentrumPropertyDetail(id!, content, searchHotel));
+          setProperty((prev) =>
+            prev?.reviews?.length && !detail.reviews.length
+              ? { ...detail, reviews: prev.reviews }
+              : detail
+          );
           setRooms([]);
-          setIsLoading(false);
         }
-        void loadRoomsAndRates(id!, { currency });
+
+        await loadRoomsAndRates(id!, { currency });
+        if (cancelled) return;
+
+        // Prefer dedicated guestReviews API (richer than nested content snippets).
+        try {
+          const { data } = await getGuestReviews(id!, {
+            correlationId: correlationId ?? undefined,
+            providerName: content?.providerName,
+          });
+          const guestReviews = mapGuestReviewDetails(data.reviews);
+          if (!cancelled && guestReviews.length > 0) {
+            setProperty((prev) =>
+              prev ? { ...prev, reviews: guestReviews } : prev
+            );
+          }
+        } catch {
+          /* keep content snippets if guestReviews fails */
+        }
+
+        if (!cancelled) setIsLoading(false);
         return;
       }
 
@@ -306,12 +506,65 @@ export function usePropertyDetail(id: string | undefined): UsePropertyDetailResu
     return () => {
       cancelled = true;
     };
-  }, [id, isZentrum, loadRoomsAndRates, currency]);
+  }, [
+    id,
+    loadRoomsAndRates,
+    repriceHotel,
+    currency,
+    urlCheckIn,
+    urlCheckOut,
+  ]);
+
+  // Keep property-level totals in sync when search hotel rates refresh (API currency).
+  useEffect(() => {
+    if (!id || !isZentrumConfigured()) return;
+    const { hotels } = useSearchStore.getState();
+    const searchHotel = hotels.find((h) => h.id === id);
+    if (!searchHotel || searchHotel.currency !== currency) return;
+
+    const nights = (() => {
+      const criteria = useSearchStore.getState().criteria;
+      if (!criteria?.checkIn || !criteria?.checkOut) return 1;
+      try {
+        return Math.max(
+          1,
+          differenceInCalendarDays(
+            parseISO(criteria.checkOut),
+            parseISO(criteria.checkIn)
+          )
+        );
+      } catch {
+        return 1;
+      }
+    })();
+    const totalRate = searchHotel.totalRate ?? 0;
+    const perNight = totalRate > 0 ? totalRate / nights : 0;
+
+    setProperty((prev) => {
+      if (!prev || prev.lane !== "wholesale") return prev;
+      return {
+        ...prev,
+        priceAmount: perNight,
+        priceCurrency: searchHotel.currency,
+        totalStayAmount: totalRate > 0 ? totalRate : undefined,
+        publishedStayAmount:
+          searchHotel.publishedRate && searchHotel.publishedRate > totalRate
+            ? searchHotel.publishedRate
+            : undefined,
+        priceUsd: perNight,
+      };
+    });
+  }, [id, currency, searchCurrency, searchStatus, searchToken]);
 
   return {
     property,
     rooms,
-    isLoading: isLoading || (isZentrum && roomsRatesStatus === "loading"),
+    isLoading:
+      isLoading ||
+      (isZentrum &&
+        (searchStatus === "init" ||
+          searchStatus === "polling" ||
+          roomsRatesStatus === "loading")),
     error,
     isZentrum,
   };

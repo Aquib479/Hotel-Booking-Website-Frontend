@@ -46,18 +46,20 @@ export function SiteNavbar({
         isOverlay
           ? "border-b border-transparent bg-transparent"
           : "border-b border-border/80 bg-white/95 shadow-sm backdrop-blur-md",
-        className
+        className,
       )}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-8">
         <Link
           to="/"
-          className={cn(
-            "text-xl font-bold tracking-tight transition-colors sm:text-2xl",
-            isOverlay ? "text-white" : "text-foreground"
-          )}
+          aria-label="RestHalf home"
+          className="inline-flex shrink-0 items-center"
         >
-          RestHalf
+          <img
+            src="/resthalf-logo.png"
+            alt="RestHalf.com"
+            className={cn("h-10 w-auto rounded-md object-contain sm:h-11")}
+          />
         </Link>
 
         <nav
@@ -78,7 +80,7 @@ export function SiteNavbar({
                         : "text-white/80 hover:text-white"
                       : isActive
                         ? "font-bold text-foreground"
-                        : "text-foreground/80 hover:text-foreground"
+                        : "text-foreground/80 hover:text-foreground",
                   )
                 }
               >
@@ -92,12 +94,12 @@ export function SiteNavbar({
                   "text-sm font-medium transition-colors",
                   isOverlay
                     ? "text-white/80 hover:text-white"
-                    : "text-foreground/80 hover:text-foreground"
+                    : "text-foreground/80 hover:text-foreground",
                 )}
               >
                 {link.label}
               </a>
-            )
+            ),
           )}
         </nav>
 
@@ -110,7 +112,7 @@ export function SiteNavbar({
               "flex size-8 items-center justify-center rounded-full border transition-colors",
               isOverlay
                 ? "border-white/35 bg-white/10 text-white hover:bg-white/20"
-                : "border-border bg-muted text-muted-foreground hover:text-foreground"
+                : "border-border bg-muted text-muted-foreground hover:text-foreground",
             )}
             title={isAuthenticated ? user?.fullName : "Log in"}
           >

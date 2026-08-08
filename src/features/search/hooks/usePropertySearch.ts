@@ -82,6 +82,7 @@ function mapApiResultToProperty(result: SearchApiResult, slotType: string): Prop
     country: h.country ?? "",
     image: h.imageUrl ?? FALLBACK_IMAGE,
     rating: h.rating ?? 4.0,
+    reviewCount: 0,
     starRating: Math.round(h.rating ?? 4),
     lane: "direct",
     priceUsd: 0,
@@ -89,6 +90,8 @@ function mapApiResultToProperty(result: SearchApiResult, slotType: string): Prop
     roomType: roomType as Property["roomType"],
     maxOccupancy: result.maxOccupancy,
     amenities: [],
+    amenityPills: [],
+    highlightAttributes: [],
     category: "all",
     latitude: coords?.lat ?? null,
     longitude: coords?.lng ?? null,
@@ -108,15 +111,26 @@ function mapZentrumHotelToProperty(
     country: string;
     image: string;
     rating: number;
+    reviewCount: number;
     starRating: number;
     latitude: number | null;
     longitude: number | null;
     totalRate: number;
+    publishedRate: number;
+    baseRate: number;
+    taxes: number;
+    fees: number;
+    discounts: number;
     currency: string;
     amenities: string[];
+    amenityPills: string[];
+    highlightAttributes: string[];
     freeBreakfast?: boolean;
     freeCancellation?: boolean;
     refundable?: boolean;
+    payAtHotel?: boolean;
+    boardBasisLabel?: string;
+    offerLabel?: string;
   },
   nights: number
 ): Property {
@@ -145,6 +159,12 @@ function mapZentrumHotelToProperty(
 
   const roomType = inferRoomTypeFromAmenities(hotel.name, mappedAmenities);
 
+  // Star filters use whole numbers; round official class for filter matching only.
+  const starForFilter =
+    hotel.starRating > 0 && hotel.starRating <= 5
+      ? Math.round(hotel.starRating)
+      : 0;
+
   return {
     id: hotel.id,
     title: hotel.name,
@@ -152,20 +172,40 @@ function mapZentrumHotelToProperty(
     city: hotel.city,
     country: hotel.country,
     image: hotel.image || FALLBACK_IMAGE,
-    rating: hotel.rating || hotel.starRating || 0,
-    // Keep official stars only; do not derive from guest review score
-    starRating:
-      hotel.starRating > 0 && hotel.starRating <= 5
-        ? Math.round(hotel.starRating)
-        : 0,
+    rating: hotel.rating,
+    reviewCount: hotel.reviewCount,
+    starRating: hotel.starRating > 0 ? hotel.starRating : starForFilter,
     lane: "wholesale",
     priceAmount: perNightInApiCurrency,
     priceCurrency: apiCurrency,
+    totalStayAmount: hotel.totalRate > 0 ? hotel.totalRate : undefined,
+    publishedStayAmount:
+      hotel.publishedRate > hotel.totalRate ? hotel.publishedRate : undefined,
+    priceBreakdown:
+      hotel.totalRate > 0
+        ? {
+            baseRate: hotel.baseRate > 0 ? hotel.baseRate : undefined,
+            taxes: hotel.taxes > 0 ? hotel.taxes : undefined,
+            fees: hotel.fees > 0 ? hotel.fees : undefined,
+            discounts: hotel.discounts > 0 ? hotel.discounts : undefined,
+            publishedRate:
+              hotel.publishedRate > 0 ? hotel.publishedRate : undefined,
+            totalRate: hotel.totalRate,
+          }
+        : undefined,
     priceUsd,
     priceIdr: 0,
     roomType,
     maxOccupancy: 2,
     amenities: mappedAmenities,
+    amenityPills: hotel.amenityPills,
+    freeBreakfast: hotel.freeBreakfast,
+    freeCancellation: hotel.freeCancellation,
+    refundable: hotel.refundable,
+    payAtHotel: hotel.payAtHotel,
+    boardBasisLabel: hotel.boardBasisLabel,
+    offerLabel: hotel.offerLabel,
+    highlightAttributes: hotel.highlightAttributes,
     category: "all",
     latitude: hotel.latitude,
     longitude: hotel.longitude,
@@ -329,6 +369,8 @@ export function usePropertySearch() {
   const zhStatus = useSearchStore((s) => s.status);
   const zhError = useSearchStore((s) => s.error);
   const runSearch = useSearchStore((s) => s.runSearch);
+  const expectedHotelCount = useSearchStore((s) => s.expectedHotelCount);
+  const completedHotelCount = useSearchStore((s) => s.completedHotelCount);
 
   const query: SearchQuery = useMemo(
     () => ({
@@ -367,6 +409,7 @@ export function usePropertySearch() {
     ...getDefaultFilters(currency),
     category: searchParams.get("category") ?? "all",
   }));
+  const [nameQuery, setNameQuery] = useState("");
 
   // When guest currency changes, reset budget bounds to that currency's scale.
   useEffect(() => {
@@ -376,6 +419,11 @@ export function usePropertySearch() {
       priceMax: defaultPriceMaxForCurrency(currency),
     }));
   }, [currency]);
+
+  // Clear hotel-name filter when the destination search changes.
+  useEffect(() => {
+    setNameQuery("");
+  }, [query.location, query.locationId, query.checkIn, query.checkOut, query.restDate, query.mode]);
 
   const sort = (searchParams.get("sort") as SortOption) ?? "latest";
   const view = (searchParams.get("view") as ViewMode) ?? "card";
@@ -604,18 +652,31 @@ export function usePropertySearch() {
     [query, updateParams]
   );
 
-  // Show hotels as they stream in; keep spinner only before the first batch.
+  // Show hotels as they stream in; keep full-page spinner only before the first batch.
+  const isSearching =
+    useZentrum && (zhStatus === "init" || zhStatus === "polling");
   const isLoading = !hasSearchCriteria
     ? false
     : useZentrum
-      ? (zhStatus === "init" || zhStatus === "polling") && zhHotels.length === 0
+      ? isSearching && zhHotels.length === 0
       : isLoadingLegacy;
 
   const error = useZentrum ? zhError : errorLegacy;
 
   const filteredProperties = useMemo(() => {
+    const hotelName = nameQuery.trim().toLowerCase();
+
     let results = sourceProperties.filter((property) => {
       if (!useZentrum && !matchesLocation(property, query.location)) return false;
+
+      if (
+        hotelName &&
+        !property.title.toLowerCase().includes(hotelName) &&
+        !property.address.toLowerCase().includes(hotelName) &&
+        !property.city.toLowerCase().includes(hotelName)
+      ) {
+        return false;
+      }
 
       const price = getPropertyFilterPrice(property, currency);
       // Ignore $0 placeholder rates so incomplete content doesn't wipe results
@@ -642,9 +703,10 @@ export function usePropertySearch() {
         }
       }
 
-      // Star filter: multi-select OR of exact star counts
+      // Star filter: multi-select OR of rounded official star class
       if (filters.starRatings.length > 0) {
-        if (!property.starRating || !filters.starRatings.includes(property.starRating)) {
+        const roundedStars = Math.round(property.starRating);
+        if (!roundedStars || !filters.starRatings.includes(roundedStars)) {
           return false;
         }
       }
@@ -707,10 +769,38 @@ export function usePropertySearch() {
     });
 
     return results;
-  }, [currency, filters, query.location, query.mode, sort, sourceProperties, useZentrum]);
+  }, [
+    currency,
+    filters,
+    nameQuery,
+    query.location,
+    query.mode,
+    sort,
+    sourceProperties,
+    useZentrum,
+  ]);
 
-  const totalResults = filteredProperties.length;
-  const totalPages = Math.max(1, Math.ceil(totalResults / perPage));
+  const activeFilterCount = countActiveFilters(filters, currency);
+  const hasClientResultNarrowing = activeFilterCount > 0 || nameQuery.trim().length > 0;
+
+  /**
+   * Stable total for the toolbar (Agoda/Trip-style):
+   * - While searching / no filters: prefer API expectedHotelCount once known
+   * - With filters applied: show how many currently match
+   */
+  const loadedResults = filteredProperties.length;
+  const displayTotalResults =
+    useZentrum && !hasClientResultNarrowing
+      ? Math.max(expectedHotelCount, loadedResults)
+      : loadedResults;
+  const isStreamingResults =
+    useZentrum &&
+    isSearching &&
+    !hasClientResultNarrowing &&
+    (expectedHotelCount === 0 || loadedResults < expectedHotelCount);
+
+  const totalResults = displayTotalResults;
+  const totalPages = Math.max(1, Math.ceil(Math.max(loadedResults, 1) / perPage));
   const currentPage = Math.min(page, totalPages);
 
   const paginatedProperties = useMemo(() => {
@@ -729,8 +819,6 @@ export function usePropertySearch() {
     });
     return counts;
   }, [sourceProperties]);
-
-  const activeFilterCount = countActiveFilters(filters, currency);
 
   const setSort = (value: SortOption) => updateParams({ sort: value, page: "1" });
   const setView = (value: ViewMode) => updateParams({ view: value });
@@ -767,12 +855,18 @@ export function usePropertySearch() {
     query,
     hasSearchCriteria,
     filters,
+    nameQuery,
     sort,
     view,
     page: currentPage,
     perPage,
     totalPages,
     totalResults,
+    loadedResults,
+    expectedHotelCount,
+    completedHotelCount,
+    isStreamingResults,
+    isSearching,
     nights,
     paginatedProperties,
     filteredProperties,
@@ -788,6 +882,7 @@ export function usePropertySearch() {
       setReloadKey((key) => key + 1);
     },
     setQuery,
+    setNameQuery,
     setSort,
     setView,
     setPage,

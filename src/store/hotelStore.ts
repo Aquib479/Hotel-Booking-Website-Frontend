@@ -15,6 +15,9 @@ export interface SelectedRateOption {
   rateIds: string[];
   roomId: string;
   totalRate: number;
+  baseRate?: number;
+  publishedRate?: number;
+  taxesAmount?: number;
   currency: string;
   roomName: string;
   roomTypeLabel?: string;
@@ -25,6 +28,9 @@ export interface SelectedRateOption {
   maxGuests?: number;
   bedSummary?: string;
   facilities?: string[];
+  includes?: string[];
+  views?: string[];
+  areaLabel?: string;
 }
 
 interface HotelStoreState {
@@ -91,6 +97,9 @@ export const useHotelStore = create<HotelStoreState>((set, get) => ({
       rateIds: match.option.rateIds,
       roomId: match.option.roomId,
       totalRate: match.option.totalRate,
+      baseRate: match.option.baseRate,
+      publishedRate: match.option.publishedRate,
+      taxesAmount: match.option.taxesAmount,
       currency: match.option.currency,
       roomName: match.group.roomName,
       roomTypeLabel: match.group.roomTypeLabel,
@@ -98,10 +107,13 @@ export const useHotelStore = create<HotelStoreState>((set, get) => ({
       refundable: match.option.refundable,
       cancellationText: match.option.cancellationText,
       imageUrl: match.group.imageUrl,
-        maxGuests: match.group.maxGuests,
-        bedSummary: match.group.bedSummary,
-        facilities: match.group.facilities,
-      };
+      maxGuests: match.group.maxGuests,
+      bedSummary: match.group.bedSummary,
+      facilities: match.group.facilities,
+      includes: match.option.includes,
+      views: match.group.views,
+      areaLabel: match.group.areaLabel,
+    };
     set({ selected });
     return selected;
   },

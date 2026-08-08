@@ -14,7 +14,7 @@ export function RefundBreakdownCard({ booking, preview }: RefundBreakdownCardPro
   return (
     <div
       className={cn(
-        "rounded-2xl border p-5",
+        "rounded-md border p-5",
         isZeroRefund ? "border-red-200 bg-red-50" : "border-border bg-white"
       )}
     >

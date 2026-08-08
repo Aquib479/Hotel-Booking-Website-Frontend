@@ -7,7 +7,7 @@ export {
 } from "./client";
 export * from "./types";
 export { autosuggest, getLocationDetails } from "./locations";
-export { getHotelContent } from "./content";
+export { getHotelContent, getGuestReviews } from "./content";
 export { searchInit, pollSearchResults, pollUntilComplete } from "./availability";
 export { getRoomsAndRates } from "./roomsRates";
 export { priceRecommendation } from "./price";

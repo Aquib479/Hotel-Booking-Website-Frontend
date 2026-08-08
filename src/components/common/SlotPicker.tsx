@@ -42,7 +42,7 @@ export function SlotPicker({
         <button
           type="button"
           className={cn(
-            "flex min-w-0 flex-1 flex-col items-start gap-0.5 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-black/5 sm:px-5",
+            "flex min-w-0 flex-1 flex-col items-start gap-0.5 rounded-md px-4 py-3 text-left transition-colors hover:bg-black/5 sm:px-5",
             triggerClassName
           )}
         >

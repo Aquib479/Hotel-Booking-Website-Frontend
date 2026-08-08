@@ -23,7 +23,7 @@ export function LocationMap({ latitude, longitude, address }: LocationMapProps) 
           View on map
         </a>
       </div>
-      <div className="overflow-hidden rounded-2xl border border-border shadow-sm shadow-black/[0.03]">
+      <div className="overflow-hidden rounded-md border border-border shadow-sm shadow-black/[0.03]">
         <iframe
           title={`Map showing ${address}`}
           src={src}

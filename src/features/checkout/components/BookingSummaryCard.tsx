@@ -17,6 +17,7 @@ import {
   ChevronDown,
   CigaretteOff,
   DoorOpen,
+  Loader2,
   Maximize2,
   Pencil,
   ShieldCheck,
@@ -35,8 +36,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useCurrency } from "@/context/CurrencyContext";
-import { convertBetween } from "@/lib/currency/format";
+import { formatPrice } from "@/lib/currency/format";
 import type { CurrencyCode } from "@/lib/currency/types";
 import { CURRENCIES } from "@/lib/currency/types";
 import { cn } from "@/lib/utils";
@@ -92,14 +92,15 @@ interface BookingSummaryCardProps {
   draft: CheckoutDraft;
   onHoldExpire: () => void;
   onDraftChange: (next: CheckoutDraft) => void;
+  isRefreshingPrice?: boolean;
 }
 
 export function BookingSummaryCard({
   draft,
   onHoldExpire,
   onDraftChange,
+  isRefreshingPrice = false,
 }: BookingSummaryCardProps) {
-  const { currency, format: formatCurrency } = useCurrency();
   const [priceOpen, setPriceOpen] = useState(true);
   const [roomsOpen, setRoomsOpen] = useState(false);
   const [datesOpen, setDatesOpen] = useState(false);
@@ -117,10 +118,10 @@ export function BookingSummaryCard({
   const editParams = draftToDetailSearchParams(draft);
 
   const draftCurrency = toCurrencyCode(draft.currency);
+  // Reserved rate is already in API currency — never convert on the client.
   const displayTotal =
-    draft.totalPrice != null && draft.totalPrice > 0
-      ? convertBetween(draft.totalPrice, draftCurrency, currency)
-      : 0;
+    draft.totalPrice != null && draft.totalPrice > 0 ? draft.totalPrice : 0;
+  const formatMoney = (amount: number) => formatPrice(amount, draftCurrency);
 
   const nights = Math.max(1, draft.nights ?? 1);
   const rooms = Math.min(MAX_ROOMS, Math.max(1, draft.rooms ?? 1));
@@ -517,12 +518,12 @@ export function BookingSummaryCard({
                 {nights === 1 ? "" : "s"}
               </span>
               <span className="font-medium text-foreground">
-                {formatCurrency(displayTotal)}
+                {formatMoney(displayTotal)}
               </span>
             </div>
             {perNight > 0 ? (
               <p className="text-xs text-muted-foreground">
-                Avg. {formatCurrency(perNight)} / night / room
+                Avg. {formatMoney(perNight)} / night / room
               </p>
             ) : null}
             <div className="flex items-start justify-between gap-3">
@@ -537,44 +538,31 @@ export function BookingSummaryCard({
             <div>
               <p className="text-base font-bold text-foreground">Total</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {draft.source === "zentrumhub"
-                  ? "Estimate · confirmed at payment"
-                  : "Amount due"}
+                {isRefreshingPrice
+                  ? "Updating for selected currency…"
+                  : draft.source === "zentrumhub"
+                    ? "Estimate · confirmed at payment"
+                    : "Amount due"}
               </p>
             </div>
-            {displayTotal > 0 ? (
+            {isRefreshingPrice ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin text-brand" />
+                Updating…
+              </div>
+            ) : displayTotal > 0 ? (
               <p className="text-right text-xl font-bold tracking-tight text-foreground">
-                {formatCurrency(displayTotal)}
+                {formatMoney(displayTotal)}
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">Price pending</p>
             )}
           </div>
 
-          {draftCurrency !== currency && draft.totalPrice ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Property currency: {draft.currency}{" "}
-              {draft.totalPrice.toLocaleString(undefined, {
-                maximumFractionDigits: 2,
-              })}
-            </p>
-          ) : null}
-
           <p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-emerald-700">
             <ShieldCheck className="size-3.5" />
             Secure checkout · best available rate
           </p>
-        </div>
-
-        <div className="border-t border-border px-4 py-3">
-          <Button variant="ghost" className="h-auto w-full gap-2 py-2" asChild>
-            <Link
-              to={`/properties/${draft.propertyId}?${editParams.toString()}`}
-            >
-              <Pencil className="size-3.5" />
-              Edit room or dates
-            </Link>
-          </Button>
         </div>
       </section>
     </div>
