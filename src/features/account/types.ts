@@ -2,11 +2,25 @@ export type AccountSection = "profile" | "payment" | "notifications" | "danger";
 
 export type PhoneVerificationStatus = "verified" | "pending" | "unverified";
 
+export type GenderOption = "female" | "male" | "non_binary" | "prefer_not_to_say" | "";
+
+export type LanguagePreference = "en" | "id" | "hi";
+
+export type PriceDisplayMode = "total" | "per_night";
+
 export interface NotificationPreferences {
   whatsappTransactional: boolean;
   whatsappPromotional: boolean;
   emailTransactional: boolean;
   emailPromotional: boolean;
+}
+
+export interface MemberProfileDetails {
+  gender: GenderOption;
+  country: string;
+  city: string;
+  language: LanguagePreference;
+  priceDisplay: PriceDisplayMode;
 }
 
 export interface UserProfile {
@@ -19,6 +33,7 @@ export interface UserProfile {
   phoneVerified: boolean;
   hasPassword: boolean;
   notifications: NotificationPreferences;
+  member: MemberProfileDetails;
 }
 
 export interface SavedPaymentMethod {
@@ -27,7 +42,8 @@ export interface SavedPaymentMethod {
   label: string;
   maskedIdentifier: string;
   expiry?: string;
-  isDefault: boolean;
+  holderName?: string;
 }
 
 export type ProfileField = "fullName" | "email";
+export type MemberProfileField = keyof MemberProfileDetails;

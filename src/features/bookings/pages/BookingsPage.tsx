@@ -10,7 +10,7 @@ import { BOOKINGS_PER_PAGE } from "../constants";
 
 export function BookingsPage() {
   const { isAuthenticated } = useRequireAuth("/bookings");
-  const { filters, setStatus, setLane, setSearch, setPage } = useBookingFilters();
+  const { filters, setStatus, setSearch, setPage } = useBookingFilters();
   const { bookings, total, counts, isLoading, error } = useBookingsList(filters);
 
   if (!isAuthenticated) {
@@ -25,10 +25,8 @@ export function BookingsPage() {
       status={filters.status}
       counts={counts}
       search={filters.search}
-      lane={filters.lane}
       onStatusChange={setStatus}
       onSearchChange={setSearch}
-      onLaneChange={setLane}
       pagination={
         totalPages > 1 ? (
           <div className="flex items-center justify-center gap-3">

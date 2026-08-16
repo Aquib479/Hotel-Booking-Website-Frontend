@@ -2,17 +2,28 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuthUser } from "@/features/auth/types";
 import { useAuth } from "@/features/auth/context/AuthProvider";
 import { verifyOtp as apiVerifyOtp, sendOtp } from "@/features/auth/api";
-import type { NotificationPreferences, ProfileField, UserProfile } from "../types";
+import type {
+  MemberProfileDetails,
+  NotificationPreferences,
+  ProfileField,
+  UserProfile,
+} from "../types";
 import {
   deleteAccountApi,
   changePasswordApi,
   requestEmailChange,
+  readMemberProfile,
   readNotificationPrefs,
   setPasswordApi,
+  writeMemberProfile,
   writeNotificationPrefs,
 } from "../api";
 
-function toProfile(user: AuthUser, notifications: NotificationPreferences): UserProfile {
+function toProfile(
+  user: AuthUser,
+  notifications: NotificationPreferences,
+  member: MemberProfileDetails
+): UserProfile {
   return {
     id: user.id,
     fullName: user.fullName,
@@ -23,6 +34,7 @@ function toProfile(user: AuthUser, notifications: NotificationPreferences): User
     phoneVerified: user.phoneVerified,
     hasPassword: user.hasPassword !== false,
     notifications,
+    member,
   };
 }
 
@@ -31,13 +43,19 @@ export function useProfile() {
   const [notifications, setNotifications] = useState<NotificationPreferences>(() =>
     user ? readNotificationPrefs(user.id) : readNotificationPrefs("")
   );
+  const [member, setMember] = useState<MemberProfileDetails>(() =>
+    user ? readMemberProfile(user.id) : readMemberProfile("")
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localUser, setLocalUser] = useState<AuthUser | null>(user);
 
   useEffect(() => {
     setLocalUser(user);
-    if (user) setNotifications(readNotificationPrefs(user.id));
+    if (user) {
+      setNotifications(readNotificationPrefs(user.id));
+      setMember(readMemberProfile(user.id));
+    }
   }, [user]);
 
   const persistAuthUser = useCallback((next: AuthUser) => {
@@ -46,8 +64,8 @@ export function useProfile() {
   }, []);
 
   const profile = useMemo(
-    () => (localUser ? toProfile(localUser, notifications) : null),
-    [localUser, notifications]
+    () => (localUser ? toProfile(localUser, notifications, member) : null),
+    [localUser, notifications, member]
   );
 
   const updateField = useCallback(
@@ -70,6 +88,16 @@ export function useProfile() {
       }
     },
     [localUser, persistAuthUser]
+  );
+
+  const updateMember = useCallback(
+    (patch: Partial<MemberProfileDetails>) => {
+      if (!localUser) return;
+      const next = { ...member, ...patch };
+      setMember(next);
+      writeMemberProfile(localUser.id, next);
+    },
+    [localUser, member]
   );
 
   const startPhoneChange = useCallback(
@@ -153,6 +181,7 @@ export function useProfile() {
   return {
     profile,
     updateField,
+    updateMember,
     startPhoneChange,
     confirmPhoneChange,
     cancelPhoneChange,

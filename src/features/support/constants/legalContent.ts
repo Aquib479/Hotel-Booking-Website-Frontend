@@ -222,6 +222,13 @@ export const LEGAL_DOCUMENTS = {
 
 export const CONTACT_METHODS = [
   {
+    id: "email",
+    label: "Email",
+    description: "contactus@RestHalf.com",
+    href: "mailto:contactus@RestHalf.com?subject=RestHalf%20inquiry",
+    responseTime: "Within 24 hours on business days",
+  },
+  {
     id: "whatsapp",
     label: "WhatsApp",
     description: "Chat with us — fastest for booking questions on the go",
@@ -230,18 +237,26 @@ export const CONTACT_METHODS = [
     external: true,
   },
   {
-    id: "email",
-    label: "Email",
-    description: "support@resthalf.com",
-    href: "mailto:support@resthalf.com?subject=RestHalf%20support%20request",
-    responseTime: "Within 24 hours on business days",
-  },
-  {
     id: "phone",
     label: "Phone",
     description: "+62 812-3456-7890 (English & Bahasa)",
     href: "tel:+6281234567890",
     responseTime: "9:00–21:00 WIB",
+  },
+] as const;
+
+export const CONTACT_OFFICES = [
+  {
+    id: "hq",
+    label: "Headquarters",
+    city: "Jakarta, Indonesia",
+    detail: "RestHalf HQ — product, partnerships, and guest support for SEA.",
+  },
+  {
+    id: "india",
+    label: "India office",
+    city: "Hyderabad, India",
+    detail: "Regional operations and partner support for India.",
   },
 ] as const;
 

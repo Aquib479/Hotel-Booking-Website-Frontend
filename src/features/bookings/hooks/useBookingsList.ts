@@ -42,7 +42,7 @@ export function useBookingsList(filters: BookingFilters) {
     return () => {
       cancelled = true;
     };
-  }, [filters.status, filters.lane, filters.search, filters.page]);
+  }, [filters.status, filters.search, filters.page]);
 
   return state;
 }

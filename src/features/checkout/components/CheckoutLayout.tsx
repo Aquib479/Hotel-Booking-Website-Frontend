@@ -3,23 +3,45 @@ import { cn } from "@/lib/utils";
 
 interface CheckoutLayoutProps {
   children: ReactNode;
-  summary: ReactNode;
+  summary?: ReactNode;
   stickyCta?: ReactNode;
+  /** When true, renders a centered single-column layout (step 3 confirmed). */
+  confirmed?: boolean;
+  title?: string;
 }
 
-export function CheckoutLayout({ children, summary, stickyCta }: CheckoutLayoutProps) {
+export function CheckoutLayout({
+  children,
+  summary,
+  stickyCta,
+  confirmed = false,
+  title = "Checkout",
+}: CheckoutLayoutProps) {
+  if (confirmed) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
+        {title ? (
+          <h1 className="mb-8 text-2xl font-bold text-foreground sm:text-3xl">{title}</h1>
+        ) : null}
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
-      <h1 className="mb-8 text-2xl font-bold text-foreground sm:text-3xl">Checkout</h1>
+      <h1 className="mb-8 text-2xl font-bold text-foreground sm:text-3xl">{title}</h1>
 
       {/* Mobile: summary on top */}
-      <div className="mb-6 lg:hidden">{summary}</div>
+      {summary ? <div className="mb-6 lg:hidden">{summary}</div> : null}
 
       <div className="grid gap-8 lg:grid-cols-[1fr_380px] lg:items-start">
         <div className="min-w-0 space-y-8">{children}</div>
-        <div className="hidden lg:block">
-          <div className="sticky top-24">{summary}</div>
-        </div>
+        {summary ? (
+          <div className="hidden lg:block">
+            <div className="sticky top-24">{summary}</div>
+          </div>
+        ) : null}
       </div>
 
       {stickyCta && (

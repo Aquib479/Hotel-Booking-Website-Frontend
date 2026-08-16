@@ -1,7 +1,6 @@
 import type { BookingTabStatus } from "./types";
 
 export const BOOKINGS_STATUS_PARAM = "status";
-export const BOOKINGS_LANE_PARAM = "lane";
 export const BOOKINGS_SEARCH_PARAM = "q";
 export const BOOKINGS_PAGE_PARAM = "page";
 
@@ -15,12 +14,6 @@ export const BOOKING_STATUS_TABS: { id: BookingTabStatus; label: string }[] = [
   { id: "upcoming", label: "Upcoming" },
   { id: "past", label: "Past" },
   { id: "cancelled", label: "Cancelled" },
-];
-
-export const LANE_FILTER_OPTIONS = [
-  { id: "all" as const, label: "All" },
-  { id: "direct" as const, label: "RestHalf Exclusive" },
-  { id: "wholesale" as const, label: "Partner rate" },
 ];
 
 /** v1: Direct → hotel detail; Wholesale → search by city (OTA inventory may differ) */

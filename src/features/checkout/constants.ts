@@ -28,7 +28,37 @@ export const PAYMENT_METHODS: {
   label: string;
   description: string;
 }[] = [
-  { id: "ewallet", label: "E-wallet", description: "GoPay, OVO, DANA via Xendit / Midtrans" },
-  { id: "virtual_account", label: "Virtual account", description: "Bank transfer (BCA, Mandiri, BNI)" },
-  { id: "card", label: "Card", description: "Visa, Mastercard, JCB" },
+  {
+    id: "card",
+    label: "Credit / debit card",
+    description: "Visa, Mastercard, Amex, JCB, RuPay",
+  },
+  {
+    id: "upi",
+    label: "UPI",
+    description: "Pay instantly with any UPI app",
+  },
+];
+
+export const CARD_NETWORK_BADGES = ["Visa", "Mastercard", "Amex", "JCB", "RuPay"] as const;
+
+export const UPI_APP_HINTS = [
+  { id: "gpay", label: "GPay" },
+  { id: "phonepe", label: "PhonePe" },
+  { id: "paytm", label: "Paytm" },
+  { id: "bhim", label: "BHIM" },
+] as const;
+
+export const UPI_HANDLE_SUGGESTIONS = [
+  "@oksbi",
+  "@okhdfcbank",
+  "@paytm",
+  "@ybl",
+  "@axl",
+] as const;
+
+export const CHECKOUT_STEPS: { id: 1 | 2 | 3; label: string }[] = [
+  { id: 1, label: "Customer information" },
+  { id: 2, label: "Payment information" },
+  { id: 3, label: "Booking confirmed" },
 ];

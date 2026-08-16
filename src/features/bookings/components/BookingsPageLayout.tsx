@@ -1,17 +1,15 @@
 import type { ReactNode } from "react";
 import { BookingStatusTabs } from "./BookingStatusTabs";
 import { BookingsSearchAndFilter } from "./BookingsSearchAndFilter";
-import type { BookingTabStatus, LaneFilter } from "../types";
+import type { BookingTabStatus } from "../types";
 
 interface BookingsPageLayoutProps {
   total: number;
   status: BookingTabStatus;
   counts: Record<BookingTabStatus, number>;
   search: string;
-  lane: LaneFilter;
   onStatusChange: (status: BookingTabStatus) => void;
   onSearchChange: (search: string) => void;
-  onLaneChange: (lane: LaneFilter) => void;
   children: ReactNode;
   pagination?: ReactNode;
 }
@@ -21,10 +19,8 @@ export function BookingsPageLayout({
   status,
   counts,
   search,
-  lane,
   onStatusChange,
   onSearchChange,
-  onLaneChange,
   children,
   pagination,
 }: BookingsPageLayoutProps) {
@@ -42,12 +38,7 @@ export function BookingsPageLayout({
       <BookingStatusTabs active={status} counts={counts} onChange={onStatusChange} />
 
       <div className="mt-6">
-        <BookingsSearchAndFilter
-          search={search}
-          lane={lane}
-          onSearchChange={onSearchChange}
-          onLaneChange={onLaneChange}
-        />
+        <BookingsSearchAndFilter search={search} onSearchChange={onSearchChange} />
       </div>
 
       <div className="mt-6 space-y-4">{children}</div>

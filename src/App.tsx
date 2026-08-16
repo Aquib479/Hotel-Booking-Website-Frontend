@@ -17,6 +17,11 @@ import BookingConfirmation from "@/pages/BookingConfirmation";
 import Account from "@/pages/Account";
 import Faq from "@/pages/Faq";
 import Contact from "@/pages/Contact";
+import About from "@/pages/About";
+import ListProperty from "@/pages/ListProperty";
+import RateApp from "@/pages/RateApp";
+import Coins from "@/pages/Coins";
+import Reviews from "@/pages/Reviews";
 import Terms from "@/pages/Terms";
 import CancellationPolicy from "@/pages/CancellationPolicy";
 import Privacy from "@/pages/Privacy";
@@ -58,8 +63,13 @@ export default function App() {
               <Route path="/bookings/:id/cancel" element={<BookingCancel />} />
               <Route path="/bookings/:id" element={<BookingDetail />} />
               <Route path="/account" element={<Account />} />
+              <Route path="/coins" element={<Coins />} />
+              <Route path="/reviews" element={<Reviews />} />
               <Route path="/faq" element={<Faq />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/list-property" element={<ListProperty />} />
+              <Route path="/rate-app" element={<RateApp />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/cancellation-policy" element={<CancellationPolicy />} />
               <Route path="/privacy" element={<Privacy />} />

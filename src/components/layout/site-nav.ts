@@ -1,17 +1,17 @@
 export const SITE_NAV_LINKS = [
   { label: "Home", href: "/" },
-  { label: "Favourites", href: "/favourites" },
+  { label: "Saved", href: "/favourites" },
   { label: "Help", href: "/faq" },
   { label: "Contact", href: "/contact" },
 ] as const;
 
 export const FOOTER_LINKS = {
   RestHalf: [
-    { label: "About", href: "#" },
+    { label: "About", href: "/about" },
     { label: "How RestHalf works", href: "/faq" },
     { label: "Help Center", href: "/faq" },
     { label: "Contact", href: "/contact" },
-    { label: "Careers", href: "#" },
+    { label: "List your property", href: "/list-property" },
   ],
   Book: [
     { label: "Rest · 12h slots", href: "/search?mode=rest" },

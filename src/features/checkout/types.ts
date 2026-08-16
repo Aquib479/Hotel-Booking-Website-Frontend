@@ -64,9 +64,43 @@ export interface GuestDetailsValues {
   specialRequests: string;
 }
 
-export type PaymentMethod = "ewallet" | "virtual_account" | "card";
+export type PaymentMethod = "card" | "upi";
+
+export interface CardPaymentValues {
+  holderName: string;
+  cardNumber: string;
+  expiry: string;
+  cvv: string;
+}
+
+export interface UpiPaymentValues {
+  vpa: string;
+}
+
+/** Checkout stepper: customer info → payment → confirmed */
+export type CheckoutStep = 1 | 2 | 3;
 
 export type NoDraftReason = "missing" | "expired";
+
+/** Snapshot shown on step 3 after payment succeeds (draft may be cleared). */
+export interface ConfirmedCheckoutSnapshot {
+  bookingId: string;
+  confirmationCode?: string;
+  hotelName: string;
+  hotelImageUrl?: string;
+  mode: BookingMode;
+  checkIn?: string;
+  checkOut?: string;
+  nights?: number;
+  slotDate?: string;
+  slotWindow?: RestSlot;
+  guestsLabel: string;
+  roomName?: string;
+  totalPrice: number;
+  currency: SupportedCurrency;
+  guestName: string;
+  guestEmail: string;
+}
 
 export interface CheckoutFormState {
   values: GuestDetailsValues;

@@ -18,7 +18,7 @@ export default function Favourites() {
               Saved hotels
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              My Favourites
+              Saved
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               {favorites.length === 0

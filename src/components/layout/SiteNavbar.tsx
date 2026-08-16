@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { User } from "lucide-react";
 import { CurrencySwitcher } from "@/components/common/CurrencySwitcher";
-import { useAuth } from "@/features/auth/context/AuthProvider";
+import { AccountMenuButton } from "@/features/account/components/AccountMenuButton";
 import { cn } from "@/lib/utils";
 import { SITE_NAV_LINKS } from "./site-nav";
 
@@ -22,8 +21,6 @@ export function SiteNavbar({
   const isHome = location.pathname === "/";
   const isInline = variant === "inline";
   const [scrolled, setScrolled] = useState(false);
-  const { isAuthenticated, user } = useAuth();
-
   useEffect(() => {
     if (!isHome || isInline) {
       setScrolled(false);
@@ -105,19 +102,7 @@ export function SiteNavbar({
 
         <div className="flex items-center gap-2 sm:gap-3">
           <CurrencySwitcher variant={isOverlay ? "overlay" : "default"} />
-          <Link
-            to={isAuthenticated ? "/account" : "/login"}
-            aria-label={isAuthenticated ? "Account settings" : "Log in"}
-            className={cn(
-              "flex size-8 items-center justify-center rounded-full border transition-colors",
-              isOverlay
-                ? "border-white/35 bg-white/10 text-white hover:bg-white/20"
-                : "border-border bg-muted text-muted-foreground hover:text-foreground",
-            )}
-            title={isAuthenticated ? user?.fullName : "Log in"}
-          >
-            <User className="size-5" />
-          </Link>
+          <AccountMenuButton isOverlay={isOverlay} />
         </div>
       </div>
     </header>

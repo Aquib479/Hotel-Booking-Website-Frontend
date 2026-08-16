@@ -1,54 +1,45 @@
-import type { BookingLane } from "@/lib/booking/types";
 import { DirectPaymentMethods } from "./DirectPaymentMethods";
-import { WholesaleHandoffNotice } from "./WholesaleHandoffNotice";
 import type { PaymentMethod } from "../types";
+import type { useCardPaymentForm, useUpiPaymentForm } from "../hooks/usePaymentForms";
 
 interface PaymentSectionProps {
-  lane: BookingLane;
-  supplierName?: string;
   payAmountLabel: string;
   selectedMethod: PaymentMethod | null;
   onSelectMethod: (method: PaymentMethod) => void;
   onSubmitPayment: (method: PaymentMethod) => void;
-  onWholesaleContinue: () => void;
   isSubmitting: boolean;
   disabled: boolean;
   disabledReason?: string;
+  /** Desktop pay button — hide when an external step CTA is used. */
+  showSubmitButton?: boolean;
+  cardForm: ReturnType<typeof useCardPaymentForm>;
+  upiForm: ReturnType<typeof useUpiPaymentForm>;
 }
 
 export function PaymentSection({
-  lane,
-  supplierName,
   payAmountLabel,
   selectedMethod,
   onSelectMethod,
   onSubmitPayment,
-  onWholesaleContinue,
   isSubmitting,
   disabled,
   disabledReason,
+  showSubmitButton = false,
+  cardForm,
+  upiForm,
 }: PaymentSectionProps) {
-  if (lane === "direct") {
-    return (
-      <DirectPaymentMethods
-        selectedMethod={selectedMethod}
-        onSelectMethod={onSelectMethod}
-        payAmountLabel={payAmountLabel}
-        onSubmitPayment={onSubmitPayment}
-        isSubmitting={isSubmitting}
-        disabled={disabled}
-        disabledReason={disabledReason}
-      />
-    );
-  }
-
   return (
-    <WholesaleHandoffNotice
-      supplierName={supplierName}
-      onContinue={onWholesaleContinue}
+    <DirectPaymentMethods
+      selectedMethod={selectedMethod}
+      onSelectMethod={onSelectMethod}
+      payAmountLabel={payAmountLabel}
+      onSubmitPayment={onSubmitPayment}
       isSubmitting={isSubmitting}
       disabled={disabled}
       disabledReason={disabledReason}
+      showSubmitButton={showSubmitButton}
+      cardForm={cardForm}
+      upiForm={upiForm}
     />
   );
 }
