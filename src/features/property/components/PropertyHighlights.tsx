@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Bath,
   Coffee,
@@ -44,10 +43,7 @@ interface PropertyHighlightsProps {
 export function PropertyHighlights({
   items,
   amenities = [],
-  onShowMore,
 }: PropertyHighlightsProps) {
-  const [expanded, setExpanded] = useState(false);
-
   const labels = [...items, ...amenities.map((a) => a.label)]
     .map((l) => l.trim())
     .filter(Boolean);
@@ -61,8 +57,20 @@ export function PropertyHighlights({
 
   if (!unique.length) return null;
 
-  const visible = expanded ? unique.slice(0, 8) : unique.slice(0, 4);
-  const remaining = Math.max(0, unique.length - visible.length);
-
-  return <></>;
+  return (
+    <div className="flex flex-wrap gap-3">
+      {unique.slice(0, 8).map((label) => {
+        const Icon = iconForAmenityLabel(label);
+        return (
+          <div
+            key={label}
+            className="flex min-w-0 items-center gap-2 rounded-full border border-border bg-white px-3 py-1.5 text-sm text-muted-foreground"
+          >
+            <Icon className="size-3.5 shrink-0 text-brand" />
+            <span className="truncate">{label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }

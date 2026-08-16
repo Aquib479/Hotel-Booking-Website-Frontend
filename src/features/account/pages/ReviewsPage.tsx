@@ -17,7 +17,7 @@ export function ReviewsPage() {
       description="Reviews you've left after RestHalf stays and rest slots"
     >
       <div className="space-y-4">
-        {DEMO_USER_REVIEWS.length === 0 ? (
+        {DEMO_USER_REVIEWS.length === 0 as number ? (
           <SectionCard title="No reviews yet">
             <p className="text-sm text-muted-foreground">
               After you complete a booking, you can rate the hotel from My bookings.

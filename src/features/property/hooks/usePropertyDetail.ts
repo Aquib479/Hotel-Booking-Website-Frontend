@@ -23,80 +23,77 @@ function mapContentGuestReviews(
   snippets: HotelContentGuestReview[] | null | undefined
 ): Review[] {
   if (!snippets?.length) return [];
-  return snippets
-    .map((item, index) => {
-      const author =
-        item.ReviewerName?.trim() ||
-        item.reviewerName?.trim() ||
-        "Guest";
-      const title = item.Title?.trim() || item.title?.trim() || "";
-      const text = item.Text?.trim() || item.text?.trim() || "";
-      const comment = text || title;
-      if (!comment) return null;
-      const rating = Number(item.Rating ?? item.rating ?? 0) || 0;
-      const source = item.Source?.trim() || item.source?.trim() || undefined;
-      return {
-        id: `content-review-${index}`,
-        author,
-        date: source ? `Via ${source}` : "Guest review",
-        rating,
-        comment,
-        title: title && text ? title : undefined,
-        source,
-      } satisfies Review;
-    })
-    .filter((r): r is Review => Boolean(r));
+  return snippets.flatMap((item, index) => {
+    const author =
+      item.ReviewerName?.trim() ||
+      item.reviewerName?.trim() ||
+      "Guest";
+    const title = item.Title?.trim() || item.title?.trim() || "";
+    const text = item.Text?.trim() || item.text?.trim() || "";
+    const comment = text || title;
+    if (!comment) return [];
+    const rating = Number(item.Rating ?? item.rating ?? 0) || 0;
+    const source = item.Source?.trim() || item.source?.trim() || undefined;
+    const review: Review = {
+      id: `content-review-${index}`,
+      author,
+      date: source ? `Via ${source}` : "Guest review",
+      rating,
+      comment,
+      title: title && text ? title : undefined,
+      source,
+    };
+    return [review];
+  });
 }
 
 function mapGuestReviewDetails(details: GuestReviewDetail[] | null | undefined): Review[] {
   if (!details?.length) return [];
-  return details
-    .map((item, index) => {
-      const author = item.reviewer?.name?.trim() || "Guest";
-      const title = item.title?.trim() || "";
-      const summary = item.summary?.trim() || "";
-      const paragraphs = (item.text ?? [])
-        .map((line) => line?.trim())
-        .filter((line): line is string => Boolean(line));
-      const comment =
-        paragraphs.join("\n\n") || summary || title;
-      if (!comment && !title) return null;
+  return details.flatMap((item, index) => {
+    const author = item.reviewer?.name?.trim() || "Guest";
+    const title = item.title?.trim() || "";
+    const summary = item.summary?.trim() || "";
+    const paragraphs = (item.text ?? [])
+      .map((line) => line?.trim())
+      .filter((line): line is string => Boolean(line));
+    const comment = paragraphs.join("\n\n") || summary || title;
+    if (!comment && !title) return [];
 
-      const rating = Number(item.score ?? 0) || 0;
-      const date = item.dateSubmitted
-        ? formatReviewDate(item.dateSubmitted)
-        : "Guest review";
+    const rating = Number(item.score ?? 0) || 0;
+    const date = item.dateSubmitted
+      ? formatReviewDate(item.dateSubmitted)
+      : "Guest review";
 
-      const managementResponses = (item.managementResponses ?? [])
-        .map((response) => {
-          const text = response.text?.trim();
-          if (!text) return null;
-          return {
-            text,
-            date: response.date ? formatReviewDate(response.date) : "",
-          };
-        })
-        .filter((r): r is { text: string; date: string } => Boolean(r));
+    const managementResponses = (item.managementResponses ?? [])
+      .map((response) => {
+        const text = response.text?.trim();
+        if (!text) return null;
+        return {
+          text,
+          date: response.date ? formatReviewDate(response.date) : "",
+        };
+      })
+      .filter((r): r is { text: string; date: string } => Boolean(r));
 
-      return {
-        id: `guest-review-${index}-${item.dateSubmitted ?? index}`,
-        author,
-        date,
-        rating,
-        comment,
-        title: title || undefined,
-        summary: summary && summary !== comment ? summary : undefined,
-        paragraphs: paragraphs.length ? paragraphs : undefined,
-        source: item.verificationSource?.trim() || undefined,
-        country: item.reviewer?.country?.trim() || undefined,
-        travelPurpose: item.reviewer?.travelPurpose?.trim() || undefined,
-        travelerType: item.reviewer?.type?.trim() || undefined,
-        managementResponses: managementResponses.length
-          ? managementResponses
-          : undefined,
-      } satisfies Review;
-    })
-    .filter((r): r is Review => Boolean(r));
+    const review: Review = {
+      id: `guest-review-${index}-${item.dateSubmitted ?? index}`,
+      author,
+      date,
+      rating,
+      comment,
+      title: title || undefined,
+      summary: summary && summary !== comment ? summary : undefined,
+      paragraphs: paragraphs.length ? paragraphs : undefined,
+      source: item.verificationSource?.trim() || undefined,
+      country: item.reviewer?.country?.trim() || undefined,
+      travelPurpose: item.reviewer?.travelPurpose?.trim() || undefined,
+      travelerType: item.reviewer?.type?.trim() || undefined,
+      managementResponses: managementResponses.length
+        ? managementResponses
+        : undefined,
+    };
+    return [review];
+  });
 }
 
 function formatReviewDate(iso: string): string {

@@ -14,28 +14,15 @@ interface PropertyInfoHeaderProps {
   onScrollToReviews?: () => void;
 }
 
-function ratingLabel(rating: number) {
-  if (rating >= 9) return "Excellent";
-  if (rating >= 8) return "Very good";
-  if (rating >= 7) return "Good";
-  if (rating > 0) return "Guest score";
-  return null;
-}
-
 export function PropertyInfoHeader({
   region,
   title,
   address,
   starRating = 0,
-  rating,
-  reviewCount,
   isSaved,
   onToggleSave,
   onShare,
-  onScrollToReviews,
 }: PropertyInfoHeaderProps) {
-  const label = ratingLabel(rating);
-
   const handleShare = async () => {
     if (onShare) {
       onShare();

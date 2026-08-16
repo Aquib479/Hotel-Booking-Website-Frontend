@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import {
   addMonths,
   differenceInCalendarDays,
@@ -19,7 +18,6 @@ import {
   DoorOpen,
   Loader2,
   Maximize2,
-  Pencil,
   ShieldCheck,
   Star,
   Users,
@@ -41,7 +39,7 @@ import type { CurrencyCode } from "@/lib/currency/types";
 import { CURRENCIES } from "@/lib/currency/types";
 import { cn } from "@/lib/utils";
 import type { CheckoutDraft } from "../types";
-import { draftToDetailSearchParams, formatGuestsSummary } from "../utils";
+import { formatGuestsSummary } from "../utils";
 import { SlotHoldCountdown } from "./SlotHoldCountdown";
 
 const MAX_ROOMS = 9;
@@ -115,7 +113,6 @@ export function BookingSummaryCard({
   const starRating = draft.hotelMeta?.starRating ?? 0;
   const rating = draft.hotelMeta?.rating ?? 0;
   const reviewCount = draft.hotelMeta?.reviewCount ?? 0;
-  const editParams = draftToDetailSearchParams(draft);
 
   const draftCurrency = toCurrencyCode(draft.currency);
   // Reserved rate is already in API currency — never convert on the client.

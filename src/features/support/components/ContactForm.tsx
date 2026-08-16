@@ -54,7 +54,7 @@ export function ContactForm({ onSubmitted }: ContactFormProps) {
     let cancelled = false;
     setLoadingBookings(true);
 
-    fetchBookings({ status: "upcoming", lane: "all", search: "", page: 1 })
+    fetchBookings({ status: "upcoming", search: "", page: 1 })
       .then((result) => {
         if (!cancelled) setBookings(result.bookings);
       })
