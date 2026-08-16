@@ -224,8 +224,8 @@ export const CONTACT_METHODS = [
   {
     id: "email",
     label: "Email",
-    description: "contactus@RestHalf.com",
-    href: "mailto:contactus@RestHalf.com?subject=RestHalf%20inquiry",
+    description: "contactus@resthalf.com",
+    href: "mailto:contactus@resthalf.com?subject=RestHalf%20inquiry",
     responseTime: "Within 24 hours on business days",
   },
   {
@@ -248,15 +248,17 @@ export const CONTACT_METHODS = [
 export const CONTACT_OFFICES = [
   {
     id: "hq",
-    label: "Headquarters",
+    label: "Indonesia",
     city: "Jakarta, Indonesia",
-    detail: "RestHalf HQ — product, partnerships, and guest support for SEA.",
+    detail:
+      "Office address: Komplek Perkantoran Duta Merlin Blok F13, Room number: 3E, Jl. Gajah Mada RT.2/RW.8, Petojo Utara, Kec. Gambir, Jakarta Pusat, DKI Jakarta 10130",
   },
   {
     id: "india",
-    label: "India office",
+    label: "Hyderabad",
     city: "Hyderabad, India",
-    detail: "Regional operations and partner support for India.",
+    detail:
+      "Premises: Unit no 103, 10-2299/A, Alliance Landmark, Mallepally Village, Asifnagar Mandal, Hyderabad District, T.S",
   },
 ] as const;
 

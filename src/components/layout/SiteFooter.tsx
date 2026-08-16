@@ -6,7 +6,7 @@ export function SiteFooter() {
   return (
     <footer className="mt-auto bg-[#0f172a] px-6 py-14 text-slate-300 sm:px-10">
       <div className="mx-auto max-w-6xl">
-        <div className="grid gap-10 lg:grid-cols-[1.2fr_repeat(3,1fr)]">
+        <div className="grid gap-10 lg:grid-cols-[1.2fr_repeat(2,1fr)]">
           <div>
             <p className="text-2xl font-bold text-white">RestHalf</p>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-400">

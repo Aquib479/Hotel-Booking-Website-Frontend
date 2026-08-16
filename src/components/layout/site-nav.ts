@@ -13,13 +13,6 @@ export const FOOTER_LINKS = {
     { label: "Contact", href: "/contact" },
     { label: "List your property", href: "/list-property" },
   ],
-  Book: [
-    { label: "Rest · 12h slots", href: "/search?mode=rest" },
-    { label: "Stay · overnight", href: "/search?mode=stay" },
-    { label: "Near airport", href: "/search?category=near-airport" },
-    { label: "RestHalf Exclusive", href: "/search?category=resthalf-exclusive" },
-    { label: "Partner rates", href: "/search?lane=wholesale" },
-  ],
   Legal: [
     { label: "Terms of Service", href: "/terms" },
     { label: "Cancellation Policy", href: "/cancellation-policy" },

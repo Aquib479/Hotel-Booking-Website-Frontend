@@ -45,7 +45,7 @@ export function ListPropertyPage() {
             <SectionCard title="Request received" description="We'll be in touch soon.">
               <p className="text-sm text-muted-foreground">
                 Thanks for your interest. Our partnerships team typically replies within 2 business
-                days at contactus@RestHalf.com.
+                days at contactus@resthalf.com.
               </p>
             </SectionCard>
           ) : (
