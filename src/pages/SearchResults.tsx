@@ -141,9 +141,13 @@ export default function SearchResults() {
   }, [loadMore, search.view, visibleProperties.length, hasMore]);
 
   // Scroll down → hide navbar; scroll up → show navbar. Search bar stays.
+  // Disabled in map view to prevent layout shifts during map interaction.
   useEffect(() => {
     const root = resultsScrollRef.current;
-    if (!root) return;
+    if (!root || search.view === "map") {
+      setHideNavbar(false);
+      return;
+    }
 
     const onScroll = () => {
       const y = root.scrollTop;
@@ -162,7 +166,7 @@ export default function SearchResults() {
 
     root.addEventListener("scroll", onScroll, { passive: true });
     return () => root.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [search.view]);
 
   const showTrailingSkeleton =
     loadingMore || waitingForStream || (search.isLoading && search.totalResults > 0);

@@ -30,9 +30,12 @@ const VIEW_PADDING = 12;
 
 function FitBounds({ positions }: { positions: L.LatLngExpression[] }) {
   const map = useMap();
+  const hasFitted = useRef(false);
 
   useEffect(() => {
-    if (positions.length === 0) return;
+    if (positions.length === 0 || hasFitted.current) return;
+    hasFitted.current = true;
+
     if (positions.length === 1) {
       map.setView(positions[0], 13);
       return;
@@ -101,7 +104,7 @@ function escapeHtml(value: string) {
 function createPriceIcon(label: string, selected: boolean) {
   const bg = selected ? "#7c3aed" : "#ffffff";
   const color = selected ? "#ffffff" : "#111827";
-  const scale = selected ? "scale(1.08)" : "scale(1)";
+  const scaleVal = selected ? "scale(1.08)" : "scale(1)";
   const shadow = selected
     ? "0 6px 16px rgba(124, 58, 237, 0.35)"
     : "0 2px 10px rgba(15, 23, 42, 0.18)";
@@ -109,7 +112,7 @@ function createPriceIcon(label: string, selected: boolean) {
   return L.divIcon({
     className: "rh-price-marker",
     html: `<div style="
-      transform:${scale};
+      transform:translate(-50%,-50%) ${scaleVal};
       background:${bg};
       color:${color};
       border-radius:999px;
@@ -122,9 +125,10 @@ function createPriceIcon(label: string, selected: boolean) {
       box-shadow:${shadow};
       border:1px solid ${selected ? "#7c3aed" : "rgba(15,23,42,0.08)"};
       transition: transform 120ms ease, box-shadow 120ms ease;
+      width:max-content;
     ">${escapeHtml(label)}</div>`,
-    iconSize: [80, 32],
-    iconAnchor: [40, 16],
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
   });
 }
 
@@ -416,10 +420,11 @@ export function SearchMapView({
     <div
       ref={shellRef}
       className={cn(
-        "relative overflow-hidden rounded-md border border-border bg-white",
+        "relative touch-none overflow-hidden rounded-md border border-border bg-white",
         "[&_.leaflet-container]:h-[min(70vh,560px)] [&_.leaflet-container]:w-full [&_.leaflet-container]:bg-[#e8eef5]",
         "[&_.rh-price-marker]:border-0 [&_.rh-price-marker]:bg-transparent"
       )}
+      onWheel={(e) => e.stopPropagation()}
     >
       <MapContainer center={center} zoom={12} scrollWheelZoom className="z-0">
         <TileLayer
