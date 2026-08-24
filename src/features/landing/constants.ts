@@ -1,5 +1,3 @@
-
-
 export const FEATURE_BADGES = [
   "500K+ Rest slots booked",
   "Top rated layover hotels",
@@ -13,3 +11,21 @@ export const REVIEW_AVATARS = [
 ] as const;
 
 export { GUEST_OPTIONS } from "@/components/common/search";
+
+export interface PopularDestination {
+  city: string;
+  country: string;
+  image: string;
+}
+
+export const POPULAR_DESTINATIONS: PopularDestination[] = [
+  { city: "Jakarta", country: "Indonesia", image: "/destinations/jakarta.png" },
+  { city: "Kuala Lumpur", country: "Malaysia", image: "/destinations/kuala-lumpur.png" },
+  { city: "Singapore", country: "Singapore", image: "/destinations/singapore.png" },
+  { city: "Bangkok", country: "Thailand", image: "/destinations/bangkok.png" },
+  { city: "Ho Chi Minh City", country: "Vietnam", image: "/destinations/ho-chi-minh.png" },
+  { city: "Phnom Penh", country: "Cambodia", image: "/destinations/phnom-penh.png" },
+  { city: "Hyderabad", country: "India", image: "/destinations/hyderabad.png" },
+  { city: "Tokyo", country: "Japan", image: "/destinations/tokyo.png" },
+  { city: "Manila", country: "Philippines", image: "/destinations/manila.png" },
+];

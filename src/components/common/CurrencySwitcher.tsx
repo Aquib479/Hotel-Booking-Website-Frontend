@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, Search } from "lucide-react";
+import { Check, ChevronDown, Search } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -76,7 +76,7 @@ export function CurrencySwitcher({
           )}
         >
           <span>{current?.code ?? DEFAULT_CURRENCY}</span>
-          <span className="text-muted-foreground">{current?.symbol}</span>
+          <ChevronDown className="size-3.5 text-muted-foreground" />
         </button>
       </DialogTrigger>
 

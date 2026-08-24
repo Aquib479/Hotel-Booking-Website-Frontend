@@ -33,14 +33,14 @@ export function SiteNavbar({
     return () => window.removeEventListener("scroll", onScroll);
   }, [isHome, isInline]);
 
-  const isOverlay = !isInline && isHome && !scrolled;
+  const isTransparentHome = !isInline && isHome && !scrolled;
 
   return (
     <header
       className={cn(
-        "z-50 w-full transition-[background-color,border-color,box-shadow,backdrop-filter,transform] duration-300",
+        "z-[60] w-full transition-[background-color,border-color,box-shadow,backdrop-filter,transform] duration-300",
         !isInline && (isHome ? "fixed top-0" : "sticky top-0"),
-        isOverlay
+        isTransparentHome
           ? "border-b border-transparent bg-transparent"
           : "border-b border-border/80 bg-white/95 shadow-sm backdrop-blur-md",
         className,
@@ -55,7 +55,7 @@ export function SiteNavbar({
           <img
             src="/resthalf-logo.png"
             alt="RestHalf.com"
-            className={cn("h-10 w-auto rounded-md object-contain sm:h-11")}
+            className="h-12 w-auto max-w-[240px] origin-left scale-x-110 rounded-md object-contain object-left sm:h-14 sm:max-w-[280px]"
           />
         </Link>
 
@@ -68,16 +68,13 @@ export function SiteNavbar({
               <NavLink
                 key={link.label}
                 to={link.href}
+                end={link.href === "/"}
                 className={({ isActive }) =>
                   cn(
-                    "text-sm font-medium transition-colors",
-                    isOverlay
-                      ? isActive
-                        ? "text-white"
-                        : "text-white/80 hover:text-white"
-                      : isActive
-                        ? "font-bold text-foreground"
-                        : "text-foreground/80 hover:text-foreground",
+                    "border-b-2 pb-0.5 text-sm font-medium transition-colors",
+                    isActive
+                      ? "border-sky-400 font-semibold text-foreground"
+                      : "border-transparent text-foreground/80 hover:text-foreground",
                   )
                 }
               >
@@ -87,12 +84,7 @@ export function SiteNavbar({
               <a
                 key={link.label}
                 href={link.href}
-                className={cn(
-                  "text-sm font-medium transition-colors",
-                  isOverlay
-                    ? "text-white/80 hover:text-white"
-                    : "text-foreground/80 hover:text-foreground",
-                )}
+                className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
               >
                 {link.label}
               </a>
@@ -101,8 +93,8 @@ export function SiteNavbar({
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <CurrencySwitcher variant={isOverlay ? "overlay" : "default"} />
-          <AccountMenuButton isOverlay={isOverlay} />
+          <CurrencySwitcher />
+          <AccountMenuButton />
         </div>
       </div>
     </header>

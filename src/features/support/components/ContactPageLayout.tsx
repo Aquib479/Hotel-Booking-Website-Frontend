@@ -9,7 +9,7 @@ export function ContactPageLayout() {
       <header className="max-w-2xl">
         <h1 className="text-3xl font-bold text-foreground sm:text-4xl">Contact us</h1>
         <p className="mt-3 text-muted-foreground">
-          Questions about a rest slot, refund, or partner booking? Reach us by email, WhatsApp, or
+          Reach us by email, WhatsApp, or
           the form below — or visit one of our offices.
         </p>
       </header>

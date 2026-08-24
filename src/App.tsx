@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import { AuthProvider } from "@/features/auth/context/AuthProvider";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -15,7 +15,6 @@ import BookingDetail from "@/pages/BookingDetail";
 import BookingCancel from "@/pages/BookingCancel";
 import BookingConfirmation from "@/pages/BookingConfirmation";
 import Account from "@/pages/Account";
-import Faq from "@/pages/Faq";
 import Contact from "@/pages/Contact";
 import About from "@/pages/About";
 import ListProperty from "@/pages/ListProperty";
@@ -65,7 +64,7 @@ export default function App() {
               <Route path="/account" element={<Account />} />
               <Route path="/coins" element={<Coins />} />
               <Route path="/reviews" element={<Reviews />} />
-              <Route path="/faq" element={<Faq />} />
+              <Route path="/faq" element={<Navigate to="/contact" replace />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/about" element={<About />} />
               <Route path="/list-property" element={<ListProperty />} />

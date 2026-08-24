@@ -2,7 +2,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
   Building2,
-  CircleHelp,
   Coins,
   Heart,
   Info,
@@ -31,7 +30,6 @@ export const ACCOUNT_MENU_ITEMS: AccountMenuItem[] = [
   { id: "contact", label: "Contact us", href: "/contact", icon: Mail },
   { id: "bookings", label: "My bookings", href: "/bookings", icon: BookOpen, authOnly: true },
   { id: "account", label: "My account", href: "/account", icon: UserRound, authOnly: true },
-  { id: "help", label: "Help Center", href: "/faq", icon: CircleHelp },
   { id: "list-property", label: "List your property", href: "/list-property", icon: Building2 },
   { id: "coins", label: "My coins", href: "/coins", icon: Coins, authOnly: true },
   { id: "saved", label: "Saved", href: "/favourites", icon: Heart },

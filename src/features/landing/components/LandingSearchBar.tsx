@@ -60,12 +60,10 @@ export function LandingSearchBar() {
 
   return (
     <div className="w-full">
-      <div className="overflow-visible rounded-[1.75rem] border border-white/40 bg-white/95 p-4 shadow-2xl shadow-black/25 backdrop-blur-xl transition duration-300 hover:shadow-brand/20 sm:p-5">
-        <div className="grid gap-3 overflow-visible lg:grid-cols-[1.2fr_1.4fr_1fr_auto] lg:items-end">
-          <div className="min-w-0">
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-              Location
-            </p>
+      <div className="flex flex-col overflow-visible rounded-[1.75rem] bg-white shadow-[0_20px_50px_rgba(15,23,42,0.1)] lg:h-[7.25rem] lg:flex-row lg:items-center lg:pl-8 lg:pr-2 lg:py-2">
+        <div className="min-w-0 flex-1 border-b border-slate-100 px-5 py-4 lg:flex lg:h-full lg:items-center lg:border-b-0 lg:border-r lg:px-0 lg:py-0 lg:pr-6">
+          <div className="w-full">
+            <p className="mb-1 text-[13px] font-medium text-slate-400">Location</p>
             <LocationSearchField
               value={location}
               onChange={(next) => {
@@ -74,45 +72,53 @@ export function LandingSearchBar() {
               }}
               variant="landing"
               label=""
+              lockPage
             />
           </div>
+        </div>
 
-          <DateRangeField
-            label="Date"
-            checkIn={checkIn}
-            checkOut={checkOut}
-            onChange={({ checkIn: nextIn, checkOut: nextOut }) => {
-              setCheckIn(nextIn);
-              setCheckOut(nextOut);
-              setError(null);
-            }}
-            triggerClassName="rounded-xl bg-muted/50"
-          />
+        <div className="min-w-0 flex-1 border-b border-slate-100 px-5 py-4 lg:flex lg:h-full lg:items-center lg:border-b-0 lg:border-r lg:px-6 lg:py-0">
+          <div className="w-full">
+            <p className="mb-1 text-[13px] font-medium text-slate-400">Date</p>
+            <DateRangeField
+              label=""
+              checkIn={checkIn}
+              checkOut={checkOut}
+              onChange={({ checkIn: nextIn, checkOut: nextOut }) => {
+                setCheckIn(nextIn);
+                setCheckOut(nextOut);
+                setError(null);
+              }}
+              className="flex-none"
+              triggerClassName="rounded-none bg-transparent px-0 py-1 hover:bg-transparent"
+            />
+          </div>
+        </div>
 
-          <div className="min-w-0">
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-              People
-            </p>
+        <div className="min-w-0 flex-[0.85] px-5 py-4 lg:flex lg:h-full lg:items-center lg:px-6 lg:py-0">
+          <div className="w-full">
+            <p className="mb-1 text-[13px] font-medium text-slate-400">People</p>
             <OccupancyPicker value={occupancy} onChange={setOccupancy}>
               <button
                 type="button"
-                className="flex w-full min-w-0 items-center gap-2 rounded-xl bg-muted/50 px-3 py-3 text-left transition hover:bg-muted/80"
+                className="flex w-full min-w-0 items-center gap-2 py-1 text-left"
               >
-                <Users className="size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+                <Users className="size-4 shrink-0 text-slate-400" />
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">
                   {formatOccupancyLabel(occupancy)}
                 </span>
-                <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                <ChevronDown className="size-4 shrink-0 text-slate-400" />
               </button>
             </OccupancyPicker>
           </div>
+        </div>
 
+        <div className="flex shrink-0 items-center p-2 lg:pl-3 lg:pr-2">
           <Button
             type="button"
-            variant="brand"
             onClick={handleSearch}
             disabled={isLoading}
-            className="h-13 rounded-xl px-8 text-base font-semibold lg:self-end"
+            className="h-11 w-full rounded-lg bg-gradient-to-r from-sky-500 to-teal-400 p-6 text-sm font-semibold text-white shadow-none hover:from-sky-500 hover:to-teal-400 hover:opacity-95 lg:w-auto lg:min-w-[9.5rem]"
           >
             {isLoading ? (
               <Loader2 className="mr-2 size-4 animate-spin" />
@@ -122,7 +128,7 @@ export function LandingSearchBar() {
         </div>
       </div>
       {error ? (
-        <p className="mt-2 text-center text-sm text-red-200">{error}</p>
+        <p className="mt-2 text-center text-sm text-red-600">{error}</p>
       ) : null}
     </div>
   );

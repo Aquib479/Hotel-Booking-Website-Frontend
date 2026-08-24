@@ -232,15 +232,15 @@ export const CONTACT_METHODS = [
     id: "whatsapp",
     label: "WhatsApp",
     description: "Chat with us — fastest for booking questions on the go",
-    href: "https://wa.me/6281234567890?text=Hi%20RestHalf%2C%20I%20need%20help%20with%20a%20booking",
+    href: "https://wa.me/6281523902591?text=Hi%20RestHalf%2C%20I%20need%20help%20with%20a%20booking",
     responseTime: "Usually replies within 1 hour",
     external: true,
   },
   {
     id: "phone",
     label: "Phone",
-    description: "+62 812-3456-7890 (English & Bahasa)",
-    href: "tel:+6281234567890",
+    description: "+62 81523902591 (English & Bahasa)",
+    href: "tel:+6281523902591",
     responseTime: "9:00–21:00 WIB",
   },
 ] as const;

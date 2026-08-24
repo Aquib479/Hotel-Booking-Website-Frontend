@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Globe, Mail, Share2 } from "lucide-react";
+import { Globe, Mail, Phone, Share2 } from "lucide-react";
 import { FOOTER_LINKS } from "./site-nav";
 
 export function SiteFooter() {
@@ -9,10 +9,13 @@ export function SiteFooter() {
         <div className="grid gap-10 lg:grid-cols-[1.2fr_repeat(2,1fr)]">
           <div>
             <p className="text-2xl font-bold text-white">RestHalf</p>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-400">
-              Flexible hotel rest for layovers and short stays — 12-hour slots or full overnight
-              bookings, worldwide.
-            </p>
+            <a
+              href="tel:+6281523902591"
+              className="mt-3 inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
+            >
+              <Phone className="size-4" />
+              +62 81523902591
+            </a>
           </div>
 
           {Object.entries(FOOTER_LINKS).map(([title, links]) => (

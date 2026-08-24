@@ -6,6 +6,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useLockBodyScroll } from "@/lib/hooks/useLockBodyScroll";
 import { cn } from "@/lib/utils";
 import { searchLocations } from "./location-api";
 import type { LocationSuggestion, SearchPanelVariant } from "./types";
@@ -15,12 +16,14 @@ interface LocationSearchFieldProps {
   onChange: (location: LocationSuggestion) => void;
   variant?: SearchPanelVariant;
   label?: string;
+  /** Freeze page scroll while the location list is open. */
+  lockPage?: boolean;
 }
 
 const fieldStyles: Record<SearchPanelVariant, string> = {
   hero: "rounded-md px-4 py-3 hover:bg-black/5 sm:px-5",
   page: "px-4 py-3 hover:bg-muted/50 sm:px-5",
-  landing: "w-full rounded-xl bg-muted/50 px-3 py-3 text-left hover:bg-muted/80",
+  landing: "w-full rounded-xl px-0 py-1 text-left",
 };
 
 const MIN_QUERY_LENGTH = 3;
@@ -30,8 +33,10 @@ export function LocationSearchField({
   onChange,
   variant = "hero",
   label = "Location",
+  lockPage = false,
 }: LocationSearchFieldProps) {
   const [open, setOpen] = useState(false);
+  useLockBodyScroll(lockPage && open);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -95,13 +100,14 @@ export function LocationSearchField({
   const showLabel = Boolean(label);
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover modal={lockPage} open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"
           className={cn(
-            "flex min-w-0 w-full max-w-full flex-1 overflow-hidden text-left transition-colors",
+            "flex min-w-0 w-full max-w-full overflow-hidden text-left transition-colors",
             showLabel ? "flex-col items-start gap-0.5" : "flex-row items-center gap-2",
+            variant !== "landing" && "flex-1",
             fieldStyles[variant],
           )}
         >
@@ -127,7 +133,14 @@ export function LocationSearchField({
         </button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-80 p-0" align="start">
+      <PopoverContent
+        className={cn("w-80 p-0", lockPage && "z-40")}
+        data-scroll-lock-allow=""
+        align="start"
+        side="bottom"
+        sideOffset={12}
+        collisionPadding={{ top: 88, bottom: 16, left: 12, right: 12 }}
+      >
         <div className="border-b border-border p-3">
           <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
             <MapPin className="size-4 shrink-0 text-muted-foreground" />
