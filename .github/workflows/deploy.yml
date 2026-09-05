@@ -1,45 +1,37 @@
 name: Deploy Frontend
 
+# Manual deploy only. In Actions → Deploy Frontend, click "Run workflow"
+# and choose the branch in "Use workflow from".
 on:
-  # Manual only: Actions → Deploy Frontend → Run workflow → pick branch.
   workflow_dispatch:
-    inputs:
-      branch:
-        description: "Branch, tag, or commit SHA to deploy"
-        required: true
-        default: "main"
-        type: string
-      skip_lint:
-        description: "Skip lint (faster emergency deploy)"
-        required: false
-        default: false
-        type: boolean
 
-# Never let two deploys race to the same bucket.
 concurrency:
   group: deploy-frontend
   cancel-in-progress: false
+
+# OIDC: mint a short-lived AWS token. No long-lived access keys in GitHub.
+permissions:
+  id-token: write
+  contents: read
 
 env:
   AWS_REGION: ap-southeast-1
   S3_BUCKET: resthalfv2-prod-web
   CLOUDFRONT_DISTRIBUTION_ID: E2Z7I6SCSFIFBP
+  AWS_ROLE_ARN: arn:aws:iam::439594592406:role/github-actions-frontend
 
 jobs:
   deploy:
     name: Deploy to production
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout selected ref
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.branch }}
 
       - name: Show deploy target
         run: |
-          echo "Requested ref: ${{ inputs.branch }}"
-          echo "Checked out SHA: $(git rev-parse HEAD)"
-          echo "Checked out branch/ref: $(git rev-parse --abbrev-ref HEAD || true)"
+          echo "Ref: ${{ github.ref_name }}"
+          echo "SHA: $(git rev-parse HEAD)"
 
       - uses: pnpm/action-setup@v4
         with:
@@ -53,7 +45,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Lint
-        if: ${{ inputs.skip_lint != true }}
         run: pnpm lint
 
       - name: Build
@@ -68,15 +59,12 @@ jobs:
           VITE_ZENTRUMHUB_CULTURE: ${{ vars.VITE_ZENTRUMHUB_CULTURE }}
         run: pnpm build
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Hashed assets are immutable and safe to cache forever. index.html is
-      # excluded here and re-uploaded below so browsers always revalidate it.
       - name: Sync assets to S3
         run: |
           aws s3 sync dist "s3://$S3_BUCKET" --delete \
@@ -98,6 +86,7 @@ jobs:
       - name: Deploy summary
         run: |
           echo "### Frontend deploy" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Ref:** \`${{ inputs.branch }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Ref:** \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **SHA:** \`$(git rev-parse --short HEAD)\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Auth:** GitHub OIDC → \`github-actions-frontend\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **URL:** https://www.resthalf.com" >> "$GITHUB_STEP_SUMMARY"
