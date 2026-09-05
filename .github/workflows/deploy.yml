@@ -1,0 +1,103 @@
+name: Deploy Frontend
+
+on:
+  # Manual only: Actions → Deploy Frontend → Run workflow → pick branch.
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch, tag, or commit SHA to deploy"
+        required: true
+        default: "main"
+        type: string
+      skip_lint:
+        description: "Skip lint (faster emergency deploy)"
+        required: false
+        default: false
+        type: boolean
+
+# Never let two deploys race to the same bucket.
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-southeast-1
+  S3_BUCKET: resthalfv2-prod-web
+  CLOUDFRONT_DISTRIBUTION_ID: E2Z7I6SCSFIFBP
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Show deploy target
+        run: |
+          echo "Requested ref: ${{ inputs.branch }}"
+          echo "Checked out SHA: $(git rev-parse HEAD)"
+          echo "Checked out branch/ref: $(git rev-parse --abbrev-ref HEAD || true)"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        if: ${{ inputs.skip_lint != true }}
+        run: pnpm lint
+
+      - name: Build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_ZENTRUMHUB_API_KEY: ${{ secrets.VITE_ZENTRUMHUB_API_KEY }}
+          VITE_ZENTRUMHUB_ACCOUNT_ID: ${{ secrets.VITE_ZENTRUMHUB_ACCOUNT_ID }}
+          VITE_ZENTRUMHUB_CHANNEL_ID: ${{ secrets.VITE_ZENTRUMHUB_CHANNEL_ID }}
+          VITE_ZENTRUMHUB_NEXUS_URL: ${{ vars.VITE_ZENTRUMHUB_NEXUS_URL }}
+          VITE_ZENTRUMHUB_AUTOSUGGEST_URL: ${{ vars.VITE_ZENTRUMHUB_AUTOSUGGEST_URL }}
+          VITE_ZENTRUMHUB_CURRENCY: ${{ vars.VITE_ZENTRUMHUB_CURRENCY }}
+          VITE_ZENTRUMHUB_CULTURE: ${{ vars.VITE_ZENTRUMHUB_CULTURE }}
+        run: pnpm build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Hashed assets are immutable and safe to cache forever. index.html is
+      # excluded here and re-uploaded below so browsers always revalidate it.
+      - name: Sync assets to S3
+        run: |
+          aws s3 sync dist "s3://$S3_BUCKET" --delete \
+            --exclude "index.html" \
+            --cache-control "public,max-age=31536000,immutable"
+
+      - name: Upload index.html
+        run: |
+          aws s3 cp dist/index.html "s3://$S3_BUCKET/index.html" \
+            --cache-control "no-cache,no-store,must-revalidate" \
+            --content-type "text/html; charset=utf-8"
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --paths "/*"
+
+      - name: Deploy summary
+        run: |
+          echo "### Frontend deploy" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Ref:** \`${{ inputs.branch }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **SHA:** \`$(git rev-parse --short HEAD)\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **URL:** https://www.resthalf.com" >> "$GITHUB_STEP_SUMMARY"
