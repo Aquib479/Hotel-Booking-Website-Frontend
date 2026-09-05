@@ -1,21 +1,10 @@
 name: Deploy Frontend
 
+# Manual deploy only. In Actions → Deploy Frontend, click "Run workflow"
+# and choose the branch in "Use workflow from".
 on:
-  # Manual only: Actions → Deploy Frontend → Run workflow → pick branch.
   workflow_dispatch:
-    inputs:
-      branch:
-        description: "Branch, tag, or commit SHA to deploy"
-        required: true
-        default: "main"
-        type: string
-      skip_lint:
-        description: "Skip lint (faster emergency deploy)"
-        required: false
-        default: false
-        type: boolean
 
-# Never let two deploys race to the same bucket.
 concurrency:
   group: deploy-frontend
   cancel-in-progress: false
@@ -30,16 +19,13 @@ jobs:
     name: Deploy to production
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout selected ref
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.branch }}
 
       - name: Show deploy target
         run: |
-          echo "Requested ref: ${{ inputs.branch }}"
-          echo "Checked out SHA: $(git rev-parse HEAD)"
-          echo "Checked out branch/ref: $(git rev-parse --abbrev-ref HEAD || true)"
+          echo "Ref: ${{ github.ref_name }}"
+          echo "SHA: $(git rev-parse HEAD)"
 
       - uses: pnpm/action-setup@v4
         with:
@@ -53,7 +39,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Lint
-        if: ${{ inputs.skip_lint != true }}
         run: pnpm lint
 
       - name: Build
@@ -75,8 +60,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Hashed assets are immutable and safe to cache forever. index.html is
-      # excluded here and re-uploaded below so browsers always revalidate it.
       - name: Sync assets to S3
         run: |
           aws s3 sync dist "s3://$S3_BUCKET" --delete \
@@ -98,6 +81,6 @@ jobs:
       - name: Deploy summary
         run: |
           echo "### Frontend deploy" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Ref:** \`${{ inputs.branch }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Ref:** \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **SHA:** \`$(git rev-parse --short HEAD)\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **URL:** https://www.resthalf.com" >> "$GITHUB_STEP_SUMMARY"
