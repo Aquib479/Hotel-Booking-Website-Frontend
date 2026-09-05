@@ -9,10 +9,16 @@ concurrency:
   group: deploy-frontend
   cancel-in-progress: false
 
+# OIDC: mint a short-lived AWS token. No long-lived access keys in GitHub.
+permissions:
+  id-token: write
+  contents: read
+
 env:
   AWS_REGION: ap-southeast-1
   S3_BUCKET: resthalfv2-prod-web
   CLOUDFRONT_DISTRIBUTION_ID: E2Z7I6SCSFIFBP
+  AWS_ROLE_ARN: arn:aws:iam::439594592406:role/github-actions-frontend
 
 jobs:
   deploy:
@@ -53,11 +59,10 @@ jobs:
           VITE_ZENTRUMHUB_CULTURE: ${{ vars.VITE_ZENTRUMHUB_CULTURE }}
         run: pnpm build
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Sync assets to S3
@@ -83,4 +88,5 @@ jobs:
           echo "### Frontend deploy" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Ref:** \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **SHA:** \`$(git rev-parse --short HEAD)\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Auth:** GitHub OIDC → \`github-actions-frontend\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **URL:** https://www.resthalf.com" >> "$GITHUB_STEP_SUMMARY"
