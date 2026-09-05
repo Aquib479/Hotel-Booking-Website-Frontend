@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface CancelFlowLayoutProps {
   bookingId: string;
@@ -15,6 +16,7 @@ export function CancelFlowLayout({
   footer,
   className,
 }: CancelFlowLayoutProps) {
+  const { t } = useLanguage();
   return (
     <div className={cn("mx-auto flex min-h-[70vh] max-w-lg flex-col px-4 py-8 sm:px-6", className)}>
       <div className="flex-1">{children}</div>
@@ -26,7 +28,7 @@ export function CancelFlowLayout({
           to={`/bookings/${bookingId}`}
           className="text-sm font-medium text-muted-foreground hover:text-foreground"
         >
-          Never mind, keep my booking
+          {t("bookings.keepBooking")}
         </Link>
       </p>
     </div>

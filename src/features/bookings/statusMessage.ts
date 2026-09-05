@@ -1,10 +1,13 @@
 import { format, parseISO } from "date-fns";
+import { enUS, id as idLocale } from "date-fns/locale";
 import { formatPrice } from "@/lib/currency/format";
 import {
   DIRECT_CANCEL_HOURS_BEFORE_SLOT,
   getMinutesUntilSlotStart,
 } from "@/lib/booking/cancellation";
 import { formatHotelLocalTime } from "@/lib/booking/timezone";
+import type { AppLanguage } from "@/lib/i18n/languages";
+import { translate } from "@/lib/i18n/messages";
 import type { BookingDetail } from "./types";
 import { classifyBookingStatus } from "./utils";
 
@@ -13,7 +16,7 @@ export interface StatusBannerMessage {
   message: string;
 }
 
-function formatSlotStartTime(booking: BookingDetail): string {
+function formatSlotStartTime(booking: BookingDetail, language: AppLanguage): string {
   if (!booking.slotDate || !booking.slotWindow) return "";
   const date = parseISO(booking.slotDate);
   const isToday =
@@ -26,49 +29,64 @@ function formatSlotStartTime(booking: BookingDetail): string {
     }).format(new Date());
 
   const startHour = booking.slotWindow === "12-24" ? 12 : 0;
-  const label = new Intl.DateTimeFormat("en-US", {
+  const localeTag = language === "id" ? "id-ID" : "en-US";
+  const label = new Intl.DateTimeFormat(localeTag, {
     timeZone: booking.hotelTimezone,
     hour: "numeric",
     minute: "2-digit",
-    hour12: true,
+    hour12: language !== "id",
   }).format(new Date(date.getFullYear(), date.getMonth(), date.getDate(), startHour, 0));
 
-  return isToday ? `today at ${label}` : `on ${format(date, "MMM d")} at ${label}`;
+  const dfLocale = language === "id" ? idLocale : enUS;
+  if (isToday) return translate(language, "bookings.status.todayAt", { time: label });
+  return translate(language, "bookings.status.onDateAt", {
+    date: format(date, "MMM d", { locale: dfLocale }),
+    time: label,
+  });
 }
 
 export function resolveStatusBannerMessage(
   booking: BookingDetail,
-  now = new Date()
+  now = new Date(),
+  language: AppLanguage = "en",
 ): StatusBannerMessage {
+  const t = (key: string, vars?: Record<string, string | number>) =>
+    translate(language, key, vars);
   const status = classifyBookingStatus(booking, now);
+  const dfLocale = language === "id" ? idLocale : enUS;
 
   if (status === "cancelled") {
     if (booking.refund?.status === "pending" || booking.refundStatus === "pending") {
       const amount = booking.refund?.refundAmount ?? booking.paidAmount;
       const cancelledDate = booking.cancelledAt
-        ? format(parseISO(booking.cancelledAt), "MMM d, yyyy")
-        : "recently";
+        ? format(parseISO(booking.cancelledAt), "MMM d, yyyy", { locale: dfLocale })
+        : t("bookings.status.recently");
       return {
         tone: "warning",
-        message: `This booking was cancelled on ${cancelledDate}. Refund of ${formatPrice(amount, booking.paidCurrency)} is processing.`,
+        message: t("bookings.status.refundProcessing", {
+          date: cancelledDate,
+          amount: formatPrice(amount, booking.paidCurrency),
+        }),
       };
     }
     if (booking.refund?.status === "refunded" || booking.refundStatus === "refunded") {
       return {
         tone: "muted",
-        message: "This booking was cancelled. Your refund has been completed.",
+        message: t("bookings.status.refunded"),
       };
     }
     return {
       tone: "muted",
-      message: `This booking was cancelled${booking.cancelReason ? `: ${booking.cancelReason}` : ""}.`,
+      message: booking.cancelReason
+        ? t("bookings.status.cancelledReason", { reason: booking.cancelReason })
+        : t("bookings.status.cancelled"),
     };
   }
 
   if (status === "past") {
     return {
       tone: "success",
-      message: "This stay is complete. We hope it was restful.",
+      message: t("bookings.status.complete"),
     };
   }
 
@@ -77,36 +95,40 @@ export function resolveStatusBannerMessage(
       booking.slotDate,
       booking.slotWindow,
       booking.hotelTimezone,
-      now
+      now,
     );
-    const slotTime = formatSlotStartTime(booking);
+    const slotTime = formatSlotStartTime(booking, language);
 
     if (minutes <= DIRECT_CANCEL_HOURS_BEFORE_SLOT * 60 && minutes > 0) {
       return {
         tone: "warning",
-        message: `Your slot starts ${slotTime}. Show this confirmation at check-in — cancellation window has closed.`,
+        message: t("bookings.status.slotSoonClosed", { time: slotTime }),
       };
     }
 
     if (minutes <= 0) {
       return {
         tone: "info",
-        message: `Your slot is in progress. Show this confirmation at check-in if you haven't already.`,
+        message: t("bookings.status.slotInProgress"),
       };
     }
 
     return {
       tone: "info",
-      message: `Your slot starts ${slotTime}. Show this confirmation at check-in.`,
+      message: t("bookings.status.slotStarts", { time: slotTime }),
     };
   }
 
   if (booking.lane === "wholesale" && booking.checkIn) {
     const checkInTime = formatHotelLocalTime(booking.hotelTimezone, parseISO(booking.checkIn));
-    const supplier = booking.supplierName ?? "our partner";
+    const supplier = booking.supplierName ?? t("bookings.partnerFallback");
     return {
       tone: "info",
-      message: `Your stay is confirmed with ${booking.hotelName} via ${supplier}. Check-in from ${checkInTime}.`,
+      message: t("bookings.status.wholesaleStay", {
+        hotel: booking.hotelName,
+        supplier,
+        time: checkInTime,
+      }),
     };
   }
 
@@ -114,12 +136,12 @@ export function resolveStatusBannerMessage(
     const checkInTime = formatHotelLocalTime(booking.hotelTimezone, parseISO(booking.checkIn));
     return {
       tone: "info",
-      message: `Your booking is confirmed. Check-in from ${checkInTime}.`,
+      message: t("bookings.status.checkinFrom", { time: checkInTime }),
     };
   }
 
   return {
     tone: "info",
-    message: "Your booking is confirmed.",
+    message: t("bookings.status.confirmed"),
   };
 }

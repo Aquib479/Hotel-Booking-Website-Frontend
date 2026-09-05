@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 import { useCardPaymentForm } from "@/features/checkout/hooks/usePaymentForms";
 import { PaymentMethodCard } from "./PaymentMethodCard";
 import { cardValuesToSavedMethod } from "../lib/saveCard";
@@ -25,6 +26,7 @@ export function SavedPaymentMethodsSection({
   onAdd,
   onRemove,
 }: SavedPaymentMethodsSectionProps) {
+  const { t } = useLanguage();
   const [showAddCard, setShowAddCard] = useState(false);
   const cardForm = useCardPaymentForm();
 
@@ -38,8 +40,8 @@ export function SavedPaymentMethodsSection({
 
   return (
     <SectionCard
-      title="Saved cards"
-      description="Add a card here, or we’ll save it automatically when you pay by card at checkout"
+      title={t("account.savedCards")}
+      description={t("account.savedCardsHint")}
     >
       {isLoading && (
         <div className="space-y-3">
@@ -50,8 +52,7 @@ export function SavedPaymentMethodsSection({
       {!isLoading && cards.length === 0 && !showAddCard && (
         <Alert className="border-dashed">
           <AlertDescription>
-            No cards saved yet. Add a card below, or complete a booking with card payment and it
-            will appear here.
+            {t("account.noCards")}
           </AlertDescription>
         </Alert>
       )}
@@ -76,24 +77,24 @@ export function SavedPaymentMethodsSection({
           onClick={() => setShowAddCard(true)}
         >
           <Plus className="size-4" aria-hidden />
-          Add card
+          {t("account.addCard")}
         </Button>
       ) : (
         <div className="mt-4 space-y-3 rounded-xl border border-border p-4">
-          <p className="text-sm font-medium text-foreground">Add a card</p>
+          <p className="text-sm font-medium text-foreground">{t("account.addCardTitle")}</p>
           <p className="text-xs text-muted-foreground">
-            Only the last four digits are stored — never your full card number or CVV.
+            {t("account.addCardPrivacy")}
           </p>
 
           <FormField
-            label="Card holder name"
+            label={t("account.cardHolder")}
             htmlFor="save-card-holder"
             error={cardForm.touched.holderName ? cardForm.errors.holderName : undefined}
           >
             <Input
               id="save-card-holder"
               autoComplete="cc-name"
-              placeholder="Name on card"
+              placeholder={t("account.nameOnCard")}
               value={cardForm.values.holderName}
               onChange={(e) => cardForm.handleChange("holderName", e.target.value)}
               onBlur={() => cardForm.handleBlur("holderName")}
@@ -101,7 +102,7 @@ export function SavedPaymentMethodsSection({
           </FormField>
 
           <FormField
-            label="Card number"
+            label={t("account.cardNumber")}
             htmlFor="save-card-number"
             error={cardForm.touched.cardNumber ? cardForm.errors.cardNumber : undefined}
           >
@@ -122,7 +123,7 @@ export function SavedPaymentMethodsSection({
 
           <div className="grid grid-cols-2 gap-3">
             <FormField
-              label="Expiry"
+              label={t("account.expiry")}
               htmlFor="save-card-expiry"
               error={cardForm.touched.expiry ? cardForm.errors.expiry : undefined}
             >
@@ -138,7 +139,7 @@ export function SavedPaymentMethodsSection({
             </FormField>
 
             <FormField
-              label="CVV"
+              label={t("account.cvv")}
               htmlFor="save-card-cvv"
               error={cardForm.touched.cvv ? cardForm.errors.cvv : undefined}
             >
@@ -156,7 +157,7 @@ export function SavedPaymentMethodsSection({
 
           <div className="flex flex-wrap gap-2 pt-1">
             <Button type="button" className="rounded-xl" onClick={handleSaveCard}>
-              Save card
+              {t("account.saveCard")}
             </Button>
             <Button
               type="button"
@@ -164,7 +165,7 @@ export function SavedPaymentMethodsSection({
               className={cn("rounded-xl")}
               onClick={() => setShowAddCard(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </div>

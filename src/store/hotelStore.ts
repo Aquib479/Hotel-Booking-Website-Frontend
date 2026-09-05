@@ -59,7 +59,7 @@ export const useHotelStore = create<HotelStoreState>((set, get) => ({
     if (!token || !correlationId) {
       set({
         status: "error",
-        error: "No active search token. Run a hotel search first.",
+        error: "hotel.noSearchToken",
         hotelId,
       });
       return;
@@ -81,7 +81,7 @@ export const useHotelStore = create<HotelStoreState>((set, get) => ({
           ? err.message
           : err instanceof Error
             ? err.message
-            : "Failed to load rooms and rates";
+            : "hotel.loadRoomsFail";
       set({ status: "error", error: message });
     }
   },

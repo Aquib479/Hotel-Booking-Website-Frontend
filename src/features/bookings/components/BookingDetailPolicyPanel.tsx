@@ -6,6 +6,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import type { BookingPolicySnapshot } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface BookingDetailPolicyPanelProps {
   policy: BookingPolicySnapshot;
@@ -16,10 +17,11 @@ export function BookingDetailPolicyPanel({
   policy,
   lockedAtBooking = true,
 }: BookingDetailPolicyPanelProps) {
+  const { t } = useLanguage();
   return (
     <SectionCard
-      title="Cancellation policy"
-      description={lockedAtBooking ? "As agreed at time of booking" : undefined}
+      title={t("bookings.policy")}
+      description={lockedAtBooking ? t("bookings.policyLocked") : undefined}
       contentClassName="pt-0"
       size="sm"
     >

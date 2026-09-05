@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { RATE_APP_CONTENT } from "../constants/sitePages";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function RateAppPage() {
+  const { language, t } = useLanguage();
+  const content = RATE_APP_CONTENT[language];
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [feedback, setFeedback] = useState("");
@@ -16,25 +19,21 @@ export function RateAppPage() {
     <main>
       <div className="mx-auto max-w-lg px-4 py-10 sm:px-8 sm:py-14">
         <header className="text-center">
-          <h1 className="text-3xl font-bold text-foreground sm:text-4xl">
-            {RATE_APP_CONTENT.title}
-          </h1>
-          <p className="mt-3 text-muted-foreground">{RATE_APP_CONTENT.intro}</p>
+          <h1 className="text-3xl font-bold text-foreground sm:text-4xl">{content.title}</h1>
+          <p className="mt-3 text-muted-foreground">{content.intro}</p>
         </header>
 
         <div className="mt-10">
           {submitted ? (
-            <SectionCard title="Thank you" description="We appreciate your feedback.">
-              <p className="text-sm text-muted-foreground">
-                Your rating helps us improve RestHalf for every traveler.
-              </p>
+            <SectionCard title={t("support.thankYou")} description={t("support.appreciate")}>
+              <p className="text-sm text-muted-foreground">{t("support.ratingHelps")}</p>
             </SectionCard>
           ) : (
-            <SectionCard title="How are we doing?" description="Tap a star, then share optional notes.">
+            <SectionCard title={t("support.howDoing")} description={t("support.tapStar")}>
               <div
                 className="flex justify-center gap-1"
                 role="radiogroup"
-                aria-label="App rating"
+                aria-label={t("support.appRating")}
               >
                 {[1, 2, 3, 4, 5].map((value) => {
                   const active = value <= (hover || rating);
@@ -44,7 +43,7 @@ export function RateAppPage() {
                       type="button"
                       role="radio"
                       aria-checked={rating === value}
-                      aria-label={`${value} star${value === 1 ? "" : "s"}`}
+                      aria-label={value === 1 ? t("support.starOne") : t("support.starsN", { n: value })}
                       className="rounded-lg p-1.5 transition-colors hover:bg-muted"
                       onMouseEnter={() => setHover(value)}
                       onMouseLeave={() => setHover(0)}
@@ -64,7 +63,7 @@ export function RateAppPage() {
               <Textarea
                 className="mt-4"
                 rows={4}
-                placeholder="What could we improve? (optional)"
+                placeholder={t("support.improvePh")}
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
               />
@@ -74,12 +73,12 @@ export function RateAppPage() {
                 disabled={rating === 0}
                 onClick={() => setSubmitted(true)}
               >
-                Submit rating
+                {t("support.submitRating")}
               </Button>
 
               <div className="mt-6 space-y-2 border-t border-border pt-4">
-                <p className="text-xs font-medium text-muted-foreground">Or rate us on the stores</p>
-                {RATE_APP_CONTENT.storeLinks.map((link) => (
+                <p className="text-xs font-medium text-muted-foreground">{t("support.orStores")}</p>
+                {content.storeLinks.map((link) => (
                   <a
                     key={link.id}
                     href={link.href}

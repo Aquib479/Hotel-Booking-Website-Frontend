@@ -1,6 +1,7 @@
 import { SearchPanel } from "@/components/common/search";
 import type { LocationSuggestion } from "@/components/common/search";
 import type { SearchQuery } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface SearchTopBarProps {
   query: SearchQuery;
@@ -29,6 +30,7 @@ function queryToLocation(query: SearchQuery): LocationSuggestion | undefined {
 }
 
 export function SearchTopBar({ query, onSearch, className }: SearchTopBarProps) {
+  const { t } = useLanguage();
   return (
     <div
       className={
@@ -39,7 +41,7 @@ export function SearchTopBar({ query, onSearch, className }: SearchTopBarProps) 
       <div className="mx-auto w-full max-w-7xl px-4 py-2 sm:px-8">
         <SearchPanel
           variant="page"
-          submitLabel="Update Search"
+          submitLabel={t("search.update")}
           initialLocation={queryToLocation(query)}
           initialMode={query.mode}
           initialCheckIn={query.checkIn}

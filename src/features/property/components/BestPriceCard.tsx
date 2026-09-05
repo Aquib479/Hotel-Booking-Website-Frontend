@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
+import { hasMessage } from "@/lib/i18n/messages";
 
 interface BestPriceCardProps {
   roomName?: string | null;
@@ -39,6 +41,7 @@ export function BestPriceCard({
   priceLabel,
   onScrollToRooms,
 }: BestPriceCardProps) {
+  const { t } = useLanguage();
   const hasSelection = Boolean(roomName && priceLabel);
   const hasBreakfast = /breakfast|bb|half.?board|full.?board/i.test(
     boardBasis ?? ""
@@ -46,9 +49,9 @@ export function BestPriceCard({
 
   const banner = hasSelection
     ? hasBreakfast
-      ? "Best price with breakfast"
-      : "Your selected rate"
-    : "Today's best price";
+      ? t("hotel.bestBreakfast")
+      : t("hotel.selectedRate")
+    : t("hotel.todaysBest");
 
   return (
     <div className="overflow-hidden rounded-md border border-border bg-white shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
@@ -64,7 +67,7 @@ export function BestPriceCard({
                 {priceLabel}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Total for stay · taxes may apply
+                {t("hotel.totalStayTaxes")}
               </p>
             </div>
             {imageUrl ? (
@@ -78,10 +81,10 @@ export function BestPriceCard({
         ) : (
           <div>
             <p className="text-lg font-semibold text-foreground">
-              Compare rooms below
+              {t("hotel.compareRooms")}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Tap Reserve on a rate to go straight to checkout.
+              {t("hotel.tapReserve")}
             </p>
           </div>
         )}
@@ -122,7 +125,7 @@ export function BestPriceCard({
               ) : (
                 <li className="flex items-start gap-2">
                   <Utensils className="mt-0.5 size-4 shrink-0" />
-                  {boardBasis || "Room only"}
+                  {boardBasis || t("hotel.roomOnly")}
                 </li>
               )}
               {(includes ?? []).map((item) => (
@@ -131,7 +134,9 @@ export function BestPriceCard({
                   className="flex items-start gap-2 text-emerald-700"
                 >
                   <Check className="mt-0.5 size-4 shrink-0" />
-                  {item}
+                  {hasMessage(`search.amenity.${item}`)
+                    ? t(`search.amenity.${item}`)
+                    : item}
                 </li>
               ))}
               <li
@@ -145,15 +150,15 @@ export function BestPriceCard({
                 ) : (
                   <XCircle className="mt-0.5 size-4 shrink-0" />
                 )}
-                {refundable ? "Free cancellation" : "Non-refundable"}
+                {refundable ? t("search.amenity.Free cancellation") : t("hotel.nonRefundable")}
               </li>
               <li className="flex items-start gap-2 text-emerald-700">
                 <Zap className="mt-0.5 size-4 shrink-0" />
-                Instant confirmation
+                {t("hotel.instantConfirm")}
               </li>
               <li className="flex items-start gap-2">
                 <CreditCard className="mt-0.5 size-4 shrink-0" />
-                Prepay online
+                {t("hotel.prepayOnline")}
               </li>
             </ul>
           </div>
@@ -165,12 +170,12 @@ export function BestPriceCard({
           type="button"
           onClick={onScrollToRooms}
         >
-          More options
+          {t("hotel.moreOptions")}
         </Button>
 
         <p className="flex items-center justify-center gap-1.5 text-xs text-emerald-700">
           <ShieldCheck className="size-3.5" />
-          Secure booking · live price check
+          {t("hotel.secureBooking")}
         </p>
       </div>
     </div>

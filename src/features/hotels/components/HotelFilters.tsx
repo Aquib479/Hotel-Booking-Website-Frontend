@@ -1,3 +1,6 @@
+import { useLanguage } from "@/context/LanguageContext";
+
 export function HotelFilters() {
-  return <div className="rounded-md border p-3">Filters</div>;
+  const { t } = useLanguage();
+  return <div className="rounded-md border p-3">{t("search.filters")}</div>;
 }

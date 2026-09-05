@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
+import { useLanguage } from "@/context/LanguageContext";
 import { AUTH_BRAND_HEADLINE, AUTH_BRAND_SUBLINE, AUTH_HERO_IMAGE } from "../constants";
 
 interface AuthLayoutProps {
@@ -8,6 +10,8 @@ interface AuthLayoutProps {
 }
 
 export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="flex min-h-screen">
       <aside className="relative hidden w-[45%] overflow-hidden lg:block">
@@ -19,29 +23,34 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
           </Link>
           <div>
             <h2 className="font-display text-3xl font-bold leading-tight xl:text-4xl">
-              {AUTH_BRAND_HEADLINE}
+              {AUTH_BRAND_HEADLINE(t)}
             </h2>
-            <p className="mt-3 max-w-md text-base text-white/85">{AUTH_BRAND_SUBLINE}</p>
+            <p className="mt-3 max-w-md text-base text-white/85">{AUTH_BRAND_SUBLINE(t)}</p>
           </div>
           <p className="text-sm text-white/60">© RestHalf</p>
         </div>
       </aside>
 
-      <main className="flex flex-1 flex-col justify-center px-6 py-10 sm:px-10 lg:px-16">
-        <div className="mx-auto w-full max-w-md">
-          <div className="mb-8 lg:hidden">
-            <Link to="/" className="text-xl font-bold tracking-tight text-foreground">
-              RestHalf
-            </Link>
-            <p className="mt-1 text-sm text-muted-foreground">{AUTH_BRAND_HEADLINE}</p>
-          </div>
+      <main className="relative flex flex-1 flex-col">
+        <div className="flex justify-end px-6 pt-6 sm:px-10 lg:px-16">
+          <LanguageSwitcher />
+        </div>
+        <div className="flex flex-1 flex-col justify-center px-6 pb-10 sm:px-10 lg:px-16">
+          <div className="mx-auto w-full max-w-md">
+            <div className="mb-8 lg:hidden">
+              <Link to="/" className="text-xl font-bold tracking-tight text-foreground">
+                RestHalf
+              </Link>
+              <p className="mt-1 text-sm text-muted-foreground">{AUTH_BRAND_HEADLINE(t)}</p>
+            </div>
 
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-            {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
-          </div>
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+              {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+            </div>
 
-          {children}
+            {children}
+          </div>
         </div>
       </main>
     </div>

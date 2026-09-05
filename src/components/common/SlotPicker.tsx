@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   getAvailableSlots,
   isSlotBookable,
@@ -25,11 +26,16 @@ export function SlotPicker({
   restDate = new Date(),
   hotelTimezone,
   triggerClassName,
-  label = "Slot",
+  label,
 }: SlotPickerProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const availableSlots = getAvailableSlots(restDate, hotelTimezone);
   const selected = REST_SLOTS.find((s) => s.value === value);
+  const resolvedLabel = label ?? t("common.slot");
+
+  const slotLabel = (slot: (typeof REST_SLOTS)[number]) =>
+    slot.value === "24h" ? t("common.full24") : slot.label;
 
   useEffect(() => {
     const resolved = resolveSlotSelection(value, restDate, hotelTimezone);
@@ -48,19 +54,21 @@ export function SlotPicker({
         >
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="size-3.5" />
-            {label}
+            {resolvedLabel}
           </span>
           <span className="truncate text-sm font-semibold text-foreground sm:text-base">
             {availableSlots.length === 0
-              ? "No slots today"
-              : (selected?.label ?? "Select slot")}
+              ? t("common.noSlotsToday")
+              : selected
+                ? slotLabel(selected)
+                : t("common.selectSlot")}
           </span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-1" align="start">
         {availableSlots.length === 0 ? (
           <p className="px-3 py-2.5 text-sm text-muted-foreground">
-            No slots left today at this hotel. Choose tomorrow or another date.
+            {t("slot.noneLeft")}
           </p>
         ) : (
           <ul>
@@ -83,10 +91,10 @@ export function SlotPicker({
                       value === slot.value && bookable && "bg-muted font-medium"
                     )}
                   >
-                    <span className="block">{slot.label}</span>
+                    <span className="block">{slotLabel(slot)}</span>
                     {!bookable && (
                       <span className="text-xs text-muted-foreground">
-                        Unavailable — ended or under 60 min left (hotel local time)
+                        {t("slot.unavailable")}
                       </span>
                     )}
                   </button>

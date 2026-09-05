@@ -1,6 +1,7 @@
 import type { BookingMode } from "@/lib/booking/types";
 import type { RestSlot } from "@/lib/booking/types";
 import { getBookingDateOrSlotDisplay } from "@/lib/booking/dateSlotDisplay";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface DateOrSlotSummaryProps {
   mode: BookingMode;
@@ -19,13 +20,18 @@ export function DateOrSlotSummary({
   checkOut,
   nights,
 }: DateOrSlotSummaryProps) {
-  const display = getBookingDateOrSlotDisplay(mode, {
-    slotDate,
-    slotWindow,
-    checkIn,
-    checkOut,
-    nights,
-  });
+  const { language } = useLanguage();
+  const display = getBookingDateOrSlotDisplay(
+    mode,
+    {
+      slotDate,
+      slotWindow,
+      checkIn,
+      checkOut,
+      nights,
+    },
+    { language }
+  );
 
   if (!display) return null;
 

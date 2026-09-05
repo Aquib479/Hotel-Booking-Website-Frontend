@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuthUser } from "@/features/auth/types";
 import { useAuth } from "@/features/auth/context/AuthProvider";
 import { verifyOtp as apiVerifyOtp, sendOtp } from "@/features/auth/api";
+import { useLanguage } from "@/context/LanguageContext";
 import type {
   MemberProfileDetails,
   NotificationPreferences,
@@ -39,6 +40,7 @@ function toProfile(
 }
 
 export function useProfile() {
+  const { t } = useLanguage();
   const { user, logout } = useAuth();
   const [notifications, setNotifications] = useState<NotificationPreferences>(() =>
     user ? readNotificationPrefs(user.id) : readNotificationPrefs("")
@@ -78,16 +80,16 @@ export function useProfile() {
           persistAuthUser({ ...localUser, fullName: value.trim() });
         } else if (field === "email") {
           const result = await requestEmailChange(localUser.id, value.trim());
-          if (!result.success) throw new Error("Failed to send confirmation");
+          if (!result.success) throw new Error(t("account.emailConfirmFail"));
           persistAuthUser({ ...localUser, pendingEmail: value.trim() });
         }
       } catch {
-        setError("Couldn't save changes. Please try again.");
+        setError(t("account.saveFail"));
       } finally {
         setIsSaving(false);
       }
     },
-    [localUser, persistAuthUser]
+    [localUser, persistAuthUser, t]
   );
 
   const updateMember = useCallback(
@@ -148,7 +150,7 @@ export function useProfile() {
 
   const changePassword = useCallback(
     async (current: string, newPassword: string) => {
-      if (!localUser) return { success: false, error: "Not signed in" };
+      if (!localUser) return { success: false, error: t("account.notSignedIn") };
       setIsSaving(true);
       try {
         const result =
@@ -163,7 +165,7 @@ export function useProfile() {
         setIsSaving(false);
       }
     },
-    [localUser, persistAuthUser]
+    [localUser, persistAuthUser, t]
   );
 
   const deleteAccount = useCallback(async () => {

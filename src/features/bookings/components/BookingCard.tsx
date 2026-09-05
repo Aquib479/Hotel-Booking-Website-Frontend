@@ -18,26 +18,30 @@ import {
 import { classifyBookingStatus, isSlotStartingSoon } from "../utils";
 import { BookingCardDateOrSlot } from "./BookingCardDateOrSlot";
 import { BookingCardStatusPill } from "./BookingCardStatusPill";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface BookingCardProps {
   booking: BookingRecord;
 }
 
-function getPrimaryAction(booking: BookingRecord): { label: string; href?: string } {
+function getPrimaryAction(
+  booking: BookingRecord,
+  t: (key: string) => string,
+): { kind: "view" | "bookAgain" | "refund"; label: string } {
   const status = classifyBookingStatus(booking);
 
   if (status === "upcoming") {
     if (booking.lane === "direct") {
-      return { label: "View slot details" };
+      return { kind: "view", label: t("bookings.viewSlot") };
     }
-    return { label: "View booking" };
+    return { kind: "view", label: t("bookings.view") };
   }
 
   if (status === "past") {
-    return { label: "Book again" };
+    return { kind: "bookAgain", label: t("bookings.bookAgain") };
   }
 
-  return { label: "View refund status" };
+  return { kind: "refund", label: t("bookings.viewRefund") };
 }
 
 function getBookAgainHref(booking: BookingRecord): string {
@@ -51,12 +55,13 @@ function getBookAgainHref(booking: BookingRecord): string {
 }
 
 export function BookingCard({ booking }: BookingCardProps) {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fromStatus = searchParams.get(BOOKINGS_STATUS_PARAM) ?? DEFAULT_BOOKING_STATUS;
   const status = classifyBookingStatus(booking);
   const startingSoon = status === "upcoming" && isSlotStartingSoon(booking);
-  const action = getPrimaryAction(booking);
+  const action = getPrimaryAction(booking, t);
   const detailHref = `/bookings/${booking.id}`;
   const paidLabel = formatPrice(booking.paidAmount, booking.paidCurrency);
 
@@ -65,7 +70,7 @@ export function BookingCard({ booking }: BookingCardProps) {
 
   const handleAction = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (action.label === "Book again") {
+    if (action.kind === "bookAgain") {
       navigate(getBookAgainHref(booking));
       return;
     }
@@ -111,7 +116,7 @@ export function BookingCard({ booking }: BookingCardProps) {
           {startingSoon && (
             <Badge variant="brand" className="shrink-0 gap-1 uppercase">
               <Clock className="size-3" />
-              Starting soon
+              {t("bookings.startingSoon")}
             </Badge>
           )}
         </div>
@@ -133,19 +138,19 @@ export function BookingCard({ booking }: BookingCardProps) {
 
         {booking.lane === "wholesale" && status === "upcoming" && (
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Cancellations follow partner policy — not RestHalf&apos;s refund engine.
+            {t("bookings.partnerCancelNote")}
           </p>
         )}
 
         {booking.cancelReason && status === "cancelled" && (
-          <p className="text-xs text-muted-foreground">Reason: {booking.cancelReason}</p>
+          <p className="text-xs text-muted-foreground">{t("bookings.reason", { reason: booking.cancelReason })}</p>
         )}
 
         <Separator className="my-1" />
 
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs text-muted-foreground">Paid</p>
+            <p className="text-xs text-muted-foreground">{t("bookings.paid")}</p>
             <p className="font-bold text-foreground">{paidLabel}</p>
           </div>
           <Button
@@ -163,7 +168,7 @@ export function BookingCard({ booking }: BookingCardProps) {
           className="sr-only"
           onClick={(e) => e.stopPropagation()}
         >
-          View booking {booking.confirmationCode}
+          {t("bookings.viewBookingCode", { code: booking.confirmationCode })}
         </Link>
       </CardImageRow>
     </Card>

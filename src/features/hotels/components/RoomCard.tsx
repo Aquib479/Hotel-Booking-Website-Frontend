@@ -1,13 +1,8 @@
 import type { Room } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
+import { hasMessage } from "@/lib/i18n/messages";
 
 const FALLBACK_AMENITIES = ["WiFi", "Air conditioning"];
-
-const FALLBACK_DESCRIPTIONS: Record<string, string> = {
-  single: "Cozy single room with essential amenities for a comfortable rest.",
-  double: "Spacious double room ideal for couples or solo travellers wanting extra space.",
-  suite: "Premium suite with separate living area and luxury finishes.",
-  family: "Generously sized family room accommodating up to 4 guests.",
-};
 
 function formatPrice(amount: number, currency: string) {
   if (currency === "IDR") {
@@ -17,31 +12,38 @@ function formatPrice(amount: number, currency: string) {
 }
 
 export function RoomCard({ room }: { room: Room }) {
+  const { t } = useLanguage();
   const amenities =
     room.amenities.length > 0 ? room.amenities : FALLBACK_AMENITIES;
+  const roomTypeKey = room.roomType?.toLowerCase() ?? "";
+  const descKey = `hotels.desc.${roomTypeKey}`;
   const description =
     room.description ??
-    FALLBACK_DESCRIPTIONS[room.roomType?.toLowerCase() ?? ""] ??
-    "Comfortable room with modern amenities.";
+    (hasMessage(descKey) ? t(descKey) : t("hotels.desc.fallback"));
   const coverImage = room.imageUrls[0] ?? null;
+  const typeLabel = room.roomType
+    ? hasMessage(`search.room.${room.roomType.toLowerCase()}`)
+      ? t(`search.room.${room.roomType.toLowerCase()}`)
+      : room.roomType
+    : t("hotels.standard");
 
   return (
     <div className="flex gap-4 rounded-lg border p-3">
       {coverImage ? (
         <img
           src={coverImage}
-          alt={`${room.roomType ?? "Room"} ${room.roomNumber}`}
+          alt={t("hotels.roomAlt", { type: typeLabel, number: room.roomNumber })}
           className="h-24 w-32 shrink-0 rounded object-cover"
         />
       ) : (
         <div className="flex h-24 w-32 shrink-0 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
-          No image
+          {t("hotels.noImage")}
         </div>
       )}
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <h4 className="font-medium capitalize">
-            {room.roomType ?? "Standard"}
+            {typeLabel}
           </h4>
           <span className="text-xs text-muted-foreground">
             #{room.roomNumber}
@@ -56,11 +58,13 @@ export function RoomCard({ room }: { room: Room }) {
               key={a}
               className="rounded-full bg-secondary px-2 py-0.5 text-xs"
             >
-              {a}
+              {hasMessage(`search.amenity.${a}`) ? t(`search.amenity.${a}`) : a}
             </span>
           ))}
           <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
-            Max {room.maxOccupancy} guest{room.maxOccupancy !== 1 ? "s" : ""}
+            {room.maxOccupancy === 1
+              ? t("hotels.maxGuest", { n: room.maxOccupancy })
+              : t("hotels.maxGuests", { n: room.maxOccupancy })}
           </span>
         </div>
         <div className="mt-1.5 flex gap-3 text-sm font-medium">

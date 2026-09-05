@@ -1,29 +1,31 @@
 import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
 import { useRequireAuth } from "@/features/bookings/hooks/useRequireAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
 import { AccountLayout } from "../components/AccountLayout";
 import { DEMO_USER_REVIEWS } from "../constants/rewards";
 
 export function ReviewsPage() {
+  const { t } = useLanguage();
   const { isAuthenticated } = useRequireAuth("/reviews");
 
   if (!isAuthenticated) return null;
 
   return (
     <AccountLayout
-      title="Ratings & reviews"
-      description="Reviews you've left after RestHalf stays and rest slots"
+      title={t("account.reviewsTitle")}
+      description={t("account.reviewsHint")}
     >
       <div className="space-y-4">
         {DEMO_USER_REVIEWS.length === 0 as number ? (
-          <SectionCard title="No reviews yet">
+          <SectionCard title={t("account.noReviews")}>
             <p className="text-sm text-muted-foreground">
-              After you complete a booking, you can rate the hotel from My bookings.
+              {t("account.reviewsEmptyHint")}
             </p>
             <Button asChild className="mt-4 rounded-xl">
-              <Link to="/bookings">Go to My bookings</Link>
+              <Link to="/bookings">{t("account.goBookings")}</Link>
             </Button>
           </SectionCard>
         ) : (
@@ -33,7 +35,7 @@ export function ReviewsPage() {
               title={review.hotelName}
               description={`${review.city} · ${review.date}`}
             >
-              <div className="flex items-center gap-0.5" aria-label={`${review.rating} out of 5`}>
+              <div className="flex items-center gap-0.5" aria-label={t("account.ratingOutOf", { n: review.rating })}>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
                     key={i}
@@ -45,7 +47,9 @@ export function ReviewsPage() {
                   />
                 ))}
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{review.body}</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {t(`account.review.${review.id}`)}
+              </p>
             </SectionCard>
           ))
         )}

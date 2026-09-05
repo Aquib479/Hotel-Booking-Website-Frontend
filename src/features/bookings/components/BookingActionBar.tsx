@@ -10,6 +10,7 @@ import { DirectCancelEligibility } from "./DirectCancelEligibility";
 import { WholesaleCancelRedirectNotice } from "./WholesaleCancelRedirectNotice";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface BookingActionBarProps {
   booking: BookingDetail;
@@ -27,6 +28,7 @@ function getBookAgainHref(booking: BookingDetail): string {
 }
 
 export function BookingActionBar({ booking, eligibility }: BookingActionBarProps) {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const status = classifyBookingStatus(booking);
 
@@ -37,7 +39,7 @@ export function BookingActionBar({ booking, eligibility }: BookingActionBarProps
   if (status === "past") {
     return (
       <Button variant="brand" onClick={() => navigate(getBookAgainHref(booking))}>
-        Book again
+        {t("bookings.bookAgain")}
       </Button>
     );
   }
@@ -50,11 +52,11 @@ export function BookingActionBar({ booking, eligibility }: BookingActionBarProps
     return (
       <Alert>
         <AlertDescription>
-          Your slot is in progress.{" "}
+          {t("bookings.slotInProgress")}{" "}
           <a href={SUPPORT_CONTACT_HREF} className="font-medium text-brand hover:underline">
-            Contact support
+            {t("bookings.contactSupport")}
           </a>{" "}
-          if you need help.
+          {t("bookings.ifNeedHelp")}
         </AlertDescription>
       </Alert>
     );
@@ -63,7 +65,7 @@ export function BookingActionBar({ booking, eligibility }: BookingActionBarProps
   if (eligibility.canCancel) {
     return (
       <Button variant="destructive" className="bg-red-50 text-red-700 hover:bg-red-100" asChild>
-        <Link to={`/bookings/${booking.id}/cancel`}>Cancel booking</Link>
+        <Link to={`/bookings/${booking.id}/cancel`}>{t("bookings.cancel")}</Link>
       </Button>
     );
   }
@@ -77,7 +79,7 @@ export function BookingActionBar({ booking, eligibility }: BookingActionBarProps
             <a
               href={`${SUPPORT_CONTACT_HREF}&body=Booking%20${encodeURIComponent(booking.confirmationCode)}`}
             >
-              Contact support
+              {t("bookings.contactSupport")}
             </a>
           </Button>
         )}
@@ -91,7 +93,7 @@ export function BookingActionBar({ booking, eligibility }: BookingActionBarProps
         <a
           href={`${SUPPORT_CONTACT_HREF}&body=Booking%20${encodeURIComponent(booking.confirmationCode)}`}
         >
-          Contact support
+          {t("bookings.contactSupport")}
         </a>
       </Button>
     );

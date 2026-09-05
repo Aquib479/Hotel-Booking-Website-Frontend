@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 
 export interface OccupancySelection {
@@ -20,7 +21,24 @@ const MAX_ROOMS = 8;
 const MAX_ADULTS = 16;
 const MAX_CHILDREN = 8;
 
-export function formatOccupancyLabel(value: OccupancySelection): string {
+type TranslateFn = (key: string, vars?: Record<string, string | number>) => string;
+
+export function formatOccupancyLabel(value: OccupancySelection, t?: TranslateFn): string {
+  if (t) {
+    const adultPart =
+      value.adults === 1
+        ? t("common.adultOne")
+        : t("common.adultsN", { n: value.adults });
+    const childPart =
+      value.children > 0
+        ? value.children === 1
+          ? t("common.childOne")
+          : t("common.childrenN", { n: value.children })
+        : "";
+    const roomPart = value.rooms > 1 ? t("common.roomsN", { n: value.rooms }) : "";
+    return `${adultPart}${childPart}${roomPart}`;
+  }
+
   const adultPart = `${value.adults} Adult${value.adults === 1 ? "" : "s"}`;
   const childPart =
     value.children > 0
@@ -33,10 +51,11 @@ export function formatOccupancyLabel(value: OccupancySelection): string {
 export function parseOccupancyLabel(label: string): OccupancySelection {
   if (!label.trim()) return { ...DEFAULT_OCCUPANCY, adults: 0, rooms: 0 };
 
-  const adultsMatch = label.match(/(\d+)\s*adult/i);
-  const childrenMatch = label.match(/(\d+)\s*child/i) || label.match(/(\d+)\s*kid/i);
-  const roomsMatch = label.match(/(\d+)\s*room/i);
-  const travellersMatch = label.match(/(\d+)\s*traveller/i);
+  const adultsMatch = label.match(/(\d+)\s*(?:adult|dewasa)/i);
+  const childrenMatch =
+    label.match(/(\d+)\s*(?:child|anak|kid)/i);
+  const roomsMatch = label.match(/(\d+)\s*(?:room|kamar)/i);
+  const travellersMatch = label.match(/(\d+)\s*(?:traveller|wisatawan|tamu)/i);
 
   if (!adultsMatch && !childrenMatch && !roomsMatch && travellersMatch) {
     return {
@@ -68,6 +87,8 @@ function StepperRow({
   max: number;
   onChange: (next: number) => void;
 }) {
+  const { t } = useLanguage();
+
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <div>
@@ -77,7 +98,7 @@ function StepperRow({
       <div className="flex items-center gap-3">
         <button
           type="button"
-          aria-label={`Decrease ${label}`}
+          aria-label={t("common.decrease", { label })}
           disabled={value <= min}
           onClick={() => onChange(Math.max(min, value - 1))}
           className={cn(
@@ -92,7 +113,7 @@ function StepperRow({
         <span className="min-w-6 text-center text-sm font-semibold tabular-nums">{value}</span>
         <button
           type="button"
-          aria-label={`Increase ${label}`}
+          aria-label={t("common.increase", { label })}
           disabled={value >= max}
           onClick={() => onChange(Math.min(max, value + 1))}
           className={cn(
@@ -124,6 +145,7 @@ export function OccupancyPicker({
   open: controlledOpen,
   onOpenChange,
 }: OccupancyPickerProps) {
+  const { t } = useLanguage();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
   const setOpen = onOpenChange ?? setUncontrolledOpen;
@@ -140,23 +162,23 @@ export function OccupancyPicker({
       <PopoverContent align="start" className="w-80 p-0">
         <div className="divide-y divide-border px-4">
           <StepperRow
-            label="Rooms"
+            label={t("common.rooms")}
             value={draft.rooms}
             min={1}
             max={MAX_ROOMS}
             onChange={(rooms) => setDraft((prev) => ({ ...prev, rooms }))}
           />
           <StepperRow
-            label="Adults"
-            hint="18+ yrs"
+            label={t("common.adults")}
+            hint={t("common.adultsHint")}
             value={draft.adults}
             min={1}
             max={MAX_ADULTS}
             onChange={(adults) => setDraft((prev) => ({ ...prev, adults }))}
           />
           <StepperRow
-            label="Children"
-            hint="0-17 yrs"
+            label={t("common.children")}
+            hint={t("common.childrenHint")}
             value={draft.children}
             min={0}
             max={MAX_CHILDREN}
@@ -173,7 +195,7 @@ export function OccupancyPicker({
               setOpen(false);
             }}
           >
-            Done
+            {t("common.done")}
           </Button>
         </div>
       </PopoverContent>

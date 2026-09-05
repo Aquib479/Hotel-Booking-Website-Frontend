@@ -1,10 +1,13 @@
+import { useLanguage } from "@/context/LanguageContext";
 import { LegalPageLayout } from "../components/LegalPageLayout";
-import { CANCELLATION_POLICY } from "../constants/legalContent";
+import { getLegalDocument } from "../constants/legalContent";
 
 export function CancellationPolicyPage() {
+  const { language } = useLanguage();
+
   return (
     <main>
-      <LegalPageLayout document={CANCELLATION_POLICY} />
+      <LegalPageLayout document={getLegalDocument("cancellation-policy", language)} />
     </main>
   );
 }

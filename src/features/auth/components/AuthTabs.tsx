@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AUTH_FROM_BOOKING_PARAM } from "../constants";
 import { useAuthRedirect } from "../hooks/useAuthRedirect";
@@ -10,13 +11,14 @@ interface AuthTabsProps {
 }
 
 export function AuthTabs({ active }: AuthTabsProps) {
+  const { t } = useLanguage();
   const { buildAuthPath } = useAuthRedirect();
   const location = useLocation();
   const fromBooking = new URLSearchParams(location.search).get(AUTH_FROM_BOOKING_PARAM) === "1";
 
   const tabs: { id: AuthTab; label: string; path: string }[] = [
-    { id: "login", label: "Log in", path: buildAuthPath("/login") },
-    { id: "signup", label: "Sign up", path: buildAuthPath("/signup") },
+    { id: "login", label: t("auth.login"), path: buildAuthPath("/login") },
+    { id: "signup", label: t("auth.signup"), path: buildAuthPath("/signup") },
   ];
 
   return (
@@ -24,7 +26,7 @@ export function AuthTabs({ active }: AuthTabsProps) {
       value={active}
       className={cn("mb-6", fromBooking && active === "signup" && "opacity-90")}
     >
-      <TabsList className="grid h-auto w-full grid-cols-2" aria-label="Authentication">
+      <TabsList className="grid h-auto w-full grid-cols-2" aria-label={t("auth.authentication")}>
         {tabs.map((tab) => (
           <TabsTrigger key={tab.id} value={tab.id} asChild>
             <Link

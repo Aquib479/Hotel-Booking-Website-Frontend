@@ -19,8 +19,10 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import { enUS, id as localeId } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { useLanguage } from "@/context/LanguageContext";
 import { useLockBodyScroll } from "@/lib/hooks/useLockBodyScroll";
 import { cn } from "@/lib/utils";
 
@@ -39,9 +41,12 @@ interface BookingDateRangeCalendarProps {
   panelClassName?: string;
 }
 
-function formatShort(date?: Date) {
-  if (!date) return "Select";
-  return format(date, "dd MMM yyyy");
+function formatShort(date: Date, locale: string) {
+  return date.toLocaleDateString(locale, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export function BookingDateRangeCalendar({
@@ -57,6 +62,9 @@ export function BookingDateRangeCalendar({
   closeOnComplete = false,
   panelClassName,
 }: BookingDateRangeCalendarProps) {
+  const { t, language } = useLanguage();
+  const dateFnsLocale = language === "id" ? localeId : enUS;
+  const localeCode = language === "id" ? "id-ID" : "en-GB";
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
   const setOpen = onOpenChange ?? setUncontrolledOpen;
@@ -185,10 +193,10 @@ export function BookingDateRangeCalendar({
         )}
       >
         {checkIn && checkOut
-          ? `${formatShort(checkIn)} - ${formatShort(checkOut)}`
+          ? `${formatShort(checkIn, localeCode)} - ${formatShort(checkOut, localeCode)}`
           : checkIn
-            ? `${formatShort(checkIn)} - Add checkout`
-            : "Add dates"}
+            ? `${formatShort(checkIn, localeCode)} - ${t("common.addCheckout")}`
+            : t("common.addDates")}
       </span>
     </button>
   );
@@ -227,7 +235,7 @@ export function BookingDateRangeCalendar({
         <>
           <button
             type="button"
-            aria-label="Close calendar"
+            aria-label={t("common.closeCalendar")}
             className="fixed inset-0 z-[70] cursor-default bg-black/25"
             onClick={() => handleOpenChange(false)}
           />
@@ -267,8 +275,9 @@ export function BookingDateRangeCalendar({
               endMonth={endMonth}
               className="mx-auto"
               style={{ ["--cell-size" as string]: cellSize }}
+              locale={dateFnsLocale}
               formatters={{
-                formatMonthDropdown: (date) => format(date, "MMMM"),
+                formatMonthDropdown: (date) => format(date, "MMMM", { locale: dateFnsLocale }),
                 formatYearDropdown: (date) => format(date, "yyyy"),
               }}
               classNames={{
@@ -309,12 +318,14 @@ export function BookingDateRangeCalendar({
               {nights > 0 ? (
                 <>
                   <span className="font-semibold text-foreground">{nights}</span>{" "}
-                  night{nights === 1 ? "" : "s"} selected
+                  {nights === 1
+                    ? t("common.nightSelectedSuffix")
+                    : t("common.nightsSelectedSuffix")}
                 </>
               ) : checkIn ? (
-                "Now pick your check-out date"
+                t("common.pickCheckout")
               ) : (
-                "Pick your check-in date"
+                t("common.pickCheckin")
               )}
             </p>
             <div className="flex items-center gap-2">
@@ -327,7 +338,7 @@ export function BookingDateRangeCalendar({
                   onChange({ checkIn: undefined, checkOut: undefined })
                 }
               >
-                Clear
+                {t("common.clear")}
               </Button>
               <Button
                 type="button"
@@ -337,7 +348,7 @@ export function BookingDateRangeCalendar({
                 disabled={!checkIn || !checkOut}
                 onClick={() => handleOpenChange(false)}
               >
-                Done
+                {t("common.done")}
               </Button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 import type { LegalSection } from "../types";
 
 export function flattenLegalSections(
@@ -24,6 +25,7 @@ interface LegalTableOfContentsProps {
 }
 
 export function LegalTableOfContents({ sections }: LegalTableOfContentsProps) {
+  const { t } = useLanguage();
   const [mobileOpen, setMobileOpen] = useState(false);
   const items = flattenLegalSections(sections);
 
@@ -59,7 +61,7 @@ export function LegalTableOfContents({ sections }: LegalTableOfContentsProps) {
           onClick={() => setMobileOpen((v) => !v)}
           className="flex w-full items-center justify-between rounded-xl border border-border bg-white px-4 py-3 text-sm font-medium"
         >
-          On this page
+          {t("support.onThisPage")}
           <ChevronDown className={cn("size-4 transition-transform", mobileOpen && "rotate-180")} />
         </button>
         {mobileOpen && <div className="mt-2 rounded-xl border border-border bg-white p-3">{list}</div>}
@@ -67,9 +69,9 @@ export function LegalTableOfContents({ sections }: LegalTableOfContentsProps) {
 
       <aside className="hidden lg:block">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          On this page
+          {t("support.onThisPage")}
         </p>
-        <nav aria-label="Table of contents">{list}</nav>
+        <nav aria-label={t("support.toc")}>{list}</nav>
       </aside>
     </>
   );

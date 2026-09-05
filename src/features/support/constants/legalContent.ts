@@ -1,5 +1,6 @@
 import { DIRECT_CANCEL_HOURS_BEFORE_SLOT } from "@/lib/booking/cancellation";
-import type { LegalDocument } from "../types";
+import type { AppLanguage } from "@/lib/i18n/languages";
+import type { ContactMethod, LegalDocument } from "../types";
 import { formatDirectCancellationBullets } from "../types";
 
 const directBullets = formatDirectCancellationBullets();
@@ -214,11 +215,236 @@ export const PRIVACY_POLICY: LegalDocument = {
   ],
 };
 
+const TERMS_OF_SERVICE_ID: LegalDocument = {
+  slug: "terms",
+  title: "Ketentuan Layanan",
+  lastUpdated: "2026-01-15",
+  intro:
+    "Ketentuan ini mengatur penggunaan situs web dan layanan pemesanan RestHalf. Dengan menyelesaikan pemesanan, Anda menyetujui Ketentuan ini dan Kebijakan Pembatalan kami.",
+  sections: [
+    {
+      id: "acceptance",
+      title: "Penerimaan ketentuan",
+      paragraphs: [
+        "RestHalf menyediakan platform untuk mencari dan memesan slot istirahat hotel serta menginap semalam. Ketentuan ini berlaku untuk semua pengguna, baik yang memiliki akun maupun tidak.",
+        "Jika Anda memesan atas nama orang lain, Anda menegaskan bahwa Anda berwenang menerima Ketentuan ini untuk mereka.",
+      ],
+    },
+    {
+      id: "services",
+      title: "Layanan kami",
+      paragraphs: [
+        "RestHalf menawarkan inventaris RestHalf Exclusive (Langsung) yang dikonfirmasi oleh RestHalf dan tarif Mitra (Grosir) yang disediakan pihak ketiga. Ketersediaan produk, harga, dan waktu konfirmasi berbeda menurut jalur dan properti.",
+      ],
+      listItems: [
+        "Pemesanan langsung: dijual dan didukung oleh RestHalf sesuai Ketentuan ini.",
+        "Pemesanan mitra: tunduk pada ketentuan pemasok selain Ketentuan ini jika berlaku.",
+      ],
+    },
+    {
+      id: "bookings",
+      title: "Pemesanan dan pembayaran",
+      paragraphs: [
+        "Pemesanan dikonfirmasi hanya setelah Anda menerima referensi konfirmasi dan, jika diperlukan, pembayaran berhasil. Mata uang tampilan bersifat indikatif hingga checkout menampilkan mata uang dan jumlah penagihan.",
+        "Anda bertanggung jawab atas data tamu yang akurat, informasi kontak, dan mematuhi peraturan hotel.",
+      ],
+    },
+    {
+      id: "conduct",
+      title: "Penggunaan yang dapat diterima",
+      paragraphs: [
+        "Anda tidak boleh menyalahgunakan platform, mencoba akses tanpa izin, atau membuat pemesanan palsu. Kami dapat menangguhkan akun atau membatalkan pemesanan yang melanggar Ketentuan ini atau hukum yang berlaku.",
+      ],
+    },
+    {
+      id: "liability",
+      title: "Batasan tanggung jawab",
+      paragraphs: [
+        "RestHalf bertindak sebagai perantara untuk tarif Mitra. Sejauh diizinkan hukum, RestHalf tidak bertanggung jawab atas tindakan atau kelalaian hotel atau pemasok mitra di luar kewajiban pemesanan langsung kami.",
+        "Tidak ada dalam Ketentuan ini yang membatasi hak yang tidak dapat dikecualikan berdasarkan hukum perlindungan konsumen di yurisdiksi Anda.",
+      ],
+    },
+    {
+      id: "changes",
+      title: "Perubahan Ketentuan ini",
+      paragraphs: [
+        "Kami dapat memperbarui Ketentuan ini dari waktu ke waktu. Tanggal terakhir diperbarui di bagian atas halaman ini menunjukkan versi yang berlaku. Perubahan material yang memengaruhi pemesanan yang ada akan dikomunikasikan jika diwajibkan.",
+      ],
+    },
+    {
+      id: "contact",
+      title: "Kontak",
+      paragraphs: [
+        "Pertanyaan tentang Ketentuan ini: support@resthalf.com atau melalui halaman Kontak kami.",
+      ],
+    },
+  ],
+};
+
+const CANCELLATION_POLICY_ID: LegalDocument = {
+  slug: "cancellation-policy",
+  title: "Kebijakan Pembatalan",
+  lastUpdated: "2026-01-15",
+  intro:
+    "Aturan pembatalan dan refund bergantung pada apakah Anda memesan RestHalf Exclusive (Langsung) atau tarif Mitra (Grosir). Ringkasan yang ditampilkan saat checkout dan pada pemesanan Anda diambil dari kebijakan ini.",
+  sections: [
+    {
+      id: "overview",
+      title: "Ikhtisar",
+      paragraphs: [
+        "Selalu periksa konfirmasi pemesanan Anda untuk kebijakan yang berlaku pada saat pembelian. Pemesanan mitra dapat mencakup syarat khusus pemasok yang tercantum pada konfirmasi Anda.",
+      ],
+    },
+    {
+      id: "direct-bookings",
+      title: "Pemesanan RestHalf Exclusive (Langsung)",
+      paragraphs: [
+        `Pemesanan istirahat dan menginap langsung mengikuti jendela pembatalan RestHalf. Pembatalan gratis tersedia hingga ${DIRECT_CANCEL_HOURS_BEFORE_SLOT} jam sebelum slot atau waktu check-in Anda (waktu lokal hotel).`,
+      ],
+      listItems: formatDirectCancellationBullets("id"),
+      subsections: [
+        {
+          id: "direct-refund-tiers",
+          title: "Waktu refund",
+          paragraphs: [
+            "Pembatalan sebelum batas gratis menerima refund penuh dari jumlah yang dibayar untuk pemesanan.",
+            `Pembatalan dalam ${DIRECT_CANCEL_HOURS_BEFORE_SLOT} jam sebelum slot dimulai (atau setelah check-in untuk pemesanan menginap jika berlaku) menggugurkan jumlah pemesanan.`,
+            "Tidak hadir diperlakukan sebagai tidak dapat direfund.",
+          ],
+        },
+        {
+          id: "direct-processing",
+          title: "Cara refund diproses",
+          paragraphs: [
+            "Refund yang disetujui dikembalikan ke metode pembayaran asli Anda. Sebagian besar refund selesai dalam 5–7 hari kerja tergantung bank atau penyedia dompet Anda.",
+            "Refund sebagian, jika ada, akan dijelaskan pada pratinjau pembatalan sebelum Anda mengonfirmasi.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "wholesale-bookings",
+      title: "Pemesanan Mitra (Grosir)",
+      paragraphs: [
+        "Pemesanan mitra dipenuhi oleh pemasok pihak ketiga. RestHalf tidak menetapkan syarat pembatalan mitra — syarat tersebut ditampilkan saat Anda memilih tarif dan pada konfirmasi pemesanan.",
+        "RestHalf dapat membantu permintaan pembatalan tetapi tidak dapat menjamin hasil di luar kebijakan pemasok.",
+      ],
+      listItems: [
+        "Jendela pembatalan dan persentase refund ditentukan oleh pemasok mitra.",
+        "Nomor konfirmasi pemasok mungkin diperlukan saat menghubungi hotel secara langsung.",
+        "Ajukan permintaan pembatalan melalui Pemesanan Saya atau dukungan RestHalf jika pembatalan mandiri tidak tersedia.",
+        "Jadwal refund mengikuti pemasok dan prosesor pembayaran — sering 5–14 hari kerja.",
+      ],
+    },
+    {
+      id: "how-to-cancel",
+      title: "Cara membatalkan",
+      paragraphs: [
+        "Masuk, buka Pemesanan Saya, pilih pemesanan, dan ikuti alur pembatalan jika memenuhi syarat. Jika pembatalan tidak tersedia, hubungi dukungan dengan referensi pemesanan Anda.",
+      ],
+    },
+    {
+      id: "disputes",
+      title: "Pertanyaan dan sengketa",
+      paragraphs: [
+        "Untuk pertanyaan kebijakan, email support@resthalf.com dengan referensi pemesanan Anda. Kami akan merespons dengan snapshot kebijakan yang tersimpan untuk pemesanan Anda.",
+      ],
+    },
+  ],
+};
+
+const PRIVACY_POLICY_ID: LegalDocument = {
+  slug: "privacy",
+  title: "Kebijakan Privasi",
+  lastUpdated: "2026-01-15",
+  intro:
+    "Kebijakan Privasi ini menjelaskan bagaimana RestHalf mengumpulkan, menggunakan, dan melindungi data pribadi saat Anda menggunakan situs web dan layanan pemesanan kami.",
+  sections: [
+    {
+      id: "data-we-collect",
+      title: "Informasi yang kami kumpulkan",
+      paragraphs: [
+        "Kami mengumpulkan informasi yang Anda berikan saat mencari, memesan, membuat akun, atau menghubungi dukungan.",
+      ],
+      listItems: [
+        "Identitas dan kontak: nama, email, nomor telepon (termasuk WhatsApp).",
+        "Detail pemesanan: hotel, tanggal, slot, jumlah tamu, permintaan khusus.",
+        "Metadata pembayaran: jenis metode dan referensi transaksi (kami tidak menyimpan nomor kartu lengkap).",
+        "Data penggunaan: perangkat, browser, dan analitik untuk meningkatkan produk.",
+      ],
+    },
+    {
+      id: "how-we-use",
+      title: "Bagaimana kami menggunakan informasi Anda",
+      paragraphs: [
+        "Kami menggunakan data Anda untuk memproses pemesanan, mengirim konfirmasi dan pesan layanan (termasuk WhatsApp), memberikan dukungan, mencegah penipuan, dan meningkatkan RestHalf.",
+      ],
+    },
+    {
+      id: "sharing",
+      title: "Berbagi dengan hotel dan mitra",
+      paragraphs: [
+        "Kami membagikan detail pemesanan yang diperlukan kepada hotel dan pemasok mitra untuk memenuhi reservasi Anda. Mitra memproses data berdasarkan kebijakan privasi mereka sendiri saat Anda menyelesaikan pemesanan grosir.",
+      ],
+    },
+    {
+      id: "whatsapp",
+      title: "Notifikasi WhatsApp",
+      paragraphs: [
+        "Jika Anda memberikan nomor ponsel, kami dapat mengirim konfirmasi pemesanan dan pembaruan layanan melalui WhatsApp. Anda dapat mengelola preferensi pemasaran di akun Anda; pesan transaksional tetap dapat dikirim untuk pemesanan aktif.",
+      ],
+    },
+    {
+      id: "retention",
+      title: "Retensi data",
+      paragraphs: [
+        "Kami menyimpan catatan pemesanan dan akun sesuai kebutuhan hukum, pajak, dan dukungan, lalu menghapus atau menganonimkan data jika tidak lagi diperlukan.",
+      ],
+    },
+    {
+      id: "rights",
+      title: "Hak Anda",
+      paragraphs: [
+        "Tergantung lokasi Anda, Anda mungkin memiliki hak untuk mengakses, memperbaiki, menghapus, atau mengekspor data Anda. Hubungi privacy@resthalf.com atau gunakan pengaturan akun jika tersedia.",
+      ],
+    },
+    {
+      id: "security",
+      title: "Keamanan",
+      paragraphs: [
+        "Kami menggunakan langkah standar industri untuk melindungi data dalam perjalanan dan saat disimpan. Tidak ada metode transmisi melalui internet yang 100% aman.",
+      ],
+    },
+    {
+      id: "updates",
+      title: "Pembaruan kebijakan",
+      paragraphs: [
+        "Kami dapat memperbarui kebijakan ini secara berkala. Penggunaan berkelanjutan setelah perubahan merupakan penerimaan kebijakan yang diperbarui sepanjang diizinkan hukum.",
+      ],
+    },
+  ],
+};
+
 export const LEGAL_DOCUMENTS = {
   terms: TERMS_OF_SERVICE,
   "cancellation-policy": CANCELLATION_POLICY,
   privacy: PRIVACY_POLICY,
 } as const;
+
+const LEGAL_DOCUMENTS_ID = {
+  terms: TERMS_OF_SERVICE_ID,
+  "cancellation-policy": CANCELLATION_POLICY_ID,
+  privacy: PRIVACY_POLICY_ID,
+} as const;
+
+export type LegalDocumentSlug = keyof typeof LEGAL_DOCUMENTS;
+
+export function getLegalDocument(
+  slug: LegalDocumentSlug,
+  language: AppLanguage = "en",
+): LegalDocument {
+  return language === "id" ? LEGAL_DOCUMENTS_ID[slug] : LEGAL_DOCUMENTS[slug];
+}
 
 export const CONTACT_METHODS = [
   {
@@ -245,6 +471,36 @@ export const CONTACT_METHODS = [
   },
 ] as const;
 
+export function getContactMethods(language: AppLanguage): ContactMethod[] {
+  if (language !== "id") {
+    return CONTACT_METHODS.map((m) => ({ ...m }));
+  }
+  return [
+    {
+      id: "email",
+      label: "Email",
+      description: "contactus@resthalf.com",
+      href: "mailto:contactus@resthalf.com?subject=RestHalf%20inquiry",
+      responseTime: "Dalam 24 jam pada hari kerja",
+    },
+    {
+      id: "whatsapp",
+      label: "WhatsApp",
+      description: "Chat dengan kami — tercepat untuk pertanyaan pemesanan di perjalanan",
+      href: "https://wa.me/6281523902591?text=Hi%20RestHalf%2C%20I%20need%20help%20with%20a%20booking",
+      responseTime: "Biasanya membalas dalam 1 jam",
+      external: true,
+    },
+    {
+      id: "phone",
+      label: "Telepon",
+      description: "+62 81523902591 (English & Bahasa)",
+      href: "tel:+6281523902591",
+      responseTime: "9:00–21:00 WIB",
+    },
+  ];
+}
+
 export const CONTACT_OFFICES = [
   {
     id: "hq",
@@ -262,9 +518,33 @@ export const CONTACT_OFFICES = [
   },
 ] as const;
 
+export const CONSUMER_COMPLAINT = {
+  whatsappLine: "WhatsApp No: +62853-1111-1010",
+  agencyWhatsAppHref: "https://wa.me/6285311111010",
+  en: {
+    heading: "Consumer complaints",
+    agency: "Directorate General of Consumer Protection and Trade Compliance,",
+    ministry: "Ministry of Trade of the Republic of Indonesia",
+  },
+  id: {
+    heading: "Layanan Pengaduan Konsumen",
+    agency: "Direktorat Jenderal Perlindungan Konsumen dan Tertib Niaga",
+    ministry: "Kementerian Perdagangan Republik Indonesia",
+  },
+} as const;
+
 export const CONTACT_SUBJECT_OPTIONS = [
   { value: "booking_issue" as const, label: "Booking issue" },
   { value: "refund_question" as const, label: "Refund question" },
   { value: "technical_issue" as const, label: "Technical issue" },
   { value: "other" as const, label: "Other" },
 ];
+
+export function getContactSubjectOptions(t: (key: string) => string) {
+  return [
+    { value: "booking_issue" as const, label: t("support.bookingIssue") },
+    { value: "refund_question" as const, label: t("support.refundQ") },
+    { value: "technical_issue" as const, label: t("support.techIssue") },
+    { value: "other" as const, label: t("support.other") },
+  ];
+}

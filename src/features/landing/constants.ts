@@ -1,7 +1,7 @@
 export const FEATURE_BADGES = [
-  "500K+ Rest slots booked",
-  "Top rated layover hotels",
-  "Instant confirm on Exclusive",
+  "landing.badge1",
+  "landing.badge2",
+  "landing.badge3",
 ] as const;
 
 export const REVIEW_AVATARS = [

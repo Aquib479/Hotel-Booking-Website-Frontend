@@ -15,6 +15,7 @@ import {
 } from "../constants";
 import type { FilterState, LaneFilter } from "../types";
 import type { RoomType, SlotDuration } from "@/lib/booking/types";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface FilterPanelProps {
   filters: FilterState;
@@ -117,6 +118,7 @@ export function FilterPanel({
   onUpdate,
   onClear,
 }: FilterPanelProps) {
+  const { t } = useLanguage();
   const { currency, currencies } = useCurrency();
   const currencyMeta = currencies.find((c) => c.code === currency);
   const currencyLabel = `${currencyMeta?.code ?? currency}${
@@ -126,53 +128,53 @@ export function FilterPanel({
   const laneOptions =
     mode === "stay"
       ? [
-          { value: "all", label: "All" },
-          { value: "wholesale", label: "Partner rates" },
+          { value: "all", label: t("search.cat.all") },
+          { value: "wholesale", label: t("search.partnerRates") },
         ]
       : [
-          { value: "all", label: "All" },
-          { value: "direct", label: "RestHalf Exclusive" },
-          { value: "wholesale", label: "Partner rates" },
+          { value: "all", label: t("search.cat.all") },
+          { value: "direct", label: t("common.exclusive") },
+          { value: "wholesale", label: t("search.partnerRates") },
         ];
 
   return (
     <div className="mt-4 rounded-md border border-border bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-foreground">Filters</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t("search.filters")}</h3>
         {activeFilterCount > 0 && (
           <button
             type="button"
             onClick={onClear}
             className="text-sm font-medium text-brand hover:text-brand/80"
           >
-            Clear all ({activeFilterCount})
+            {t("search.clearAllN", { n: activeFilterCount })}
           </button>
         )}
       </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
         <FilterSelect
-          label="Booking lane"
+          label={t("search.bookingLane")}
           value={filters.lane}
           onChange={(v) => onUpdate({ lane: v as LaneFilter })}
           options={laneOptions}
         />
 
         <PriceInput
-          label={`Min price (${currencyLabel})`}
+          label={`${t("search.minPrice")} (${currencyLabel})`}
           value={filters.priceMin}
           onCommit={(priceMin) => onUpdate({ priceMin })}
         />
 
         <PriceInput
-          label={`Max price (${currencyLabel})`}
+          label={`${t("search.maxPrice")} (${currencyLabel})`}
           value={filters.priceMax}
           min={filters.priceMin}
           onCommit={(priceMax) => onUpdate({ priceMax })}
         />
 
         <FilterSelect
-          label="Star rating"
+          label={t("search.starRating")}
           value={
             filters.starRatings.length === 1
               ? String(filters.starRatings[0])
@@ -185,22 +187,22 @@ export function FilterPanel({
           }
           options={STAR_RATING_OPTIONS.map((option) => ({
             value: option,
-            label: option === "any" ? "Any" : `${option}+ stars`,
+            label: option === "any" ? t("search.any") : t("search.starsN", { n: option }),
           }))}
         />
 
         <FilterSelect
-          label="Room type"
+          label={t("search.roomType")}
           value={filters.roomType}
           onChange={(v) => onUpdate({ roomType: v as RoomType | "any" })}
           options={ROOM_TYPE_OPTIONS.map((option) => ({
             value: option.value,
-            label: option.label,
+            label: t(`search.room.${option.value}`),
           }))}
         />
 
         <FilterSelect
-          label="Max occupancy"
+          label={t("search.maxOccupancy")}
           value={String(filters.maxOccupancy)}
           onChange={(v) =>
             onUpdate({
@@ -209,17 +211,17 @@ export function FilterPanel({
           }
           options={COUNT_OPTIONS.map((option) => ({
             value: option === "5+" ? "5" : option,
-            label: option === "any" ? "Any" : option,
+            label: option === "any" ? t("search.any") : option,
           }))}
         />
 
         {mode === "rest" && (
           <FilterSelect
-            label="Slot duration"
+            label={t("search.slotDuration")}
             value={filters.slotDuration}
             onChange={(v) => onUpdate({ slotDuration: v as SlotDuration | "any" })}
             options={[
-              { value: "any", label: "Any" },
+              { value: "any", label: t("search.any") },
               ...SLOT_DURATION_OPTIONS.map((duration) => ({
                 value: duration,
                 label: duration,

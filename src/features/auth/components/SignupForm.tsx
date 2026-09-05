@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { getDefaultPhoneCountryCode } from "@/lib/phone/constants";
 import { isValidE164, isValidEmail, toE164 } from "@/lib/phone/validation";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { TermsAcceptance } from "@/features/checkout/components/TermsAcceptance";
 import { useCheckoutDraft } from "@/features/checkout/hooks/useCheckoutDraft";
 import { FormAlert, FormField, FormMessage } from "@/components/common/form";
@@ -17,44 +18,45 @@ import { PhoneInput } from "./PhoneInput";
 import { PasswordStrengthMeter } from "./PasswordStrengthMeter";
 import { OtpVerificationModal } from "./OtpVerificationModal";
 
-function validateSignupField(
-  field: keyof SignupFormValues,
-  values: SignupFormValues
-): string | undefined {
-  switch (field) {
-    case "fullName":
-      if (!values.fullName.trim()) return "Full name is required";
-      if (values.fullName.trim().length < 2) return "Enter your full name";
-      return undefined;
-    case "email":
-      if (SIGNUP_REQUIRES_EMAIL && !values.email.trim()) return "Email is required";
-      if (values.email.trim() && !isValidEmail(values.email)) return "Enter a valid email address";
-      return undefined;
-    case "phoneNumber":
-      if (!values.phoneNumber.trim()) return "Phone number is required";
-      if (!isValidE164(values.phoneCountryCode, values.phoneNumber)) {
-        return "Enter a valid phone number with country code";
-      }
-      return undefined;
-    case "phoneCountryCode":
-      return values.phoneCountryCode ? undefined : "Country code is required";
-    case "password":
-      if (!values.password) return "Password is required";
-      if (values.password.length < 8) return "Use at least 8 characters";
-      return undefined;
-    case "termsAccepted":
-      if (!values.termsAccepted) return "You must accept the terms";
-      return undefined;
-    default:
-      return undefined;
-  }
-}
-
 export function SignupForm() {
+  const { t } = useLanguage();
   const { currency } = useCurrency();
   const { signup, verifyPhone, skipPhoneVerification, isLoading } = useAuth();
   const { redirectAfterAuth } = useAuthRedirect();
   const { draft } = useCheckoutDraft();
+
+  const validateSignupField = useCallback(
+    (field: keyof SignupFormValues, values: SignupFormValues): string | undefined => {
+      switch (field) {
+        case "fullName":
+          if (!values.fullName.trim()) return t("auth.err.nameRequired");
+          if (values.fullName.trim().length < 2) return t("auth.err.nameShort");
+          return undefined;
+        case "email":
+          if (SIGNUP_REQUIRES_EMAIL && !values.email.trim()) return t("auth.err.emailRequired");
+          if (values.email.trim() && !isValidEmail(values.email)) return t("auth.err.emailInvalid");
+          return undefined;
+        case "phoneNumber":
+          if (!values.phoneNumber.trim()) return t("auth.err.phoneRequired");
+          if (!isValidE164(values.phoneCountryCode, values.phoneNumber)) {
+            return t("auth.err.phoneInvalid");
+          }
+          return undefined;
+        case "phoneCountryCode":
+          return values.phoneCountryCode ? undefined : t("auth.err.countryRequired");
+        case "password":
+          if (!values.password) return t("auth.err.passwordRequired");
+          if (values.password.length < 8) return t("auth.err.passwordMin");
+          return undefined;
+        case "termsAccepted":
+          if (!values.termsAccepted) return t("auth.err.terms");
+          return undefined;
+        default:
+          return undefined;
+      }
+    },
+    [t]
+  );
 
   const initial = useMemo(
     (): SignupFormValues => ({
@@ -73,7 +75,7 @@ export function SignupForm() {
   const [showOtp, setShowOtp] = useState(false);
   const [signedUpPhone, setSignedUpPhone] = useState("");
 
-  const hotelName = draft?.hotelMeta?.name ?? "your hotel";
+  const hotelName = draft?.hotelMeta?.name ?? t("auth.yourHotel");
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -91,11 +93,11 @@ export function SignupForm() {
 
       if (!result.success) {
         const messages: Record<string, string> = {
-          email_taken: "An account with this email already exists",
-          phone_taken: "An account with this phone number already exists",
-          weak_password: "Choose a stronger password (at least 8 characters)",
-          network: "Something went wrong. Please try again.",
-          unknown: "Something went wrong. Please try again.",
+          email_taken: t("auth.err.emailTaken"),
+          phone_taken: t("auth.err.phoneTaken"),
+          weak_password: t("auth.err.weakPassword"),
+          network: t("auth.err.generic"),
+          unknown: t("auth.err.generic"),
         };
         setSubmitError(messages[result.error] ?? messages.unknown);
         return;
@@ -109,7 +111,7 @@ export function SignupForm() {
 
       redirectAfterAuth();
     },
-    [form, signup, redirectAfterAuth]
+    [form, signup, redirectAfterAuth, t]
   );
 
   const handleOtpVerified = useCallback(async () => {
@@ -121,15 +123,14 @@ export function SignupForm() {
       {draft && (
         <Alert className="mb-4 border-brand/30 bg-brand/5">
           <AlertDescription>
-            Create an account to finish booking <span className="font-semibold">{hotelName}</span>.
-            Your booking details are saved.
+            {t("auth.finishBooking", { hotel: hotelName })}
           </AlertDescription>
         </Alert>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <FormField
-          label="Full name"
+          label={t("auth.fullName")}
           htmlFor="signup-name"
           error={form.touched.fullName ? form.errors.fullName : undefined}
         >
@@ -145,7 +146,7 @@ export function SignupForm() {
         </FormField>
 
         <FormField
-          label="Email (optional)"
+          label={t("auth.emailOptional")}
           htmlFor="signup-email"
           error={form.touched.email ? form.errors.email : undefined}
         >
@@ -161,7 +162,7 @@ export function SignupForm() {
         </FormField>
 
         <FormField
-          label="Phone number"
+          label={t("auth.phone")}
           error={form.touched.phoneNumber ? form.errors.phoneNumber : undefined}
         >
           <PhoneInput
@@ -176,7 +177,7 @@ export function SignupForm() {
         </FormField>
 
         <FormField
-          label="Password"
+          label={t("auth.password")}
           htmlFor="signup-password"
           error={form.touched.password ? form.errors.password : undefined}
         >
@@ -203,7 +204,7 @@ export function SignupForm() {
         {submitError && <FormAlert message={submitError} />}
 
         <Button type="submit" variant="brand" size="lg" className="w-full" disabled={isLoading}>
-          {isLoading ? "Creating account…" : "Create account"}
+          {isLoading ? t("auth.creating") : t("auth.createAccount")}
         </Button>
       </form>
 

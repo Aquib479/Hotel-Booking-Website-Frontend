@@ -1,4 +1,5 @@
 import { BookingDateRangeCalendar } from "@/components/common/BookingDateRangeCalendar";
+import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 
 interface DateRangeFieldProps {
@@ -14,16 +15,18 @@ export function DateRangeField({
   checkIn,
   checkOut,
   onChange,
-  label = "Date",
+  label,
   className,
   triggerClassName,
 }: DateRangeFieldProps) {
+  const { t } = useLanguage();
+
   return (
     <BookingDateRangeCalendar
       checkIn={checkIn}
       checkOut={checkOut}
       onChange={onChange}
-      label={label}
+      label={label ?? t("common.date")}
       className={cn(className)}
       triggerClassName={triggerClassName}
     />

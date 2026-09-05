@@ -1,10 +1,12 @@
 export { FaqPage } from "./pages/FaqPage";
 export { ContactPage } from "./pages/ContactPage";
 export { AboutPage } from "./pages/AboutPage";
+export { HowItWorksPage } from "./pages/HowItWorksPage";
 export { ListPropertyPage } from "./pages/ListPropertyPage";
 export { RateAppPage } from "./pages/RateAppPage";
 export { TermsPage } from "./pages/TermsPage";
 export { CancellationPolicyPage } from "./pages/CancellationPolicyPage";
 export { PrivacyPage } from "./pages/PrivacyPage";
 export { getCancellationPolicySummary } from "./types";
+export { getLegalDocument } from "./constants/legalContent";
 export type { FaqItem, LegalDocument, ContactFormValues } from "./types";

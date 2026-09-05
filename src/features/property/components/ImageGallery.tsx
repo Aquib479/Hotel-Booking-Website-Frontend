@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface ImageGalleryProps {
   images: string[];
@@ -15,6 +16,7 @@ interface ImageGalleryProps {
 }
 
 export function ImageGallery({ images, photoCount, title }: ImageGalleryProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const uniqueImages = [...new Set(images.filter(Boolean))];
@@ -88,7 +90,7 @@ export function ImageGallery({ images, photoCount, title }: ImageGalleryProps) {
                   <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50 text-white backdrop-blur-[1px] transition group-hover:bg-black/60">
                     <Images className="size-4" />
                     <span className="px-1 text-center text-xs font-semibold sm:text-sm">
-                      See All {displayCount} Photos
+                      {t("hotel.seeAllPhotos", { n: displayCount })}
                     </span>
                   </span>
                 ) : (
@@ -105,7 +107,7 @@ export function ImageGallery({ images, photoCount, title }: ImageGalleryProps) {
           className="flex items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition hover:border-brand/30 hover:text-brand sm:hidden"
         >
           <Images className="size-4" />
-          See all {displayCount} photos
+          {t("hotel.seeAllPhotosSm", { n: displayCount })}
         </button>
       </div>
 
@@ -125,7 +127,7 @@ export function ImageGallery({ images, photoCount, title }: ImageGalleryProps) {
               type="button"
               onClick={() => setOpen(false)}
               className="rounded-full p-1.5 text-white/80 transition hover:bg-white/10 hover:text-white"
-              aria-label="Close gallery"
+              aria-label={t("hotel.closeGallery")}
             >
               <X className="size-5" />
             </button>
@@ -136,20 +138,20 @@ export function ImageGallery({ images, photoCount, title }: ImageGalleryProps) {
               type="button"
               onClick={goPrev}
               className="absolute left-3 rounded-full bg-white/10 p-2.5 transition hover:bg-white/20"
-              aria-label="Previous photo"
+              aria-label={t("hotel.prevPhoto")}
             >
               <ChevronLeft className="size-5" />
             </button>
             <img
               src={uniqueImages[activeIndex]}
-              alt={`${title} photo ${activeIndex + 1}`}
+              alt={t("hotel.photoN", { title, n: activeIndex + 1 })}
               className="max-h-[62vh] w-full rounded-lg object-contain"
             />
             <button
               type="button"
               onClick={goNext}
               className="absolute right-3 rounded-full bg-white/10 p-2.5 transition hover:bg-white/20"
-              aria-label="Next photo"
+              aria-label={t("hotel.nextPhoto")}
             >
               <ChevronRight className="size-5" />
             </button>

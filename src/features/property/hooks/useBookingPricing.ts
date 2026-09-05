@@ -32,7 +32,7 @@ export function useBookingPricing(
         subtotal,
         tax,
         totalDue: subtotal + tax,
-        label: "Slot price",
+        label: "hotel.price.slot",
       };
     }
 
@@ -55,7 +55,7 @@ export function useBookingPricing(
       subtotal,
       tax,
       totalDue: subtotal + tax,
-      label: lane === "direct" ? "24h slot × nights" : "Room rate",
+      label: lane === "direct" ? "hotel.price.slotNights" : "hotel.price.roomRate",
     };
   }, [
     booking.checkIn,

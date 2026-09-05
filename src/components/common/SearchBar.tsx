@@ -1,3 +1,6 @@
+import { useLanguage } from "@/context/LanguageContext";
+
 export function SearchBar() {
-  return <div className="rounded-md border p-3">Search</div>;
+  const { t } = useLanguage();
+  return <div className="rounded-md border p-3">{t("common.search")}</div>;
 }

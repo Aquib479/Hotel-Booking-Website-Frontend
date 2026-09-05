@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { CardPaymentValues } from "../types";
 import { detectCardBrand } from "../hooks/usePaymentForms";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface PaymentCardPreviewProps {
   values: CardPaymentValues;
@@ -25,8 +26,9 @@ function displayNumber(cardNumber: string): string {
 }
 
 export function PaymentCardPreview({ values, flipped = false, className }: PaymentCardPreviewProps) {
+  const { t } = useLanguage();
   const brand = detectCardBrand(values.cardNumber);
-  const name = values.holderName.trim().toUpperCase() || "YOUR NAME";
+  const name = values.holderName.trim().toUpperCase() || t("checkout.yourName");
   const expiry = values.expiry || "MM/YY";
 
   return (
@@ -68,11 +70,11 @@ export function PaymentCardPreview({ values, flipped = false, className }: Payme
 
             <div className="flex items-end justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-wider text-white/55">Card holder</p>
+                <p className="text-[10px] uppercase tracking-wider text-white/55">{t("checkout.cardHolderShort")}</p>
                 <p className="truncate text-sm font-semibold tracking-wide">{name}</p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="text-[10px] uppercase tracking-wider text-white/55">Expires</p>
+                <p className="text-[10px] uppercase tracking-wider text-white/55">{t("checkout.expires")}</p>
                 <p className="font-mono text-sm font-semibold">{expiry}</p>
               </div>
             </div>
@@ -98,7 +100,7 @@ export function PaymentCardPreview({ values, flipped = false, className }: Payme
               </span>
             </div>
             <p className="mt-4 text-[11px] leading-relaxed text-white/65">
-              Your CVV is encrypted and never stored on RestHalf devices.
+              {t("checkout.cvvNeverStored")}
             </p>
           </div>
         </div>

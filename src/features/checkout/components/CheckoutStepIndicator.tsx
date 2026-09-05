@@ -1,19 +1,20 @@
 import { cn } from "@/lib/utils";
 import { CHECKOUT_STEPS } from "../constants";
 import type { CheckoutStep } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface CheckoutStepIndicatorProps {
   current: CheckoutStep;
 }
 
 export function CheckoutStepIndicator({ current }: CheckoutStepIndicatorProps) {
+  const { t } = useLanguage();
   const currentIndex = CHECKOUT_STEPS.findIndex((s) => s.id === current);
   const progressPct =
     currentIndex <= 0 ? 0 : (currentIndex / (CHECKOUT_STEPS.length - 1)) * 100;
 
   return (
-    <ol className="relative mb-8 flex w-full items-start" aria-label="Checkout progress">
-      {/* Track between first and last step centers */}
+    <ol className="relative mb-8 flex w-full items-start" aria-label={t("checkout.progress")}>
       <div
         className="pointer-events-none absolute top-4 right-[calc(100%/6)] left-[calc(100%/6)] h-0.5 rounded-full bg-muted"
         aria-hidden
@@ -46,7 +47,7 @@ export function CheckoutStepIndicator({ current }: CheckoutStepIndicatorProps) {
                 isActive ? "text-foreground" : "text-muted-foreground"
               )}
             >
-              {step.label}
+              {t(step.labelKey)}
             </span>
           </li>
         );

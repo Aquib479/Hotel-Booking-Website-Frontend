@@ -18,8 +18,10 @@ import { PropertyGridSkeleton } from "@/features/search/components/PropertyCardS
 import { SearchMapView } from "@/features/search/components/SearchMapView";
 import { SearchFilterSidebar } from "@/features/search/components/SearchFilterSidebar";
 import { INFINITE_SCROLL_PAGE_SIZE } from "@/features/search/constants";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function SearchResults() {
+  const { t } = useLanguage();
   const search = usePropertySearch();
   const [visibleCount, setVisibleCount] = useState(INFINITE_SCROLL_PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -255,7 +257,7 @@ export default function SearchResults() {
                       className="shrink-0 xl:hidden"
                     >
                       <Filter className="mr-2 size-4" />
-                      Filters
+                      {t("search.filters")}
                       {search.activeFilterCount > 0
                         ? ` (${search.activeFilterCount})`
                         : ""}
@@ -263,7 +265,7 @@ export default function SearchResults() {
                   </DialogTrigger>
                   <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-md">
                     <DialogHeader className="sr-only">
-                      <DialogTitle>Filters</DialogTitle>
+                      <DialogTitle>{t("search.filters")}</DialogTitle>
                     </DialogHeader>
                     <div className="max-h-[90vh] overflow-y-auto">
                       {filterSidebar}
@@ -277,27 +279,26 @@ export default function SearchResults() {
               {!search.hasSearchCriteria ? (
                 <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border bg-white py-20 text-center">
                   <p className="text-lg font-semibold text-foreground">
-                    Start your search
+                    {t("search.start")}
                   </p>
                   <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                    Enter a location, dates, and guests above to see available
-                    hotels.
+                    {t("search.startHint")}
                   </p>
                 </div>
               ) : search.error && search.loadedResults === 0 ? (
                 <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border bg-white py-20 text-center">
                   <p className="text-lg font-semibold text-foreground">
-                    Unable to load hotels
+                    {t("search.loadFail")}
                   </p>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    {search.error}
+                    {t(search.error)}
                   </p>
                   <Button
                     type="button"
                     className="mt-4"
                     onClick={search.reload}
                   >
-                    Try again
+                    {t("common.tryAgain")}
                   </Button>
                 </div>
               ) : search.view === "card" ? (
@@ -307,9 +308,9 @@ export default function SearchResults() {
                       <Loader2 className="size-4 animate-spin text-brand" />
                       {search.useZentrum
                         ? search.totalResults > 0
-                          ? `Loading ${search.totalResults} hotels…`
-                          : "Searching hotels across suppliers…"
-                        : "Loading hotels..."}
+                          ? t("search.loadingN", { n: search.totalResults })
+                          : t("search.searchingSuppliers")
+                        : t("search.loadingHotels")}
                     </div>
                     <PropertyGridSkeleton count={skeletonCount} />
                   </div>
@@ -335,7 +336,7 @@ export default function SearchResults() {
                         {(search.isStreamingResults || loadingMore) && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Loader2 className="size-4 animate-spin text-brand" />
-                            Loading more hotels…
+                            {t("search.loadingMore")}
                           </div>
                         )}
                         <PropertyGridSkeleton count={skeletonCount} />
@@ -346,9 +347,9 @@ export default function SearchResults() {
 
                     {!hasMore && search.loadedResults > 0 ? (
                       <p className="mt-2 text-center text-xs text-muted-foreground">
-                        Showing all {search.loadedResults} results
+                        {t("search.showingAll", { n: search.loadedResults })}
                         {search.totalResults > search.loadedResults
-                          ? ` of ${search.totalResults}`
+                          ? ` ${t("search.ofN", { n: search.totalResults })}`
                           : ""}
                       </p>
                     ) : null}
@@ -356,12 +357,12 @@ export default function SearchResults() {
                 ) : (
                   <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border bg-white py-20 text-center">
                     <p className="text-lg font-semibold text-foreground">
-                      No hotels found
+                      {t("search.none")}
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
                       {search.nameQuery.trim()
-                        ? `No hotels match “${search.nameQuery.trim()}”. Try a different name or clear the search.`
-                        : "Try adjusting your filters or search location."}
+                        ? `${t("search.noneMatch", { q: search.nameQuery.trim() })} ${t("search.noneMatchHint")}`
+                        : t("search.adjust")}
                     </p>
                   </div>
                 )

@@ -27,6 +27,8 @@ import { formatPrice } from "@/lib/currency/format";
 import { toSupportedCurrency } from "@/lib/currency/pricing";
 import { useHotelStore } from "@/store";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
+import { hasMessage } from "@/lib/i18n/messages";
 import { iconForAmenityLabel } from "./PropertyHighlights";
 import {
   buildDisplayRoomGroups,
@@ -182,6 +184,7 @@ export function RoomsRatesPanel({
   /** Called when user taps Reserve — parent should navigate to checkout. */
   onReserve?: (recommendationId: string) => void;
 }) {
+  const { t } = useLanguage();
   const { currency } = useCurrency();
   const status = useHotelStore((s) => s.status);
   const error = useHotelStore((s) => s.error);
@@ -223,7 +226,7 @@ export function RoomsRatesPanel({
     return (
       <div className="flex items-center gap-2 rounded-md border border-dashed border-border bg-white px-4 py-10 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
-        Loading rooms &amp; rates…
+        {t("hotel.loadingRooms")}
       </div>
     );
   }
@@ -231,7 +234,7 @@ export function RoomsRatesPanel({
   if (status === "error") {
     return (
       <div className="rounded-md border border-dashed border-border bg-white px-4 py-8 text-sm text-red-600">
-        {error ?? "Failed to load rooms and rates"}
+        {error ? t(error) : t("hotel.loadRoomsFail")}
       </div>
     );
   }
@@ -239,7 +242,7 @@ export function RoomsRatesPanel({
   if (!groups.length) {
     return (
       <div className="rounded-md border border-dashed border-border bg-white px-4 py-8 text-sm text-muted-foreground">
-        No room rates available for these dates.
+        {t("hotel.noRates")}
       </div>
     );
   }
@@ -248,10 +251,10 @@ export function RoomsRatesPanel({
     <div id="hotel-rooms" className="scroll-mt-28 space-y-5">
       <div>
         <h3 className="text-xl font-semibold tracking-tight text-foreground">
-          Select your room
+          {t("hotel.selectRoom")}
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Compare room types, inclusions, and total stay price.
+          {t("hotel.compareHint")}
         </p>
       </div>
 
@@ -268,7 +271,7 @@ export function RoomsRatesPanel({
                   : "border-border bg-white text-foreground hover:border-brand/35",
               )}
             >
-              All options
+              {t("hotel.allOptions")}
             </button>
             {filters.map((item) => {
               const on = activeFilters.has(item.id);
@@ -284,22 +287,29 @@ export function RoomsRatesPanel({
                       : "border-border bg-white text-foreground hover:border-brand/35",
                   )}
                 >
-                  {item.label}
+                  {t(`hotel.filter.${item.id}`)}
                 </button>
               );
             })}
           </div>
           {activeFilters.size > 0 ? (
             <p className="text-xs text-muted-foreground">
-              Showing {filteredGroups.length} of {groups.length} room type
-              {groups.length === 1 ? "" : "s"}
+              {groups.length === 1
+                ? t("hotel.showingRoomOne", {
+                    shown: filteredGroups.length,
+                    total: groups.length,
+                  })
+                : t("hotel.showingRooms", {
+                    shown: filteredGroups.length,
+                    total: groups.length,
+                  })}
               {" · "}
               <button
                 type="button"
                 onClick={clearFilters}
                 className="font-medium text-brand hover:underline"
               >
-                Clear filters
+                {t("hotel.clearFilters")}
               </button>
             </p>
           ) : null}
@@ -308,13 +318,13 @@ export function RoomsRatesPanel({
 
       {filteredGroups.length === 0 ? (
         <div className="rounded-md border border-dashed border-border bg-white px-4 py-8 text-center text-sm text-muted-foreground">
-          No rooms match these filters.{" "}
+          {t("hotel.noMatchFilters")}{" "}
           <button
             type="button"
             onClick={clearFilters}
             className="font-medium text-brand hover:underline"
           >
-            Clear filters
+            {t("hotel.clearFilters")}
           </button>
         </div>
       ) : (
@@ -348,6 +358,7 @@ function RoomGroupCard({
   formatRoomPrice: (amount: number, currency?: string) => string;
   onSelect: (recommendationId: string) => void;
 }) {
+  const { t } = useLanguage();
   const [showAllRates, setShowAllRates] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -368,12 +379,12 @@ function RoomGroupCard({
   const hiddenCount = Math.max(0, group.options.length - DEFAULT_VISIBLE_RATES);
   const cheapestHidden = group.options[DEFAULT_VISIBLE_RATES];
 
-  const facilityItems = buildRoomFacilityRows(group);
+  const facilityItems = buildRoomFacilityRows(group, t);
   const occupancyBits = [
-    group.maxGuests ? `Sleeps ${group.maxGuests}` : null,
-    group.maxAdults != null ? `${group.maxAdults} adults` : null,
+    group.maxGuests ? t("hotel.sleepsN", { n: group.maxGuests }) : null,
+    group.maxAdults != null ? t("hotel.adultsN", { n: group.maxAdults }) : null,
     group.maxChildren != null && group.maxChildren > 0
-      ? `${group.maxChildren} children`
+      ? t("hotel.childrenN", { n: group.maxChildren })
       : null,
   ].filter(Boolean);
 
@@ -414,7 +425,7 @@ function RoomGroupCard({
               <>
                 <button
                   type="button"
-                  aria-label="Previous photo"
+                  aria-label={t("hotel.prevPhoto")}
                   onClick={() =>
                     setPhotoIndex((i) => (i <= 0 ? photos.length - 1 : i - 1))
                   }
@@ -424,7 +435,7 @@ function RoomGroupCard({
                 </button>
                 <button
                   type="button"
-                  aria-label="Next photo"
+                  aria-label={t("hotel.nextPhoto")}
                   onClick={() =>
                     setPhotoIndex((i) => (i >= photos.length - 1 ? 0 : i + 1))
                   }
@@ -483,7 +494,7 @@ function RoomGroupCard({
               onClick={() => setShowDetails((v) => !v)}
               className="text-sm font-medium text-brand hover:underline"
             >
-              {showDetails ? "Hide details" : "Room Details"}
+              {showDetails ? t("hotel.hideDetails") : t("hotel.roomDetails")}
             </button>
           )}
 
@@ -498,7 +509,7 @@ function RoomGroupCard({
               {group.facilities.length > 0 ? (
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Room facilities
+                    {t("hotel.roomFacilities")}
                   </p>
                   <ul className="mt-2 space-y-1.5">
                     {group.facilities.map((facility) => (
@@ -507,7 +518,9 @@ function RoomGroupCard({
                         className="flex items-start gap-2 text-xs text-foreground"
                       >
                         <Check className="mt-0.5 size-3 shrink-0 text-emerald-600" />
-                        {facility}
+                        {hasMessage(`search.amenity.${facility}`)
+                          ? t(`search.amenity.${facility}`)
+                          : facility}
                       </li>
                     ))}
                   </ul>
@@ -519,9 +532,9 @@ function RoomGroupCard({
 
         <div className="min-w-0">
           <div className="hidden grid-cols-[minmax(0,1.4fr)_72px_minmax(120px,1fr)_104px] gap-3 border-b border-border bg-muted/40 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:grid">
-            <span>Your choices</span>
-            <span className="text-center">Sleeps</span>
-            <span className="text-right">Total stay</span>
+            <span>{t("hotel.yourChoices")}</span>
+            <span className="text-center">{t("hotel.sleepsHeader")}</span>
+            <span className="text-right">{t("hotel.totalStay")}</span>
             <span />
           </div>
 
@@ -547,15 +560,18 @@ function RoomGroupCard({
             >
               {showAllRates ? (
                 <>
-                  Show fewer rates
+                  {t("hotel.showFewerRates")}
                   <ChevronDown className="size-4 rotate-180" />
                 </>
               ) : (
                 <>
-                  Show {hiddenCount} more room rate
-                  {hiddenCount === 1 ? "" : "s"}
+                  {hiddenCount === 1
+                    ? t("hotel.showMoreRate", { n: hiddenCount })
+                    : t("hotel.showMoreRates", { n: hiddenCount })}
                   {cheapestHidden
-                    ? ` (from ${formatRoomPrice(cheapestHidden.totalRate, cheapestHidden.currency)})`
+                    ? ` ${t("hotel.fromPrice", {
+                        price: formatRoomPrice(cheapestHidden.totalRate, cheapestHidden.currency),
+                      })}`
                     : ""}
                   <ChevronDown className="size-4" />
                 </>
@@ -583,6 +599,7 @@ function RateOptionRow({
   formatRoomPrice: (amount: number, currency?: string) => string;
   onSelect: () => void;
 }) {
+  const { t } = useLanguage();
   const [showPolicies, setShowPolicies] = useState(false);
   const breakfast = hasBreakfast(option.boardBasisLabel);
   const sleeps = Math.min(Math.max(maxGuests ?? 2, 1), 4);
@@ -612,11 +629,11 @@ function RateOptionRow({
                 : "bg-amber-50 text-amber-800",
             )}
           >
-            {breakfast ? "Best price with breakfast" : "Today's best price"}
+            {breakfast ? t("hotel.bestBreakfast") : t("hotel.todaysBest")}
           </span>
         ) : breakfast ? (
           <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-            Includes breakfast
+            {t("hotel.includesBreakfast")}
           </span>
         ) : null}
 
@@ -643,9 +660,9 @@ function RateOptionRow({
               <XCircle className="mt-0.5 size-3.5 shrink-0" />
             )}
             {option.refundable
-              ? "Free cancellation"
+              ? t("search.amenity.Free cancellation")
               : option.refundability?.replace(/([a-z])([A-Z])/g, "$1 $2") ||
-                "Non-refundable"}
+                t("hotel.nonRefundable")}
           </li>
 
           {option.includes.map((item) => {
@@ -657,41 +674,44 @@ function RateOptionRow({
                 className="flex items-start gap-2 text-emerald-700"
               >
                 <Icon className="mt-0.5 size-3.5 shrink-0" />
-                {item}
+                {hasMessage(`search.amenity.${item}`)
+                  ? t(`search.amenity.${item}`)
+                  : item}
               </li>
             );
           })}
 
           <li className="flex items-start gap-2 text-emerald-700">
             <Zap className="mt-0.5 size-3.5 shrink-0" />
-            Instant confirmation
-            {option.needsPriceCheck ? " · price check at checkout" : ""}
+            {option.needsPriceCheck
+              ? t("hotel.instantConfirmCheck")
+              : t("hotel.instantConfirm")}
           </li>
 
           {option.payAtHotel === false ? (
             <li className="flex items-start gap-2">
               <CreditCard className="mt-0.5 size-3.5 shrink-0" />
               {option.cardRequired
-                ? "Pay online · card required"
-                : "Pay online"}
+                ? t("hotel.payOnlineCard")
+                : t("hotel.payOnline")}
             </li>
           ) : option.payAtHotel ? (
             <li className="flex items-start gap-2">
               <CreditCard className="mt-0.5 size-3.5 shrink-0" />
-              Pay at hotel
+              {t("search.payAtHotel")}
             </li>
           ) : null}
 
           {option.specialRequestSupported ? (
             <li className="flex items-start gap-2">
               <Check className="mt-0.5 size-3.5 shrink-0" />
-              Special requests supported
+              {t("hotel.specialRequests")}
             </li>
           ) : null}
 
           {option.availability != null && option.availability <= 5 ? (
             <li className="text-xs font-medium text-amber-700">
-              Only {option.availability} left at this price
+              {t("hotel.onlyLeft", { n: option.availability })}
             </li>
           ) : null}
 
@@ -707,7 +727,7 @@ function RateOptionRow({
               onClick={() => setShowPolicies((v) => !v)}
               className="text-xs font-medium text-brand hover:underline"
             >
-              {showPolicies ? "Hide rate policies" : "View rate policies"}
+              {showPolicies ? t("hotel.hidePolicies") : t("hotel.viewPolicies")}
             </button>
             {showPolicies ? (
               <div className="mt-2 space-y-2 rounded-lg border border-border/70 bg-muted/30 p-2.5">
@@ -729,7 +749,7 @@ function RateOptionRow({
 
       <div className="flex items-center gap-1 sm:justify-center sm:pt-1">
         <span className="text-xs font-medium text-muted-foreground sm:hidden">
-          Sleeps
+          {t("hotel.sleepsHeader")}
         </span>
         {Array.from({ length: sleeps }).map((_, i) => (
           <Users key={i} className="size-4 text-foreground" />
@@ -746,14 +766,18 @@ function RateOptionRow({
           {formatRoomPrice(option.totalRate, option.currency)}
         </p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Total for stay
+          {t("hotel.totalForStay")}
           {option.taxesAmount != null && option.taxesAmount > 0
-            ? ` · taxes ${formatRoomPrice(option.taxesAmount, option.currency)}`
-            : " · taxes may apply"}
+            ? ` · ${t("hotel.taxesAmount", {
+                amount: formatRoomPrice(option.taxesAmount, option.currency),
+              })}`
+            : ` · ${t("hotel.taxesMayApply")}`}
         </p>
         {option.baseRate != null && option.baseRate > 0 ? (
           <p className="text-[11px] text-muted-foreground">
-            Base {formatRoomPrice(option.baseRate, option.currency)}
+            {t("hotel.baseAmount", {
+              amount: formatRoomPrice(option.baseRate, option.currency),
+            })}
           </p>
         ) : null}
       </div>
@@ -764,7 +788,7 @@ function RateOptionRow({
         className="w-full sm:w-auto rounded-md"
         onClick={onSelect}
       >
-        Reserve
+        {t("hotel.reserve")}
       </Button>
     </div>
   );
@@ -772,6 +796,7 @@ function RateOptionRow({
 
 function buildRoomFacilityRows(
   group: DisplayRoomGroup,
+  t: (key: string) => string,
 ): Array<{ label: string; icon: LucideIcon }> {
   const rows: Array<{ label: string; icon: LucideIcon }> = [];
 
@@ -782,15 +807,18 @@ function buildRoomFacilityRows(
   }
 
   if (group.smokingAllowed === false) {
-    rows.push({ label: "Non-smoking", icon: CigaretteOff });
+    rows.push({ label: t("hotel.nonSmoking"), icon: CigaretteOff });
   } else if (group.smokingAllowed === true) {
-    rows.push({ label: "Smoking allowed", icon: Cigarette });
+    rows.push({ label: t("hotel.smokingAllowed"), icon: Cigarette });
   }
 
-  const fromApi = group.facilities.map((label) => ({
-    label,
-    icon: iconForAmenityLabel(label),
-  }));
+  const fromApi = group.facilities.map((label) => {
+    const key = `search.amenity.${label}`;
+    return {
+      label: hasMessage(key) ? t(key) : label,
+      icon: iconForAmenityLabel(label),
+    };
+  });
 
   for (const f of fromApi) {
     if (rows.some((r) => r.label.toLowerCase() === f.label.toLowerCase())) {

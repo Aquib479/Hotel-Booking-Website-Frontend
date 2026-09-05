@@ -41,6 +41,9 @@ import { cn } from "@/lib/utils";
 import type { CheckoutDraft } from "../types";
 import { formatGuestsSummary } from "../utils";
 import { SlotHoldCountdown } from "./SlotHoldCountdown";
+import { useLanguage } from "@/context/LanguageContext";
+import { enUS, id as idLocale } from "date-fns/locale";
+import type { AppLanguage } from "@/lib/i18n/languages";
 
 const MAX_ROOMS = 9;
 
@@ -51,18 +54,19 @@ function toCurrencyCode(code: string | undefined): CurrencyCode {
     : "USD";
 }
 
-function ratingLabel(rating: number) {
-  if (rating >= 9) return "Excellent";
-  if (rating >= 8) return "Very good";
-  if (rating >= 7) return "Good";
-  if (rating > 0) return "Guest score";
+function ratingLabel(rating: number, t: (key: string) => string) {
+  if (rating >= 9) return t("search.excellent");
+  if (rating >= 8) return t("search.veryGood");
+  if (rating >= 7) return t("search.good");
+  if (rating > 0) return t("common.guestScore");
   return null;
 }
 
-function formatStayHeading(checkIn?: string, checkOut?: string) {
+function formatStayHeading(checkIn?: string, checkOut?: string, language: AppLanguage = "en") {
   if (!checkIn || !checkOut) return null;
   try {
-    return `${format(parseISO(checkIn), "EEE, MMM d")} – ${format(parseISO(checkOut), "EEE, MMM d")}`;
+    const locale = language === "id" ? idLocale : enUS;
+    return `${format(parseISO(checkIn), "EEE, MMM d", { locale })} – ${format(parseISO(checkOut), "EEE, MMM d", { locale })}`;
   } catch {
     return null;
   }
@@ -99,11 +103,12 @@ export function BookingSummaryCard({
   onDraftChange,
   isRefreshingPrice = false,
 }: BookingSummaryCardProps) {
+  const { language, t } = useLanguage();
   const [priceOpen, setPriceOpen] = useState(true);
   const [roomsOpen, setRoomsOpen] = useState(false);
   const [datesOpen, setDatesOpen] = useState(false);
 
-  const hotelName = draft.hotelMeta?.name ?? "Hotel";
+  const hotelName = draft.hotelMeta?.name ?? t("checkout.hotelFallback");
   const hotelImage = draft.roomImageUrl || draft.hotelMeta?.imageUrl || "";
   const hotelLocation = draft.hotelMeta
     ? [draft.hotelMeta.address, draft.hotelMeta.city, draft.hotelMeta.country]
@@ -123,11 +128,11 @@ export function BookingSummaryCard({
   const nights = Math.max(1, draft.nights ?? 1);
   const rooms = Math.min(MAX_ROOMS, Math.max(1, draft.rooms ?? 1));
   const perNight = displayTotal > 0 ? displayTotal / nights / rooms : 0;
-  const stayHeading = formatStayHeading(draft.checkIn, draft.checkOut);
+  const stayHeading = formatStayHeading(draft.checkIn, draft.checkOut, language);
   const hasBreakfast = /breakfast|bb|half.?board|full.?board/i.test(
     draft.boardBasis ?? "",
   );
-  const guestsLabel = formatGuestsSummary(draft.guests);
+  const guestsLabel = formatGuestsSummary(draft.guests, language);
   const sleeps = Math.min(
     Math.max(draft.maxGuests ?? draft.guests.adults + draft.guests.children, 1),
     6,
@@ -142,7 +147,7 @@ export function BookingSummaryCard({
       ? { from: checkInDate, to: checkOutDate }
       : undefined;
 
-  const facilityLines = buildFacilityLines(draft);
+  const facilityLines = buildFacilityLines(draft, t);
 
   const handleDatesChange = (range: { checkIn?: Date; checkOut?: Date }) => {
     if (!range.checkIn || !range.checkOut) {
@@ -207,7 +212,7 @@ export function BookingSummaryCard({
               {starRating > 0 ? (
                 <span
                   className="inline-flex items-center gap-0.5"
-                  aria-label={`${starRating} stars`}
+                  aria-label={t("common.starN", { n: starRating })}
                 >
                   {Array.from({ length: Math.min(5, starRating) }).map(
                     (_, i) => (
@@ -226,14 +231,18 @@ export function BookingSummaryCard({
                 <span className="rounded-md bg-brand px-1.5 py-0.5 font-bold text-white">
                   {rating.toFixed(1)}
                 </span>
-                {ratingLabel(rating) ? (
+                {ratingLabel(rating, t) ? (
                   <span className="font-medium text-brand">
-                    {ratingLabel(rating)}
+                    {ratingLabel(rating, t)}
                   </span>
                 ) : null}
                 {reviewCount > 0 ? (
                   <span className="text-muted-foreground">
-                    {reviewCount.toLocaleString()} reviews
+                    {t("checkout.reviewsN", {
+                      n: reviewCount.toLocaleString(
+                        language === "id" ? "id-ID" : "en-US",
+                      ),
+                    })}
                   </span>
                 ) : null}
               </div>
@@ -251,7 +260,7 @@ export function BookingSummaryCard({
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="font-semibold text-foreground">
-                {draft.roomName || "Selected room"}
+                {draft.roomName || t("checkout.selectedRoom")}
               </p>
               {draft.roomTypeLabel ? (
                 <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-brand">
@@ -265,8 +274,10 @@ export function BookingSummaryCard({
           </div>
 
           <p className="mt-2 text-xs text-muted-foreground">
-            Guests: {guestsLabel}
-            {draft.maxGuests ? ` · Up to ${draft.maxGuests} per room` : ""}
+            {t("checkout.guestsUpTo", { guests: guestsLabel })}
+            {draft.maxGuests
+              ? t("checkout.upToPerRoom", { n: draft.maxGuests })
+              : ""}
           </p>
 
           <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground">
@@ -295,7 +306,7 @@ export function BookingSummaryCard({
             ))}
             <li className="flex items-start gap-2 text-emerald-700">
               <Zap className="mt-0.5 size-3.5 shrink-0" />
-              Instant confirmation
+              {t("search.instant")}
             </li>
           </ul>
 
@@ -314,8 +325,8 @@ export function BookingSummaryCard({
               <span>
                 {draft.cancellationText?.trim() ||
                   (draft.refundable
-                    ? "Free cancellation available"
-                    : "Non-refundable")}
+                    ? t("checkout.freeCancel")
+                    : t("checkout.nonRefundable"))}
               </span>
             </p>
           ) : null}
@@ -331,13 +342,15 @@ export function BookingSummaryCard({
                 {stayHeading}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Check-in from afternoon · Check-out by noon
+                {t("checkout.checkinOut")}
               </p>
             </>
           ) : (
             <>
               <p className="text-base font-semibold text-foreground">
-                {draft.mode === "rest" ? "Rest slot booking" : "Your stay"}
+                {draft.mode === "rest"
+                  ? t("checkout.restSlotBooking")
+                  : t("checkout.yourStay")}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {guestsLabel}
@@ -356,7 +369,9 @@ export function BookingSummaryCard({
                 >
                   <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1 font-medium text-foreground">
-                    {nights} night{nights === 1 ? "" : "s"}
+                    {nights === 1
+                      ? t("common.nightOne")
+                      : t("common.nightsN", { n: nights })}
                   </span>
                   <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
                 </button>
@@ -395,8 +410,12 @@ export function BookingSummaryCard({
                     startMonth={startOfMonth(today)}
                     endMonth={startOfMonth(maxDate)}
                     className="mx-auto [--cell-size:2.2rem]"
+                    locale={language === "id" ? idLocale : enUS}
                     formatters={{
-                      formatMonthDropdown: (date) => format(date, "MMMM"),
+                      formatMonthDropdown: (date) =>
+                        format(date, "MMMM", {
+                          locale: language === "id" ? idLocale : enUS,
+                        }),
                       formatYearDropdown: (date) => format(date, "yyyy"),
                     }}
                   />
@@ -404,16 +423,13 @@ export function BookingSummaryCard({
                 <div className="flex items-center justify-between gap-3 border-t border-border/70 bg-muted/40 px-4 py-3">
                   <p className="text-sm text-muted-foreground">
                     {checkInDate && checkOutDate ? (
-                      <>
-                        <span className="font-semibold text-foreground">
-                          {nights}
-                        </span>{" "}
-                        night{nights === 1 ? "" : "s"} selected
-                      </>
+                      nights === 1
+                        ? t("checkout.nightSelected")
+                        : t("checkout.nightsSelected", { n: nights })
                     ) : checkInDate ? (
-                      "Now pick your check-out date"
+                      t("common.pickCheckout")
                     ) : (
-                      "Pick your check-in date"
+                      t("common.pickCheckin")
                     )}
                   </p>
                   <Button
@@ -424,7 +440,7 @@ export function BookingSummaryCard({
                     disabled={!checkInDate || !checkOutDate}
                     onClick={() => setDatesOpen(false)}
                   >
-                    Done
+                    {t("common.done")}
                   </Button>
                 </div>
               </PopoverContent>
@@ -432,7 +448,9 @@ export function BookingSummaryCard({
           ) : (
             <div className="flex items-center gap-2 px-4 py-3 text-sm">
               <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
-              <span className="font-medium text-foreground">1 slot</span>
+              <span className="font-medium text-foreground">
+                {t("checkout.oneSlot")}
+              </span>
             </div>
           )}
 
@@ -444,14 +462,16 @@ export function BookingSummaryCard({
               >
                 <DoorOpen className="size-4 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 font-medium text-foreground">
-                  {rooms} room{rooms === 1 ? "" : "s"}
+                  {rooms === 1
+                    ? t("common.roomOne")
+                    : t("common.roomsCount", { n: rooms })}
                 </span>
                 <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
               </button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-40 p-1.5">
               <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                Rooms
+                {t("common.rooms")}
               </p>
               <div className="max-h-56 overflow-y-auto">
                 {Array.from({ length: MAX_ROOMS }, (_, i) => i + 1).map((n) => (
@@ -465,7 +485,9 @@ export function BookingSummaryCard({
                     )}
                   >
                     <span>
-                      {n} room{n === 1 ? "" : "s"}
+                      {n === 1
+                        ? t("common.roomOne")
+                        : t("common.roomsCount", { n })}
                     </span>
                     {n === rooms ? <Check className="size-3.5" /> : null}
                   </button>
@@ -477,7 +499,7 @@ export function BookingSummaryCard({
 
         {draft.mode === "stay" && !checkOutDate && checkInDate ? (
           <p className="border-t border-border px-4 py-2 text-xs text-amber-700">
-            Select a check-out date to update your stay.
+            {t("checkout.selectCheckout")}
           </p>
         ) : null}
 
@@ -498,7 +520,9 @@ export function BookingSummaryCard({
           onClick={() => setPriceOpen((v) => !v)}
           className="flex w-full items-center justify-between px-4 py-3.5 text-left transition hover:bg-muted/30"
         >
-          <h3 className="font-semibold text-foreground">Price Details</h3>
+          <h3 className="font-semibold text-foreground">
+            {t("checkout.priceDetails")}
+          </h3>
           <ChevronDown
             className={cn(
               "size-4 text-muted-foreground transition",
@@ -511,8 +535,7 @@ export function BookingSummaryCard({
           <div className="space-y-2.5 border-t border-border/70 px-4 py-3.5 text-sm">
             <div className="flex items-start justify-between gap-3">
               <span className="text-muted-foreground">
-                {rooms} room{rooms === 1 ? "" : "s"} × {nights} night
-                {nights === 1 ? "" : "s"}
+                {t("checkout.roomsXNights", { rooms, nights })}
               </span>
               <span className="font-medium text-foreground">
                 {formatMoney(displayTotal)}
@@ -520,12 +543,16 @@ export function BookingSummaryCard({
             </div>
             {perNight > 0 ? (
               <p className="text-xs text-muted-foreground">
-                Avg. {formatMoney(perNight)} / night / room
+                {t("checkout.avgNight", { amount: formatMoney(perNight) })}
               </p>
             ) : null}
             <div className="flex items-start justify-between gap-3">
-              <span className="text-muted-foreground">Taxes & fees</span>
-              <span className="font-medium text-foreground">Included</span>
+              <span className="text-muted-foreground">
+                {t("checkout.taxesFees")}
+              </span>
+              <span className="font-medium text-foreground">
+                {t("checkout.included")}
+              </span>
             </div>
           </div>
         ) : null}
@@ -533,32 +560,36 @@ export function BookingSummaryCard({
         <div className="border-t border-dashed border-border px-4 py-4">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-base font-bold text-foreground">Total</p>
+              <p className="text-base font-bold text-foreground">
+                {t("checkout.total")}
+              </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {isRefreshingPrice
-                  ? "Updating for selected currency…"
+                  ? t("checkout.updatingCurrency")
                   : draft.source === "zentrumhub"
-                    ? "Estimate · confirmed at payment"
-                    : "Amount due"}
+                    ? t("checkout.estimate")
+                    : t("checkout.amountDue")}
               </p>
             </div>
             {isRefreshingPrice ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin text-brand" />
-                Updating…
+                {t("checkout.updating")}
               </div>
             ) : displayTotal > 0 ? (
               <p className="text-right text-xl font-bold tracking-tight text-foreground">
                 {formatMoney(displayTotal)}
               </p>
             ) : (
-              <p className="text-sm text-muted-foreground">Price pending</p>
+              <p className="text-sm text-muted-foreground">
+                {t("checkout.pricePending")}
+              </p>
             )}
           </div>
 
           <p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-emerald-700">
             <ShieldCheck className="size-3.5" />
-            Secure checkout · best available rate
+            {t("checkout.secureRate")}
           </p>
         </div>
       </section>
@@ -566,7 +597,10 @@ export function BookingSummaryCard({
   );
 }
 
-function buildFacilityLines(draft: CheckoutDraft) {
+function buildFacilityLines(
+  draft: CheckoutDraft,
+  t: (key: string) => string,
+) {
   const lines: Array<{
     label: string;
     icon: typeof Wifi;
@@ -584,10 +618,10 @@ function buildFacilityLines(draft: CheckoutDraft) {
   }
 
   const defaults = [
-    { label: "Free Wi-Fi", icon: Wifi, match: /wifi|wi-?fi/i },
-    { label: "Non-smoking", icon: CigaretteOff, match: /smoke|smoking/i },
-    { label: "Private bathroom", icon: Bath, match: /bath/i },
-    { label: "Air conditioning", icon: Wind, match: /air|ac|cooling/i },
+    { label: t("checkout.wifi"), icon: Wifi, match: /wifi|wi-?fi/i },
+    { label: t("checkout.nonsmoking"), icon: CigaretteOff, match: /smoke|smoking/i },
+    { label: t("checkout.privateBath"), icon: Bath, match: /bath/i },
+    { label: t("checkout.ac"), icon: Wind, match: /air|ac|cooling/i },
   ];
 
   for (const d of defaults) {

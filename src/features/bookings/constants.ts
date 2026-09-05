@@ -10,10 +10,10 @@ export const BOOKINGS_PER_PAGE = 10;
 /** Direct upcoming rest slot within this window gets urgency treatment */
 export const SLOT_STARTING_SOON_HOURS = 3;
 
-export const BOOKING_STATUS_TABS: { id: BookingTabStatus; label: string }[] = [
-  { id: "upcoming", label: "Upcoming" },
-  { id: "past", label: "Past" },
-  { id: "cancelled", label: "Cancelled" },
+export const BOOKING_STATUS_TABS: { id: BookingTabStatus; labelKey: string }[] = [
+  { id: "upcoming", labelKey: "bookings.upcoming" },
+  { id: "past", labelKey: "bookings.past" },
+  { id: "cancelled", labelKey: "bookings.cancelled" },
 ];
 
 /** v1: Direct → hotel detail; Wholesale → search by city (OTA inventory may differ) */
@@ -29,6 +29,8 @@ export const REFUND_STATUS_POLLING = false;
 /** Refund amounts come from backend/refund engine — frontend does not compute policy math */
 export const REFUND_ENGINE_PROVIDES_AMOUNT = true;
 
+export const REFUND_TIMELINE_KEY = "bookings.refundTimeline";
+
 export const REFUND_TIMELINE_TEXT =
   "Refunds typically appear in 5–7 business days on your original payment method.";
 
@@ -38,14 +40,14 @@ import type { CancelReasonId } from "./types";
 
 export const CANCEL_REASONS: {
   id: CancelReasonId;
-  label: string;
+  labelKey: string;
   escalatesToSupport?: boolean;
 }[] = [
-  { id: "plans_changed", label: "Plans changed" },
-  { id: "better_price", label: "Found a better price" },
-  { id: "booked_by_mistake", label: "Booked by mistake" },
-  { id: "hotel_issue", label: "Issue with the hotel", escalatesToSupport: true },
-  { id: "other", label: "Other" },
+  { id: "plans_changed", labelKey: "bookings.cancelReason.plans_changed" },
+  { id: "better_price", labelKey: "bookings.cancelReason.better_price" },
+  { id: "booked_by_mistake", labelKey: "bookings.cancelReason.booked_by_mistake" },
+  { id: "hotel_issue", labelKey: "bookings.cancelReason.hotel_issue", escalatesToSupport: true },
+  { id: "other", labelKey: "bookings.cancelReason.other" },
 ];
 
 export const WHOLESALE_CANCEL_RESPONSE_HOURS = 24;
@@ -54,7 +56,7 @@ export const WHOLESALE_CANCEL_RESPONSE_HOURS = 24;
 export const ALLOW_ZERO_REFUND_CANCELLATION = true;
 
 export const DIRECT_CANCEL_FLOW_STEPS = [
-  { id: "reason" as const, label: "Reason" },
-  { id: "preview" as const, label: "Refund preview" },
-  { id: "confirmation" as const, label: "Confirmed" },
+  { id: "reason" as const, labelKey: "bookings.cancelStep.reason" },
+  { id: "preview" as const, labelKey: "bookings.cancelStep.preview" },
+  { id: "confirmation" as const, labelKey: "bookings.cancelStep.confirmation" },
 ];

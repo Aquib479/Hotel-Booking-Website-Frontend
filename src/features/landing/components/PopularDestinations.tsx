@@ -1,10 +1,12 @@
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 import { POPULAR_DESTINATIONS } from "../constants";
 
 export function PopularDestinations() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   const scroll = (dir: -1 | 1) => {
@@ -18,7 +20,7 @@ export function PopularDestinations() {
       <div className="mx-auto max-w-[1120px]">
         <div className="mb-7 text-center">
           <h2 className="text-[1.35rem] font-semibold tracking-tight text-slate-600 sm:text-[1.5rem]">
-            Explore popular destinations
+            {t("landing.destinations")}
           </h2>
           <div className="mx-auto mt-2.5 h-[3px] w-14 rounded-full bg-teal-400" />
         </div>
@@ -26,7 +28,7 @@ export function PopularDestinations() {
         <div className="relative flex items-center gap-3 sm:gap-5">
           <button
             type="button"
-            aria-label="Previous destinations"
+            aria-label={t("landing.prevDest")}
             onClick={() => scroll(-1)}
             className="hidden size-11 shrink-0 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-white sm:inline-flex"
           >
@@ -54,7 +56,7 @@ export function PopularDestinations() {
               >
                 <img
                   src={dest.image}
-                  alt={`${dest.city} landmark`}
+                  alt={t("landing.cityLandmark", { city: dest.city })}
                   className="h-20 w-20 object-contain sm:h-[5.5rem] sm:w-[5.5rem]"
                 />
                 <p className="mt-4 text-[15px] font-bold text-slate-900">{dest.city}</p>
@@ -65,7 +67,7 @@ export function PopularDestinations() {
 
           <button
             type="button"
-            aria-label="Next destinations"
+            aria-label={t("landing.nextDest")}
             onClick={() => scroll(1)}
             className="hidden size-11 shrink-0 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-white sm:inline-flex"
           >

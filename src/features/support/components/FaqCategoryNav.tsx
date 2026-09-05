@@ -1,4 +1,5 @@
 import { FilterPillGroup } from "@/components/common/FilterPillGroup";
+import { useLanguage } from "@/context/LanguageContext";
 import type { FaqCategory, FaqCategoryId } from "../types";
 
 interface FaqCategoryNavProps {
@@ -14,8 +15,9 @@ export function FaqCategoryNav({
   onSelect,
   counts,
 }: FaqCategoryNavProps) {
+  const { t } = useLanguage();
   const options = [
-    { id: "all" as const, label: "All", count: counts?.all },
+    { id: "all" as const, label: t("support.faqAll"), count: counts?.all },
     ...categories.map((c) => ({
       id: c.id,
       label: c.label,
@@ -28,7 +30,7 @@ export function FaqCategoryNav({
       options={options}
       value={activeCategory}
       onChange={onSelect}
-      aria-label="FAQ categories"
+      aria-label={t("support.faqCategories")}
     />
   );
 }

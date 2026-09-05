@@ -39,6 +39,7 @@ import {
   useFavoritesStore,
   type SelectedRateOption,
 } from "@/store";
+import { useLanguage } from "@/context/LanguageContext";
 
 function parseDateParam(value: string | null): Date | undefined {
   if (!value) return undefined;
@@ -51,6 +52,7 @@ function scrollToId(id: string) {
 }
 
 export default function HotelDetails() {
+  const { t } = useLanguage();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -71,7 +73,7 @@ export default function HotelDetails() {
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 bg-[#f7f7f8]">
         <Loader2 className="size-8 animate-spin text-brand" />
-        <p className="text-sm text-muted-foreground">Loading hotel details…</p>
+        <p className="text-sm text-muted-foreground">{t("hotel.loading")}</p>
       </div>
     );
   }
@@ -79,9 +81,9 @@ export default function HotelDetails() {
   if (!property || error) {
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 bg-[#f7f7f8]">
-        <p className="text-lg font-semibold">{error ?? "Hotel not found"}</p>
+        <p className="text-lg font-semibold">{t(error ?? "hotel.notFound")}</p>
         <Button asChild>
-          <Link to="/search">Back to search</Link>
+          <Link to="/search">{t("hotel.backSearch")}</Link>
         </Button>
       </div>
     );

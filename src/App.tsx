@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { CurrencyProvider } from "@/context/CurrencyContext";
+import { LanguageProvider } from "@/context/LanguageContext";
 import { AuthProvider } from "@/features/auth/context/AuthProvider";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Home from "@/pages/Home";
@@ -17,6 +18,7 @@ import BookingConfirmation from "@/pages/BookingConfirmation";
 import Account from "@/pages/Account";
 import Contact from "@/pages/Contact";
 import About from "@/pages/About";
+import HowItWorks from "@/pages/HowItWorks";
 import ListProperty from "@/pages/ListProperty";
 import RateApp from "@/pages/RateApp";
 import Coins from "@/pages/Coins";
@@ -35,6 +37,7 @@ import { AdminRoomsPage } from "@/features/staff/pages/AdminRoomsPage";
 export default function App() {
   return (
     <BrowserRouter>
+      <LanguageProvider>
       <CurrencyProvider>
         <AuthProvider>
           <StaffAuthProvider>
@@ -67,6 +70,7 @@ export default function App() {
               <Route path="/faq" element={<Navigate to="/contact" replace />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/about" element={<About />} />
+              <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/list-property" element={<ListProperty />} />
               <Route path="/rate-app" element={<RateApp />} />
               <Route path="/terms" element={<Terms />} />
@@ -77,6 +81,7 @@ export default function App() {
           </StaffAuthProvider>
         </AuthProvider>
       </CurrencyProvider>
+      </LanguageProvider>
     </BrowserRouter>
   );
 }

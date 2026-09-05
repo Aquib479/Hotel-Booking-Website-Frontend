@@ -11,9 +11,11 @@ import {
 import { LocationSearchField } from "@/components/common/search/LocationSearchField";
 import { buildSearchParams } from "@/components/common/search/location-api";
 import type { LocationSuggestion } from "@/components/common/search/types";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function LandingSearchBar() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [location, setLocation] = useState<LocationSuggestion | null>(null);
   const [checkIn, setCheckIn] = useState<Date | undefined>();
   const [checkOut, setCheckOut] = useState<Date | undefined>();
@@ -27,15 +29,15 @@ export function LandingSearchBar() {
 
   const handleSearch = async () => {
     if (!location || !(location.city || location.label).trim()) {
-      setError("Please select a location");
+      setError(t("err.location"));
       return;
     }
     if (!checkIn || !checkOut) {
-      setError("Please select check-in and check-out dates");
+      setError(t("err.dates"));
       return;
     }
     if (checkOut <= checkIn) {
-      setError("Check-out must be after check-in");
+      setError(t("err.checkoutAfter"));
       return;
     }
 
@@ -47,7 +49,7 @@ export function LandingSearchBar() {
         mode: "stay",
         checkIn,
         checkOut,
-        guests: formatOccupancyLabel(occupancy),
+        guests: formatOccupancyLabel(occupancy, t),
         rooms: occupancy.rooms,
         adults: occupancy.adults,
         children: occupancy.children,
@@ -63,7 +65,7 @@ export function LandingSearchBar() {
       <div className="flex flex-col overflow-visible rounded-[1.75rem] bg-white shadow-[0_20px_50px_rgba(15,23,42,0.1)] lg:h-[7.25rem] lg:flex-row lg:items-center lg:pl-8 lg:pr-2 lg:py-2">
         <div className="min-w-0 flex-1 border-b border-slate-100 px-5 py-4 lg:flex lg:h-full lg:items-center lg:border-b-0 lg:border-r lg:px-0 lg:py-0 lg:pr-6">
           <div className="w-full">
-            <p className="mb-1 text-[13px] font-medium text-slate-400">Location</p>
+            <p className="mb-1 text-[13px] font-medium text-slate-400">{t("common.location")}</p>
             <LocationSearchField
               value={location}
               onChange={(next) => {
@@ -79,7 +81,7 @@ export function LandingSearchBar() {
 
         <div className="min-w-0 flex-1 border-b border-slate-100 px-5 py-4 lg:flex lg:h-full lg:items-center lg:border-b-0 lg:border-r lg:px-6 lg:py-0">
           <div className="w-full">
-            <p className="mb-1 text-[13px] font-medium text-slate-400">Date</p>
+            <p className="mb-1 text-[13px] font-medium text-slate-400">{t("common.date")}</p>
             <DateRangeField
               label=""
               checkIn={checkIn}
@@ -97,7 +99,7 @@ export function LandingSearchBar() {
 
         <div className="min-w-0 flex-[0.85] px-5 py-4 lg:flex lg:h-full lg:items-center lg:px-6 lg:py-0">
           <div className="w-full">
-            <p className="mb-1 text-[13px] font-medium text-slate-400">People</p>
+            <p className="mb-1 text-[13px] font-medium text-slate-400">{t("common.people")}</p>
             <OccupancyPicker value={occupancy} onChange={setOccupancy}>
               <button
                 type="button"
@@ -105,7 +107,7 @@ export function LandingSearchBar() {
               >
                 <Users className="size-4 shrink-0 text-slate-400" />
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">
-                  {formatOccupancyLabel(occupancy)}
+                  {formatOccupancyLabel(occupancy, t)}
                 </span>
                 <ChevronDown className="size-4 shrink-0 text-slate-400" />
               </button>
@@ -123,7 +125,7 @@ export function LandingSearchBar() {
             {isLoading ? (
               <Loader2 className="mr-2 size-4 animate-spin" />
             ) : null}
-            {isLoading ? "Searching..." : "Search Hotel"}
+            {isLoading ? t("common.searching") : t("landing.searchHotel")}
           </Button>
         </div>
       </div>

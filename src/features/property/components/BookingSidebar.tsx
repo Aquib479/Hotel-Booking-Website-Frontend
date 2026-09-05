@@ -27,6 +27,7 @@ import { buildCheckoutDraft, saveCheckoutDraftToStorage } from "@/features/check
 import { searchAvailability, createHold } from "@/features/checkout/api";
 import { useBookingPricing } from "../hooks/useBookingPricing";
 import type { BookingSidebarProps } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
 
 const DEFAULT_GUESTS_LABEL = formatTravellersLabel(DEFAULT_TRAVELLER_SELECTION);
 
@@ -44,6 +45,7 @@ export function BookingSidebar({
   supplierName,
   initialBooking,
 }: BookingSidebarProps) {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { format: formatCurrency, currency } = useCurrency();
   const isDirect = lane === "direct";
@@ -71,7 +73,7 @@ export function BookingSidebar({
     wholesalePricing,
     slotDuration
   );
-  const formatDate = (date?: Date) => (date ? format(date, "MMM. d, yyyy") : "Select");
+  const formatDate = (date?: Date) => (date ? format(date, "MMM. d, yyyy") : t("common.select"));
 
   function frontendSlotToBackend(slot: RestSlot): "HALF_DAY" | "FULL_DAY" {
     return slot === "24h" ? "FULL_DAY" : "HALF_DAY";
@@ -116,7 +118,7 @@ export function BookingSidebar({
       const availability = await searchAvailability(propertyId, dateStr, slotType);
 
       if (availability.rooms.length === 0) {
-        setBookingError("No rooms available for the selected date and slot.");
+        setBookingError("hotel.noRoomsSlot");
         setIsBooking(false);
         return;
       }
@@ -165,7 +167,7 @@ export function BookingSidebar({
       saveCheckoutDraftToStorage(draft);
       navigate("/checkout");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to create booking hold";
+      const message = err instanceof Error ? err.message : "hotel.holdFail";
       setBookingError(message);
     } finally {
       setIsBooking(false);
@@ -192,7 +194,7 @@ export function BookingSidebar({
             amountClassName="text-2xl"
           />
           <p className="text-xs text-muted-foreground">
-            {mode === "rest" ? "Per slot, before taxes" : "Per night, before taxes"}
+            {mode === "rest" ? t("hotel.perSlotTaxes") : t("hotel.perNightTaxes")}
           </p>
         </div>
         <LaneBadge lane={lane} />
@@ -201,21 +203,21 @@ export function BookingSidebar({
       {isDirect && ringFencedRooms && (
         <p className="mb-4 flex items-center gap-1.5 rounded-lg bg-brand/5 px-3 py-2 text-xs font-medium text-brand">
           <Zap className="size-3.5" />
-          {ringFencedRooms} rooms reserved for RestHalf · instant confirmation
+          {t("hotel.roomsReserved", { n: ringFencedRooms })}
         </p>
       )}
 
       {!isDirect && (
         <p className="mb-4 flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-muted-foreground">
           <ExternalLink className="size-3.5 shrink-0" />
-          You&apos;ll complete booking via {supplierName ?? "our partner"} after checkout
+          {t("hotel.completeVia", { name: supplierName ?? t("search.partner") })}
         </p>
       )}
 
       {showSlotPicker ? (
         <div className="space-y-3">
           <DateField
-            label="Date"
+            label={t("common.date")}
             value={formatDate(booking.restDate)}
             selected={booking.restDate}
             onSelect={(restDate) => {
@@ -234,7 +236,7 @@ export function BookingSidebar({
       ) : (
         <div className="grid grid-cols-2 gap-0 overflow-hidden rounded-xl border border-border">
           <DateField
-            label="Check-in"
+            label={t("hotel.checkIn")}
             value={formatDate(booking.checkIn)}
             selected={booking.checkIn}
             onSelect={(checkIn) => {
@@ -242,7 +244,7 @@ export function BookingSidebar({
             }}
           />
           <DateField
-            label="Check-out"
+            label={t("hotel.checkOut")}
             value={formatDate(booking.checkOut)}
             selected={booking.checkOut}
             onSelect={(checkOut) => {
@@ -266,7 +268,7 @@ export function BookingSidebar({
             <span className="flex items-center gap-2">
               <Users className="size-4 text-muted-foreground" />
               <span>
-                <span className="block text-xs text-muted-foreground">Guests</span>
+                <span className="block text-xs text-muted-foreground">{t("hotel.guests")}</span>
                 <span className="font-medium text-foreground">{booking.guests}</span>
               </span>
             </span>
@@ -277,24 +279,24 @@ export function BookingSidebar({
       <div className="mt-5 space-y-2.5 border-t border-border pt-4 text-sm">
         <div className="flex justify-between text-muted-foreground">
           <span>
-            {pricing.label}
-            {mode === "stay" && pricing.nights > 1 && ` × ${pricing.nights} nights`}
+            {t(pricing.label)}
+            {mode === "stay" && pricing.nights > 1 && t("hotel.timesNights", { n: pricing.nights })}
           </span>
           <span>{formatCurrency(pricing.subtotal)}</span>
         </div>
         <div className="flex justify-between text-muted-foreground">
-          <span>Taxes & fees</span>
+          <span>{t("hotel.taxesFees")}</span>
           <span>{formatCurrency(pricing.tax)}</span>
         </div>
         <div className="flex justify-between border-t border-border pt-3 text-base font-bold text-foreground">
-          <span>Total due</span>
+          <span>{t("hotel.totalDue")}</span>
           <span>{formatCurrency(pricing.totalDue)}</span>
         </div>
       </div>
 
       {bookingError && (
         <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
-          {bookingError}
+          {t(bookingError)}
         </p>
       )}
 
@@ -306,9 +308,9 @@ export function BookingSidebar({
         {isBooking ? (
           <span className="flex items-center gap-2">
             <Loader2 className="size-4 animate-spin" />
-            Checking availability…
+            {t("hotel.checkingAvail")}
           </span>
-        ) : isDirect ? "Continue to checkout" : "Continue via partner"}
+        ) : isDirect ? t("hotel.continueCheckout") : t("hotel.continuePartner")}
       </Button>
     </div>
   );

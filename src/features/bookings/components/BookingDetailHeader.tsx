@@ -8,6 +8,7 @@ import type { BookingDetail } from "../types";
 import type { BookingTabStatus } from "../types";
 import { BOOKINGS_STATUS_PARAM, DEFAULT_BOOKING_STATUS } from "../constants";
 import { BookingCardStatusPill } from "./BookingCardStatusPill";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface BookingDetailHeaderProps {
   booking: BookingDetail;
@@ -15,6 +16,7 @@ interface BookingDetailHeaderProps {
 }
 
 export function BookingDetailHeader({ booking, fromStatus }: BookingDetailHeaderProps) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const status = fromStatus ?? DEFAULT_BOOKING_STATUS;
   const backHref = `/bookings?${BOOKINGS_STATUS_PARAM}=${status}`;
@@ -34,7 +36,7 @@ export function BookingDetailHeader({ booking, fromStatus }: BookingDetailHeader
       <Button variant="ghost" className="h-auto px-0 text-muted-foreground hover:text-foreground" asChild>
         <Link to={backHref}>
           <ArrowLeft className="size-4" />
-          Back to My Bookings
+          {t("bookings.back")}
         </Link>
       </Button>
 
@@ -52,7 +54,7 @@ export function BookingDetailHeader({ booking, fromStatus }: BookingDetailHeader
         <CardContent className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Confirmation
+              {t("bookings.confirmation")}
             </p>
             <p className="font-mono text-lg font-semibold text-foreground">
               {booking.confirmationCode}
@@ -63,7 +65,7 @@ export function BookingDetailHeader({ booking, fromStatus }: BookingDetailHeader
             variant="outline"
             size="icon"
             onClick={() => void handleCopy()}
-            aria-label={copied ? "Copied" : "Copy confirmation number"}
+            aria-label={copied ? t("common.copied") : t("bookings.copyConfirm")}
           >
             {copied ? (
               <Check className="size-4 text-emerald-600" />

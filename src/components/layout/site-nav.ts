@@ -1,19 +1,19 @@
 export const SITE_NAV_LINKS = [
-  { label: "Home", href: "/" },
-  { label: "Saved", href: "/favourites" },
-  { label: "Contact", href: "/contact" },
+  { id: "home", href: "/" },
+  { id: "saved", href: "/favourites" },
+  { id: "contact", href: "/contact" },
 ] as const;
 
 export const FOOTER_LINKS = {
   RestHalf: [
-    { label: "About", href: "/about" },
-    { label: "How RestHalf works", href: "/about" },
-    { label: "Contact", href: "/contact" },
-    { label: "List your property", href: "/list-property" },
+    { id: "about", href: "/about" },
+    { id: "howItWorks", href: "/how-it-works" },
+    { id: "contact", href: "/contact" },
+    { id: "listProperty", href: "/list-property" },
   ],
   Legal: [
-    { label: "Terms of Service", href: "/terms" },
-    { label: "Cancellation Policy", href: "/cancellation-policy" },
-    { label: "Privacy Policy", href: "/privacy" },
+    { id: "terms", href: "/terms" },
+    { id: "cancellation", href: "/cancellation-policy" },
+    { id: "privacy", href: "/privacy" },
   ],
 } as const;

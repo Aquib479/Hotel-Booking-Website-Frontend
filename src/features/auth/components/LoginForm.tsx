@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { getDefaultPhoneCountryCode } from "@/lib/phone/constants";
 import { isValidE164, toE164 } from "@/lib/phone/validation";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { FormAlert, FormField } from "@/components/common/form";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,33 +16,34 @@ import type { LoginFormValues } from "../types";
 import { ForgotPasswordLink } from "./ForgotPasswordLink";
 import { PhoneInput } from "./PhoneInput";
 
-function validateLoginField(
-  field: keyof LoginFormValues,
-  values: LoginFormValues
-): string | undefined {
-  switch (field) {
-    case "phoneNumber":
-      if (!values.phoneNumber.trim()) return "Phone number is required";
-      if (!isValidE164(values.phoneCountryCode, values.phoneNumber)) {
-        return "Enter a valid phone number with country code";
-      }
-      return undefined;
-    case "phoneCountryCode":
-      return values.phoneCountryCode ? undefined : "Country code is required";
-    case "password":
-      if (!values.password) return "Password is required";
-      return undefined;
-    case "rememberMe":
-      return undefined;
-    default:
-      return undefined;
-  }
-}
-
 export function LoginForm() {
+  const { t } = useLanguage();
   const { currency } = useCurrency();
   const { login, isLoading } = useAuth();
   const { redirectAfterAuth } = useAuthRedirect();
+
+  const validateLoginField = useCallback(
+    (field: keyof LoginFormValues, values: LoginFormValues): string | undefined => {
+      switch (field) {
+        case "phoneNumber":
+          if (!values.phoneNumber.trim()) return t("auth.err.phoneRequired");
+          if (!isValidE164(values.phoneCountryCode, values.phoneNumber)) {
+            return t("auth.err.phoneInvalid");
+          }
+          return undefined;
+        case "phoneCountryCode":
+          return values.phoneCountryCode ? undefined : t("auth.err.countryRequired");
+        case "password":
+          if (!values.password) return t("auth.err.passwordRequired");
+          return undefined;
+        case "rememberMe":
+          return undefined;
+        default:
+          return undefined;
+      }
+    },
+    [t]
+  );
 
   const initial = useMemo(
     (): LoginFormValues => ({
@@ -66,19 +68,19 @@ export function LoginForm() {
       const result = await login(phone, form.values.password, form.values.rememberMe);
 
       if (!result.success) {
-        setSubmitError(LOGIN_GENERIC_ERROR);
+        setSubmitError(LOGIN_GENERIC_ERROR(t));
         return;
       }
 
       redirectAfterAuth();
     },
-    [form, login, redirectAfterAuth]
+    [form, login, redirectAfterAuth, t]
   );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <FormField
-        label="Phone number"
+        label={t("auth.phone")}
         error={form.touched.phoneNumber ? form.errors.phoneNumber : undefined}
       >
         <PhoneInput
@@ -94,7 +96,7 @@ export function LoginForm() {
       </FormField>
 
       <FormField
-        label="Password"
+        label={t("auth.password")}
         htmlFor="login-password"
         error={form.touched.password ? form.errors.password : undefined}
       >
@@ -117,14 +119,14 @@ export function LoginForm() {
           onCheckedChange={(checked) => form.handleChange("rememberMe", checked === true)}
         />
         <Label htmlFor="login-remember" className="font-normal text-muted-foreground">
-          Remember me
+          {t("auth.rememberMe")}
         </Label>
       </div>
 
       {submitError && <FormAlert message={submitError} />}
 
       <Button type="submit" variant="brand" size="lg" className="w-full" disabled={isLoading}>
-        {isLoading ? "Signing in…" : "Log in"}
+        {isLoading ? t("auth.signingIn") : t("auth.login")}
       </Button>
     </form>
   );

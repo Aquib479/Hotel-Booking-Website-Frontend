@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Coins } from "lucide-react";
 import { useRequireAuth } from "@/features/bookings/hooks/useRequireAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
 import { AccountLayout } from "../components/AccountLayout";
@@ -12,6 +13,7 @@ import {
 } from "../constants/rewards";
 
 export function CoinsPage() {
+  const { t } = useLanguage();
   const { isAuthenticated } = useRequireAuth("/coins");
   const [balance, setBalance] = useState(COINS_DEMO_BALANCE);
   const [redeemedId, setRedeemedId] = useState<string | null>(null);
@@ -20,11 +22,11 @@ export function CoinsPage() {
 
   return (
     <AccountLayout
-      title="My coins"
-      description="Earn cashback coins on RestHalf bookings and redeem them on your next stay"
+      title={t("account.coinsTitle")}
+      description={t("account.coinsHint")}
     >
       <div className="space-y-6">
-        <SectionCard title="Available balance">
+        <SectionCard title={t("account.coinsBalance")}>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="flex items-center gap-2 text-3xl font-bold text-foreground">
@@ -32,13 +34,13 @@ export function CoinsPage() {
                 {balance.toLocaleString()}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {COINS_DEMO_PENDING.toLocaleString()} coins pending from recent bookings
+                {t("account.coinsPending", { n: COINS_DEMO_PENDING.toLocaleString() })}
               </p>
             </div>
           </div>
         </SectionCard>
 
-        <SectionCard title="Redeem coins" description="Choose a reward — applied on eligible checkouts">
+        <SectionCard title={t("account.coinsRedeem")} description={t("account.coinsRedeemHint")}>
           <ul className="space-y-3">
             {REDEEM_OPTIONS.map((opt) => {
               const canAfford = balance >= opt.cost;
@@ -49,8 +51,8 @@ export function CoinsPage() {
                   className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border px-4 py-3"
                 >
                   <div>
-                    <p className="text-sm font-medium text-foreground">{opt.label}</p>
-                    <p className="text-xs text-muted-foreground">{opt.cost.toLocaleString()} coins</p>
+                    <p className="text-sm font-medium text-foreground">{t(`account.coins.redeem.${opt.id}`)}</p>
+                    <p className="text-xs text-muted-foreground">{t("account.coinsCost", { n: opt.cost.toLocaleString() })}</p>
                   </div>
                   <Button
                     type="button"
@@ -62,7 +64,7 @@ export function CoinsPage() {
                       setRedeemedId(opt.id);
                     }}
                   >
-                    {justRedeemed ? "Redeemed" : "Redeem"}
+                    {justRedeemed ? t("account.redeemed") : t("account.redeem")}
                   </Button>
                 </li>
               );
@@ -70,12 +72,12 @@ export function CoinsPage() {
           </ul>
         </SectionCard>
 
-        <SectionCard title="Recent activity">
+        <SectionCard title={t("account.coinsActivity")}>
           <ul className="divide-y divide-border">
             {COINS_HISTORY.map((row) => (
               <li key={row.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                 <div>
-                  <p className="text-sm text-foreground">{row.label}</p>
+                  <p className="text-sm text-foreground">{t(`account.coins.history.${row.id}`)}</p>
                   <p className="text-xs text-muted-foreground">{row.date}</p>
                 </div>
                 <p

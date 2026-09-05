@@ -3,6 +3,7 @@ import { LaneBadge } from "@/components/common/LaneBadge";
 import { CardImageRow, CardThumbnail } from "@/components/common/CardImageRow";
 import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface HotelSummaryHeaderProps {
   imageUrl: string;
@@ -23,6 +24,7 @@ export function HotelSummaryHeader({
   className,
   compact = false,
 }: HotelSummaryHeaderProps) {
+  const { t } = useLanguage();
   return (
     <CardImageRow
       className={cn(compact && "p-0 sm:p-0", className)}
@@ -39,7 +41,7 @@ export function HotelSummaryHeader({
         <LaneBadge lane={lane} />
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Star className="size-3.5 fill-amber-400 text-amber-400" />
-          <span>{starRating}-star</span>
+          <span>{t("common.starN", { n: starRating })}</span>
         </div>
       </div>
 

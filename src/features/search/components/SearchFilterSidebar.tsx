@@ -21,6 +21,8 @@ import {
   STAR_CHECKBOX_OPTIONS,
 } from "../constants";
 import type { FilterState } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
+import { hasMessage } from "@/lib/i18n/messages";
 
 interface SearchFilterSidebarProps {
   filters: FilterState;
@@ -85,6 +87,14 @@ function CheckRow({
   );
 }
 
+function amenityText(
+  t: (key: string) => string,
+  name: string,
+) {
+  const key = `search.amenity.${name}`;
+  return hasMessage(key) ? t(key) : name;
+}
+
 function ShowMore({
   expanded,
   onToggle,
@@ -94,6 +104,7 @@ function ShowMore({
   onToggle: () => void;
   hiddenCount: number;
 }) {
+  const { t } = useLanguage();
   if (hiddenCount <= 0) return null;
   return (
     <button
@@ -101,7 +112,7 @@ function ShowMore({
       onClick={onToggle}
       className="pt-1 text-sm font-medium text-foreground underline underline-offset-2 hover:text-brand"
     >
-      {expanded ? "Show Less" : "Show More"}
+      {expanded ? t("search.showLess") : t("search.showMore")}
     </button>
   );
 }
@@ -127,6 +138,7 @@ export function SearchFilterSidebar({
   onToggleAmenity,
   className,
 }: SearchFilterSidebarProps) {
+  const { t } = useLanguage();
   const { currency } = useCurrency();
   const code = currency as CurrencyCode;
 
@@ -160,12 +172,12 @@ export function SearchFilterSidebar({
         <div>
           <p className="text-sm font-bold text-foreground">
             {locationLabel?.trim()
-              ? `Filters for ${locationLabel}`
-              : "Filters"}
+              ? t("search.filtersFor", { location: locationLabel })
+              : t("search.filters")}
           </p>
           {activeFilterCount > 0 ? (
             <p className="text-xs text-muted-foreground">
-              {activeFilterCount} active
+              {t("search.activeN", { n: activeFilterCount })}
             </p>
           ) : null}
         </div>
@@ -175,19 +187,19 @@ export function SearchFilterSidebar({
             onClick={onClear}
             className="text-sm font-medium text-brand hover:text-brand/80"
           >
-            Clear all
+            {t("search.clearAll")}
           </button>
         ) : null}
       </div>
 
       <div className="px-4 pb-8">
-        <FilterSection title="Popular filters">
+        <FilterSection title={t("search.popular")}>
           {popular.visible.map((amenity) => (
             <CheckRow
               key={amenity}
               checked={filters.amenities.includes(amenity)}
               onChange={() => onToggleAmenity(amenity)}
-              label={amenity}
+              label={amenityText(t, amenity)}
             />
           ))}
           <CheckRow
@@ -206,8 +218,8 @@ export function SearchFilterSidebar({
           <CheckRow
             checked={filters.guestRatingMin === 9}
             onChange={() => setGuestRating(9)}
-            label="Great 9+"
-            hint="Based on guest reviews"
+            label={t("search.rating.great")}
+            hint={t("search.rating.hint")}
           />
           <ShowMore
             expanded={popular.expanded}
@@ -217,14 +229,14 @@ export function SearchFilterSidebar({
         </FilterSection>
 
         <FilterSection
-          title={`Budget (${formatPrice(displayMin, code, { compact: true })} – ${formatPrice(displayMax, code, { compact: true })}${filters.priceMax >= defaultMax ? "+" : ""})`}
+          title={`${t("search.budget")} (${formatPrice(displayMin, code, { compact: true })} – ${formatPrice(displayMax, code, { compact: true })}${filters.priceMax >= defaultMax ? "+" : ""})`}
         >
           <p className="text-xs text-muted-foreground">
-            Price per room per night (excl. taxes)
+            {t("search.pricePerNight")}
           </p>
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs text-muted-foreground">
-              Min
+              {t("search.min")}
               <input
                 type="number"
                 min={0}
@@ -240,7 +252,7 @@ export function SearchFilterSidebar({
               />
             </label>
             <label className="text-xs text-muted-foreground">
-              Max
+              {t("search.max")}
               <input
                 type="number"
                 min={0}
@@ -300,12 +312,12 @@ export function SearchFilterSidebar({
                 })
               }
             >
-              Reset budget
+              {t("search.resetBudget")}
             </button>
           )}
         </FilterSection>
 
-        <FilterSection title="Room type">
+        <FilterSection title={t("search.roomType")}>
           {ROOM_TYPE_OPTIONS.filter((o) => o.value !== "any").map((option) => (
             <CheckRow
               key={option.value}
@@ -317,12 +329,12 @@ export function SearchFilterSidebar({
                     : "any",
                 })
               }
-              label={option.label}
+              label={t(`search.room.${option.value}`)}
             />
           ))}
         </FilterSection>
 
-        <FilterSection title="Star rating">
+        <FilterSection title={t("search.starRating")}>
           {STAR_CHECKBOX_OPTIONS.map((star) => (
             <CheckRow
               key={star}
@@ -341,25 +353,31 @@ export function SearchFilterSidebar({
           ))}
         </FilterSection>
 
-        <FilterSection title="Guest rating">
+        <FilterSection title={t("search.guestRating")}>
           {GUEST_RATING_OPTIONS.map((option) => (
             <CheckRow
               key={option.value}
               checked={filters.guestRatingMin === option.value}
               onChange={() => setGuestRating(option.value)}
-              label={option.label}
-              hint={"hint" in option ? option.hint : undefined}
+              label={
+                option.value === 9
+                  ? t("search.rating.great")
+                  : option.value === 8
+                    ? t("search.rating.veryGood")
+                    : t("search.rating.good")
+              }
+              hint={"hint" in option ? t("search.rating.hint") : undefined}
             />
           ))}
         </FilterSection>
 
-        <FilterSection title="Property facilities & services">
+        <FilterSection title={t("search.propertyFacilities")}>
           {facilities.visible.map((amenity) => (
             <CheckRow
               key={amenity}
               checked={filters.amenities.includes(amenity)}
               onChange={() => onToggleAmenity(amenity)}
-              label={amenity}
+              label={amenityText(t, amenity)}
             />
           ))}
           <ShowMore
@@ -369,13 +387,13 @@ export function SearchFilterSidebar({
           />
         </FilterSection>
 
-        <FilterSection title="Room facilities & services">
+        <FilterSection title={t("search.roomFacilities")}>
           {roomFacilities.visible.map((amenity) => (
             <CheckRow
               key={amenity}
               checked={filters.amenities.includes(amenity)}
               onChange={() => onToggleAmenity(amenity)}
-              label={amenity}
+              label={amenityText(t, amenity)}
             />
           ))}
           <ShowMore
@@ -386,8 +404,8 @@ export function SearchFilterSidebar({
         </FilterSection>
 
         <FilterSection
-          title="Location"
-          description="Distance from airport"
+          title={t("common.location")}
+          description={t("search.airportDist")}
         >
           {AIRPORT_DISTANCE_OPTIONS.map((option) => (
             <CheckRow
@@ -398,25 +416,29 @@ export function SearchFilterSidebar({
                   maxAirportDistance: checked ? option.value : "any",
                 })
               }
-              label={option.label}
+              label={
+                option.value === "any"
+                  ? t("search.dist.any")
+                  : t(`search.dist.${option.value}`)
+              }
             />
           ))}
         </FilterSection>
 
-        <FilterSection title="Booking options">
+        <FilterSection title={t("search.bookingOptions")}>
           <CheckRow
             checked={filters.lane === "direct"}
             onChange={(checked) =>
               onUpdate({ lane: checked ? "direct" : "all" })
             }
-            label="RestHalf Exclusive"
+            label={t("common.exclusive")}
           />
           <CheckRow
             checked={filters.lane === "wholesale"}
             onChange={(checked) =>
               onUpdate({ lane: checked ? "wholesale" : "all" })
             }
-            label="Partner rates"
+            label={t("search.partnerRates")}
           />
           {mode === "rest" ? (
             <>
@@ -431,7 +453,7 @@ export function SearchFilterSidebar({
                         : "any",
                     })
                   }
-                  label={`${duration} slot`}
+                  label={t("search.slotN", { n: duration })}
                 />
               ))}
             </>

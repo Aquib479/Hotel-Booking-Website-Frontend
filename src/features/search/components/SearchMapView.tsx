@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { resolvePropertyCoordinates } from "../map-coordinates";
 import type { Property } from "../types";
 import "leaflet/dist/leaflet.css";
+import { useLanguage } from "@/context/LanguageContext";
+import { hasMessage } from "@/lib/i18n/messages";
 
 interface SearchMapViewProps {
   properties: Property[];
@@ -145,25 +147,27 @@ function MapHotelCard({
   searchParams: string;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const isFavorite = useFavoritesStore((s) => Boolean(s.items[property.id]));
   const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const isDirect = property.lane === "direct";
   const detailUrl = `/properties/${property.id}${searchParams ? `?${searchParams}` : ""}`;
   const hasFreeCancellation = property.amenities.includes("Free cancellation");
-  const roomLabel = property.roomType.charAt(0).toUpperCase() + property.roomType.slice(1);
+  const roomKey = `search.room.${property.roomType}`;
+  const roomLabel = hasMessage(roomKey) ? t(roomKey) : property.roomType;
   const stayLabel =
     mode === "rest"
-      ? `${property.slotDuration} slot`
+      ? t("search.slotN", { n: property.slotDuration })
       : nights > 1
-        ? `${nights} nights`
-        : "1 night";
+        ? t("search.nights", { n: nights })
+        : t("search.nightOne");
 
   const specs = [
-    `${property.starRating}-star`,
+    t("search.starClass", { n: property.starRating }),
     roomLabel,
-    `Sleeps ${property.maxOccupancy}`,
+    t("search.sleeps", { n: property.maxOccupancy }),
     property.distanceFromAirportKm > 0 && property.distanceFromAirportKm <= 15
-      ? `${property.distanceFromAirportKm} km to airport`
+      ? t("search.kmAirport", { n: property.distanceFromAirportKm })
       : null,
   ].filter(Boolean);
 
@@ -175,7 +179,7 @@ function MapHotelCard({
       <div className="absolute right-2.5 top-2.5 z-20 flex items-center gap-1.5">
         <button
           type="button"
-          aria-label={isFavorite ? "Remove from favourites" : "Add to favourites"}
+          aria-label={isFavorite ? t("search.removeFav") : t("search.addFav")}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -192,7 +196,7 @@ function MapHotelCard({
         </button>
         <button
           type="button"
-          aria-label="Close hotel card"
+          aria-label={t("search.closeCard")}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -261,24 +265,24 @@ function MapHotelCard({
               showUnit={false}
               amountClassName="text-sm font-semibold tracking-tight"
             />
-            <span className="text-xs text-muted-foreground">for {stayLabel}</span>
+            <span className="text-xs text-muted-foreground">{t("search.forStay", { label: stayLabel })}</span>
           </div>
 
           <div className="flex flex-wrap gap-1 pt-0.5">
             {hasFreeCancellation && (
               <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                Free cancellation
+                {t("search.amenity.Free cancellation")}
               </span>
             )}
             {isDirect ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-medium text-brand">
                 <Zap className="size-2.5" />
-                Instant confirm
+                {t("search.instant")}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                 <ExternalLink className="size-2.5" />
-                Via {property.supplierName ?? "partner"}
+                {t("search.viaPartner", { name: property.supplierName ?? t("search.partner") })}
               </span>
             )}
           </div>
@@ -327,6 +331,7 @@ export function SearchMapView({
   mode,
   nights,
 }: SearchMapViewProps) {
+  const { t } = useLanguage();
   const { formatLanePrice } = useCurrency();
   const [selectedId, setSelectedId] = useState<string>("");
   const [markerPoint, setMarkerPoint] = useState<{ x: number; y: number } | null>(null);
@@ -405,10 +410,9 @@ export function SearchMapView({
     return (
       <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border bg-white py-24 text-center">
         <MapPin className="mb-4 size-10 text-muted-foreground/40" />
-        <p className="text-lg font-semibold text-foreground">No map data available</p>
+        <p className="text-lg font-semibold text-foreground">{t("search.noMap")}</p>
         <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-          Hotels in your search don&apos;t have location coordinates yet. Switch to Card View to browse
-          them.
+          {t("search.noMapHint")}
         </p>
       </div>
     );

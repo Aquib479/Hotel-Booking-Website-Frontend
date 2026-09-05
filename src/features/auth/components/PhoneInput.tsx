@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { PHONE_COUNTRY_CODES, getDefaultPhoneCountryCode } from "@/lib/phone/constants";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,6 +34,7 @@ export function PhoneInput({
   showHelper = true,
   className,
 }: PhoneInputProps) {
+  const { t } = useLanguage();
   const { currency } = useCurrency();
   const defaultCode = getDefaultPhoneCountryCode(currency);
   const effectiveCode = countryCode || defaultCode;
@@ -41,7 +43,7 @@ export function PhoneInput({
     <div className={className}>
       <div className="flex gap-2">
         <Select value={effectiveCode} onValueChange={onCountryCodeChange}>
-          <SelectTrigger className="h-10 w-36 shrink-0" aria-label="Country code" onBlur={onBlur}>
+          <SelectTrigger className="h-10 w-36 shrink-0" aria-label={t("auth.countryCode")} onBlur={onBlur}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -65,7 +67,7 @@ export function PhoneInput({
       </div>
       {showHelper && (
         <p className="mt-1.5 text-xs text-muted-foreground">
-          Used for WhatsApp booking confirmations
+          {t("auth.whatsappHelper")}
         </p>
       )}
     </div>

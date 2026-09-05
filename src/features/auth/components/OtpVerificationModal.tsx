@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 import { FormAlert } from "@/components/common/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ export function OtpVerificationModal({
   onSkip,
   verify: verifyWithAuth,
 }: OtpVerificationModalProps) {
+  const { t } = useLanguage();
   const otp = useOtpVerification(phoneE164);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [verifyError, setVerifyError] = useState<string | null>(null);
@@ -57,10 +59,10 @@ export function OtpVerificationModal({
     const ok = await verifyWithAuth(otp.code);
     if (ok) onVerified();
     else {
-      setVerifyError("Incorrect or expired code. Try again.");
+      setVerifyError(t("auth.otpWrong"));
       otp.reset();
     }
-  }, [verifyWithAuth, otp, onVerified]);
+  }, [verifyWithAuth, otp, onVerified, t]);
 
   useEffect(() => {
     if (otp.code.length === OTP_LENGTH && !otp.isVerifying) {
@@ -74,9 +76,9 @@ export function OtpVerificationModal({
     <Dialog open onOpenChange={() => onSkip?.()}>
       <DialogContent className="sm:max-w-md" showCloseButton={!!onSkip}>
         <DialogHeader>
-          <DialogTitle>Verify your phone</DialogTitle>
+          <DialogTitle>{t("auth.verifyPhone")}</DialogTitle>
           <DialogDescription>
-            Enter the 6-digit code sent to {maskedPhone} via WhatsApp
+            {t("auth.otpSent", { phone: maskedPhone })}
           </DialogDescription>
         </DialogHeader>
 
@@ -95,7 +97,7 @@ export function OtpVerificationModal({
               onKeyDown={(e) => handleKeyDown(i, e)}
               aria-invalid={!!displayError}
               className={cn("size-12 text-center text-lg font-semibold")}
-              aria-label={`Digit ${i + 1}`}
+              aria-label={t("auth.digit", { n: i + 1 })}
             />
           ))}
         </div>
@@ -110,7 +112,7 @@ export function OtpVerificationModal({
             onClick={() => void handleVerify()}
             disabled={otp.isVerifying || otp.code.length !== OTP_LENGTH}
           >
-            {otp.isVerifying ? "Verifying…" : "Verify"}
+            {otp.isVerifying ? t("auth.verifying") : t("auth.verify")}
           </Button>
 
           <div className="flex items-center justify-between text-sm">
@@ -122,19 +124,19 @@ export function OtpVerificationModal({
               disabled={otp.resendCooldownSeconds > 0}
             >
               {otp.resendCooldownSeconds > 0
-                ? `Resend in ${otp.resendCooldownSeconds}s`
-                : "Resend code"}
+                ? t("auth.resendIn", { n: otp.resendCooldownSeconds })
+                : t("auth.resend")}
             </Button>
 
             {OTP_VERIFICATION_DEFERRABLE && onSkip && (
               <Button type="button" variant="ghost" className="h-auto p-0" onClick={onSkip}>
-                Skip for now
+                {t("auth.skipNow")}
               </Button>
             )}
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Demo code: <span className="font-mono">123456</span>
+            {t("auth.demoCode")} <span className="font-mono">123456</span>
           </p>
         </DialogFooter>
       </DialogContent>

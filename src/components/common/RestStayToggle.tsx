@@ -1,4 +1,5 @@
 import type { BookingMode } from "@/lib/booking/types";
+import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 
 interface RestStayToggleProps {
@@ -14,6 +15,8 @@ export function RestStayToggle({
   className,
   size = "md",
 }: RestStayToggleProps) {
+  const { t } = useLanguage();
+
   return (
     <div
       className={cn(
@@ -22,12 +25,12 @@ export function RestStayToggle({
         className
       )}
       role="group"
-      aria-label="Booking mode"
+      aria-label={t("common.bookingMode")}
     >
       {(
         [
-          { id: "rest" as const, label: "Rest", hint: "12h / 24h slot" },
-          { id: "stay" as const, label: "Stay", hint: "Overnight" },
+          { id: "rest" as const, label: t("common.rest"), hint: t("common.slotHint") },
+          { id: "stay" as const, label: t("common.stay"), hint: t("common.overnight") },
         ] as const
       ).map((option) => (
         <button

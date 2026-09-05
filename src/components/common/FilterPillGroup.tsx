@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 
 export interface FilterPillOption<T extends string> {
@@ -20,12 +21,14 @@ export function FilterPillGroup<T extends string>({
   value,
   onChange,
   className,
-  "aria-label": ariaLabel = "Filters",
+  "aria-label": ariaLabel,
 }: FilterPillGroupProps<T>) {
+  const { t } = useLanguage();
+
   return (
     <div
       role="tablist"
-      aria-label={ariaLabel}
+      aria-label={ariaLabel ?? t("common.filters")}
       className={cn("flex gap-2 overflow-x-auto pb-1", className)}
     >
       {options.map((option) => {

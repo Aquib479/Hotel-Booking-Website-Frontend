@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { CardPaymentValues, UpiPaymentValues } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
 
 const INITIAL_CARD: CardPaymentValues = {
   holderName: "",
@@ -50,39 +51,40 @@ function luhnValid(digits: string): boolean {
 
 function validateCardField(
   field: keyof CardPaymentValues,
-  values: CardPaymentValues
+  values: CardPaymentValues,
+  t: (key: string, vars?: Record<string, string | number>) => string,
 ): string | undefined {
   switch (field) {
     case "holderName": {
-      if (!values.holderName.trim()) return "Cardholder name is required";
-      if (values.holderName.trim().length < 2) return "Enter the name on your card";
+      if (!values.holderName.trim()) return t("checkout.err.holder");
+      if (values.holderName.trim().length < 2) return t("checkout.err.holderShort");
       return undefined;
     }
     case "cardNumber": {
       const digits = values.cardNumber.replace(/\D/g, "");
-      if (!digits) return "Card number is required";
+      if (!digits) return t("checkout.err.card");
       const brand = detectCardBrand(digits);
       const expected = brand === "amex" ? 15 : digits.length >= 13 && digits.length <= 19;
       if (brand === "amex" ? digits.length !== 15 : !expected || digits.length < 13) {
-        return "Enter a valid card number";
+        return t("checkout.err.cardInvalid");
       }
-      if (!luhnValid(digits)) return "Enter a valid card number";
+      if (!luhnValid(digits)) return t("checkout.err.cardInvalid");
       return undefined;
     }
     case "expiry": {
-      if (!/^\d{2}\/\d{2}$/.test(values.expiry)) return "Use MM/YY";
+      if (!/^\d{2}\/\d{2}$/.test(values.expiry)) return t("checkout.err.mmyy");
       const [mm, yy] = values.expiry.split("/").map(Number);
-      if (mm < 1 || mm > 12) return "Invalid month";
+      if (mm < 1 || mm > 12) return t("checkout.err.month");
       const now = new Date();
       const exp = new Date(2000 + yy, mm);
-      if (exp <= now) return "Card has expired";
+      if (exp <= now) return t("checkout.err.expired");
       return undefined;
     }
     case "cvv": {
       const digits = values.cvv.replace(/\D/g, "");
       const brand = detectCardBrand(values.cardNumber);
       const len = brand === "amex" ? 4 : 3;
-      if (digits.length !== len) return `Enter ${len}-digit CVV`;
+      if (digits.length !== len) return t("checkout.err.cvv", { n: len });
       return undefined;
     }
     default:
@@ -90,16 +92,20 @@ function validateCardField(
   }
 }
 
-function validateAllCard(values: CardPaymentValues) {
+function validateAllCard(
+  values: CardPaymentValues,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+) {
   const errors: Partial<Record<keyof CardPaymentValues, string>> = {};
   (Object.keys(values) as (keyof CardPaymentValues)[]).forEach((key) => {
-    const error = validateCardField(key, values);
+    const error = validateCardField(key, values, t);
     if (error) errors[key] = error;
   });
   return errors;
 }
 
 export function useCardPaymentForm(initial?: Partial<CardPaymentValues>) {
+  const { t } = useLanguage();
   const [values, setValues] = useState<CardPaymentValues>({ ...INITIAL_CARD, ...initial });
   const [errors, setErrors] = useState<Partial<Record<keyof CardPaymentValues, string>>>({});
   const [touched, setTouched] = useState<Partial<Record<keyof CardPaymentValues, boolean>>>({});
@@ -116,35 +122,35 @@ export function useCardPaymentForm(initial?: Partial<CardPaymentValues>) {
       setValues((prev) => {
         const next = { ...prev, [field]: value };
         if (touched[field]) {
-          setErrors((e) => ({ ...e, [field]: validateCardField(field, next) }));
+          setErrors((e) => ({ ...e, [field]: validateCardField(field, next, t) }));
         }
         return next;
       });
     },
-    [touched]
+    [touched, t]
   );
 
   const handleBlur = useCallback((field: keyof CardPaymentValues) => {
     setFocusedField(null);
-    setTouched((t) => ({ ...t, [field]: true }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
     setValues((prev) => {
-      setErrors((e) => ({ ...e, [field]: validateCardField(field, prev) }));
+      setErrors((e) => ({ ...e, [field]: validateCardField(field, prev, t) }));
       return prev;
     });
-  }, []);
+  }, [t]);
 
   const handleFocus = useCallback((field: keyof CardPaymentValues) => {
     setFocusedField(field);
   }, []);
 
   const validateForm = useCallback(() => {
-    const nextErrors = validateAllCard(values);
+    const nextErrors = validateAllCard(values, t);
     setErrors(nextErrors);
     setTouched({ holderName: true, cardNumber: true, expiry: true, cvv: true });
     return Object.keys(nextErrors).length === 0;
-  }, [values]);
+  }, [values, t]);
 
-  const isValid = useMemo(() => Object.keys(validateAllCard(values)).length === 0, [values]);
+  const isValid = useMemo(() => Object.keys(validateAllCard(values, t)).length === 0, [values, t]);
   const brand = useMemo(() => detectCardBrand(values.cardNumber), [values.cardNumber]);
 
   return {
@@ -161,16 +167,20 @@ export function useCardPaymentForm(initial?: Partial<CardPaymentValues>) {
   };
 }
 
-function validateVpa(vpa: string): string | undefined {
+function validateVpa(
+  vpa: string,
+  t: (key: string) => string,
+): string | undefined {
   const trimmed = vpa.trim();
-  if (!trimmed) return "UPI ID is required";
+  if (!trimmed) return t("checkout.err.upi");
   if (!/^[\w.\-]{2,256}@[a-zA-Z]{2,64}$/.test(trimmed)) {
-    return "Enter a valid UPI ID (e.g. name@oksbi)";
+    return t("checkout.err.upiInvalid");
   }
   return undefined;
 }
 
 export function useUpiPaymentForm(initial?: Partial<UpiPaymentValues>) {
+  const { t } = useLanguage();
   const [values, setValues] = useState<UpiPaymentValues>({ ...INITIAL_UPI, ...initial });
   const [errors, setErrors] = useState<Partial<Record<keyof UpiPaymentValues, string>>>({});
   const [touched, setTouched] = useState<Partial<Record<keyof UpiPaymentValues, boolean>>>({});
@@ -180,40 +190,40 @@ export function useUpiPaymentForm(initial?: Partial<UpiPaymentValues>) {
       setValues((prev) => {
         const next = { ...prev, [field]: value.trimStart().toLowerCase() };
         if (touched[field]) {
-          setErrors((e) => ({ ...e, [field]: validateVpa(next.vpa) }));
+          setErrors((e) => ({ ...e, [field]: validateVpa(next.vpa, t) }));
         }
         return next;
       });
     },
-    [touched]
+    [touched, t]
   );
 
   const handleBlur = useCallback((field: keyof UpiPaymentValues) => {
-    setTouched((t) => ({ ...t, [field]: true }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
     setValues((prev) => {
-      setErrors((e) => ({ ...e, [field]: validateVpa(prev.vpa) }));
+      setErrors((e) => ({ ...e, [field]: validateVpa(prev.vpa, t) }));
       return prev;
     });
-  }, []);
+  }, [t]);
 
   const appendHandle = useCallback((handle: string) => {
     setValues((prev) => {
       const local = prev.vpa.includes("@") ? prev.vpa.split("@")[0] : prev.vpa;
       const next = { vpa: `${local.replace(/\s/g, "")}${handle}` };
-      setTouched((t) => ({ ...t, vpa: true }));
-      setErrors((e) => ({ ...e, vpa: validateVpa(next.vpa) }));
+      setTouched((prevTouched) => ({ ...prevTouched, vpa: true }));
+      setErrors((e) => ({ ...e, vpa: validateVpa(next.vpa, t) }));
       return next;
     });
-  }, []);
+  }, [t]);
 
   const validateForm = useCallback(() => {
-    const error = validateVpa(values.vpa);
+    const error = validateVpa(values.vpa, t);
     setErrors(error ? { vpa: error } : {});
     setTouched({ vpa: true });
     return !error;
-  }, [values.vpa]);
+  }, [values.vpa, t]);
 
-  const isValid = useMemo(() => !validateVpa(values.vpa), [values.vpa]);
+  const isValid = useMemo(() => !validateVpa(values.vpa, t), [values.vpa, t]);
 
   return {
     values,

@@ -538,7 +538,7 @@ export function usePropertySearch() {
       .catch(() => {
         if (cancelled) return;
         setApiProperties([]);
-        setErrorLegacy("Failed to load hotels. Please try again.");
+        setErrorLegacy("search.loadError");
         setIsLoadingLegacy(false);
       });
 

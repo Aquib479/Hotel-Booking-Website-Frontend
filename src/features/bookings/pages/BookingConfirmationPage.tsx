@@ -10,8 +10,10 @@ import { ConfirmationWholesaleNotice } from "../components/ConfirmationWholesale
 import { ConfirmationNextSteps } from "../components/ConfirmationNextSteps";
 import { ConfirmationShareActions } from "../components/ConfirmationShareActions";
 import { ConfirmationSupportPrompt } from "../components/ConfirmationSupportPrompt";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function BookingConfirmationPage() {
+  const { t } = useLanguage();
   const { id } = useParams<{ id: string }>();
   const redirectPath = `/bookings/${id ?? ""}/confirmation`;
 
@@ -27,10 +29,8 @@ export function BookingConfirmationPage() {
   if (error === "network") {
     return (
       <main className="mx-auto max-w-lg px-6 py-16 text-center">
-        <h1 className="text-2xl font-bold text-foreground">Something went wrong</h1>
-        <p className="mt-3 text-muted-foreground">
-          We couldn&apos;t load your confirmation. Please try again.
-        </p>
+        <h1 className="text-2xl font-bold text-foreground">{t("common.somethingWrong")}</h1>
+        <p className="mt-3 text-muted-foreground">{t("bookings.confirmLoadFail")}</p>
       </main>
     );
   }
@@ -38,9 +38,9 @@ export function BookingConfirmationPage() {
   if (error === "not_found" || !booking) {
     return (
       <NoActiveDraftState
-        title="Booking not found"
-        body="We couldn't find this booking on your account. It may have been removed or you may not have access."
-        cta="Back to My Bookings"
+        title={t("bookings.notFound")}
+        body={t("bookings.notFoundBody")}
+        cta={t("bookings.back")}
         searchHref="/bookings"
       />
     );

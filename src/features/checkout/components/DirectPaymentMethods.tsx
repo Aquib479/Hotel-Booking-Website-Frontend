@@ -18,6 +18,7 @@ import {
   useUpiPaymentForm,
 } from "../hooks/usePaymentForms";
 import { PaymentCardPreview } from "./PaymentCardPreview";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface DirectPaymentMethodsProps {
   selectedMethod: PaymentMethod | null;
@@ -74,6 +75,7 @@ export function DirectPaymentMethods({
   cardForm,
   upiForm,
 }: DirectPaymentMethodsProps) {
+  const { t } = useLanguage();
   const [pulseKey, setPulseKey] = useState(0);
 
   const handleSelect = (method: PaymentMethod) => {
@@ -92,12 +94,12 @@ export function DirectPaymentMethods({
 
   return (
     <SectionCard
-      title="Payment method"
-      description="All payment data is encrypted and secure"
+      title={t("checkout.method")}
+      description={t("checkout.methodHint")}
       action={
         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand">
           <ShieldCheck className="size-3.5" aria-hidden />
-          Secured checkout
+          {t("checkout.secured")}
         </span>
       }
     >
@@ -105,7 +107,7 @@ export function DirectPaymentMethods({
         key={pulseKey}
         className="mb-4 animate-in fade-in slide-in-from-top-1 rounded-xl border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-center text-sm font-medium text-emerald-800 duration-300"
       >
-        RestHalf accepts card and UPI for this booking
+        {t("checkout.accepts")}
       </div>
 
       <RadioGroup
@@ -139,7 +141,7 @@ export function DirectPaymentMethods({
                 }}
                 className="flex w-full cursor-pointer items-center gap-3 px-4 py-4 text-left"
               >
-                <RadioGroupItem value={method.id} aria-label={method.label} />
+                <RadioGroupItem value={method.id} aria-label={t(method.labelKey)} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     {isCard ? (
@@ -147,9 +149,9 @@ export function DirectPaymentMethods({
                     ) : (
                       <Smartphone className="size-4 text-brand" aria-hidden />
                     )}
-                    <span className="text-sm font-semibold text-foreground">{method.label}</span>
+                    <span className="text-sm font-semibold text-foreground">{t(method.labelKey)}</span>
                   </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{method.description}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{t(method.descriptionKey)}</p>
                 </div>
                 <div className="hidden sm:block">{isCard ? <NetworkBadges /> : <UpiHints />}</div>
               </div>
@@ -164,13 +166,13 @@ export function DirectPaymentMethods({
                   {isCard && isSelected ? (
                     <div className="space-y-4 border-t border-border/70 px-4 pb-4 pt-3">
                       <div className="rounded-lg bg-emerald-50 px-3 py-2 text-center text-sm font-medium text-emerald-800">
-                        Last step — you&apos;re almost done
+                        {t("checkout.lastStep")}
                       </div>
 
                       <div className="grid gap-5 lg:grid-cols-[1fr_minmax(220px,280px)] lg:items-start">
                         <div className="space-y-3">
                           <FormField
-                            label="Card holder name"
+                            label={t("checkout.cardHolder")}
                             htmlFor="card-holder"
                             error={
                               cardForm.touched.holderName
@@ -181,7 +183,7 @@ export function DirectPaymentMethods({
                             <Input
                               id="card-holder"
                               autoComplete="cc-name"
-                              placeholder="Name on card"
+                              placeholder={t("checkout.nameOnCard")}
                               value={cardForm.values.holderName}
                               onChange={(e) =>
                                 cardForm.handleChange("holderName", e.target.value)
@@ -200,7 +202,7 @@ export function DirectPaymentMethods({
                           </FormField>
 
                           <FormField
-                            label="Card number"
+                            label={t("checkout.cardNumber")}
                             htmlFor="card-number"
                             error={
                               cardForm.touched.cardNumber
@@ -239,7 +241,7 @@ export function DirectPaymentMethods({
 
                           <div className="grid grid-cols-2 gap-3">
                             <FormField
-                              label="Expiry"
+                              label={t("checkout.expiry")}
                               htmlFor="card-expiry"
                               error={
                                 cardForm.touched.expiry ? cardForm.errors.expiry : undefined
@@ -268,7 +270,7 @@ export function DirectPaymentMethods({
                             </FormField>
 
                             <FormField
-                              label="CVV"
+                              label={t("checkout.cvv")}
                               htmlFor="card-cvv"
                               error={cardForm.touched.cvv ? cardForm.errors.cvv : undefined}
                             >
@@ -300,7 +302,7 @@ export function DirectPaymentMethods({
                           />
                           <p className="flex items-center gap-1.5 text-center text-[11px] text-emerald-700">
                             <ShieldCheck className="size-3.5 shrink-0" aria-hidden />
-                            Card details are encrypted end-to-end
+                            {t("checkout.cardEncrypted")}
                           </p>
                         </div>
                       </div>
@@ -310,13 +312,13 @@ export function DirectPaymentMethods({
                   {!isCard && isSelected ? (
                     <div className="space-y-4 border-t border-border/70 px-4 pb-4 pt-3">
                       <div className="rounded-lg bg-sky-50 px-3 py-2 text-center text-sm font-medium text-sky-800">
-                        Pay in one tap from your favourite UPI app
+                        {t("checkout.upiTap")}
                       </div>
 
                       <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-start">
                         <div className="space-y-3">
                           <FormField
-                            label="UPI ID"
+                            label={t("checkout.upiId")}
                             htmlFor="upi-vpa"
                             error={upiForm.touched.vpa ? upiForm.errors.vpa : undefined}
                           >
@@ -337,7 +339,7 @@ export function DirectPaymentMethods({
                           </FormField>
 
                           <div>
-                            <p className="mb-2 text-xs text-muted-foreground">Quick handles</p>
+                            <p className="mb-2 text-xs text-muted-foreground">{t("checkout.quickHandles")}</p>
                             <div className="flex flex-wrap gap-2">
                               {UPI_HANDLE_SUGGESTIONS.map((handle) => (
                                 <button
@@ -366,7 +368,7 @@ export function DirectPaymentMethods({
                             ))}
                           </div>
                           <p className="mt-2 text-[10px] font-medium text-muted-foreground">
-                            Scan in your UPI app
+                            {t("checkout.scanUpi")}
                           </p>
                         </div>
                       </div>
@@ -389,7 +391,7 @@ export function DirectPaymentMethods({
           title={disabled ? disabledReason : undefined}
           className="mt-4 hidden h-12 w-full lg:flex"
         >
-          {isSubmitting ? "Processing…" : `Pay ${payAmountLabel} now`}
+          {isSubmitting ? t("checkout.processing") : t("checkout.payNow", { amount: payAmountLabel })}
         </Button>
       ) : null}
     </SectionCard>

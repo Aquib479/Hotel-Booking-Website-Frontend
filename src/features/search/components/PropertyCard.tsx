@@ -29,6 +29,8 @@ import { CURRENCIES } from "@/lib/currency/types";
 import { cn } from "@/lib/utils";
 import { useFavoritesStore } from "@/store";
 import type { Property } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
+import { hasMessage } from "@/lib/i18n/messages";
 
 interface PropertyCardProps {
   property: Property;
@@ -39,14 +41,14 @@ interface PropertyCardProps {
   guestsLabel?: string;
 }
 
-function reviewLabel(score: number): string {
+function reviewLabelKey(score: number): string {
   const normalized = score > 5 ? score : score * 2;
-  if (normalized >= 9) return "Exceptional";
-  if (normalized >= 8) return "Excellent";
-  if (normalized >= 7) return "Very good";
-  if (normalized >= 6) return "Good";
-  if (normalized >= 5) return "Pleasant";
-  return "Fair";
+  if (normalized >= 9) return "search.exceptional";
+  if (normalized >= 8) return "search.excellent";
+  if (normalized >= 7) return "search.veryGood";
+  if (normalized >= 6) return "search.good";
+  if (normalized >= 5) return "search.pleasant";
+  return "search.fair";
 }
 
 function formatReviewScore(score: number): string {
@@ -55,11 +57,12 @@ function formatReviewScore(score: number): string {
 }
 
 function StarRow({ rating }: { rating: number }) {
+  const { t } = useLanguage();
   if (!rating || rating <= 0) return null;
   const filled = Math.min(5, Math.max(0, Math.round(rating)));
 
   return (
-    <div className="flex items-center gap-0.5" aria-label={`${rating} star hotel`}>
+    <div className="flex items-center gap-0.5" aria-label={t("search.starHotel", { n: rating })}>
       {Array.from({ length: filled }).map((_, index) => (
         <Star
           key={index}
@@ -103,6 +106,7 @@ function PriceBreakdownTooltip({
   currency?: string;
   nights: number;
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const savings =
     (breakdown.publishedRate ?? 0) > breakdown.totalRate
@@ -114,7 +118,7 @@ function PriceBreakdownTooltip({
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label="View price breakdown"
+          aria-label={t("search.viewBreakdown")}
           className={cn(
             "inline-flex size-4 shrink-0 items-center justify-center rounded-full",
             "border border-muted-foreground/40 text-muted-foreground",
@@ -142,15 +146,15 @@ function PriceBreakdownTooltip({
         onClick={(e) => e.stopPropagation()}
       >
         <PopoverHeader className="mb-2 gap-0.5">
-          <PopoverTitle className="text-sm">Price breakdown</PopoverTitle>
+          <PopoverTitle className="text-sm">{t("search.priceBreakdown")}</PopoverTitle>
           {nights > 1 ? (
-            <p className="text-xs text-muted-foreground">{nights} nights total</p>
+            <p className="text-xs text-muted-foreground">{t("search.nightsTotal", { n: nights })}</p>
           ) : null}
         </PopoverHeader>
         <ul className="space-y-1.5">
           {breakdown.baseRate ? (
             <li className="flex items-center justify-between gap-3 text-xs">
-              <span className="text-muted-foreground">Base rate</span>
+              <span className="text-muted-foreground">{t("search.baseRate")}</span>
               <span className="tabular-nums font-medium">
                 {formatStayPrice(breakdown.baseRate, currency)}
               </span>
@@ -158,7 +162,7 @@ function PriceBreakdownTooltip({
           ) : null}
           {breakdown.taxes ? (
             <li className="flex items-center justify-between gap-3 text-xs">
-              <span className="text-muted-foreground">Taxes</span>
+              <span className="text-muted-foreground">{t("search.taxes")}</span>
               <span className="tabular-nums font-medium">
                 {formatStayPrice(breakdown.taxes, currency)}
               </span>
@@ -166,7 +170,7 @@ function PriceBreakdownTooltip({
           ) : null}
           {breakdown.fees ? (
             <li className="flex items-center justify-between gap-3 text-xs">
-              <span className="text-muted-foreground">Fees</span>
+              <span className="text-muted-foreground">{t("search.fees")}</span>
               <span className="tabular-nums font-medium">
                 {formatStayPrice(breakdown.fees, currency)}
               </span>
@@ -174,7 +178,7 @@ function PriceBreakdownTooltip({
           ) : null}
           {breakdown.discounts ? (
             <li className="flex items-center justify-between gap-3 text-xs">
-              <span className="text-muted-foreground">Discounts</span>
+              <span className="text-muted-foreground">{t("search.discounts")}</span>
               <span className="tabular-nums font-medium text-emerald-700">
                 −{formatStayPrice(breakdown.discounts, currency)}
               </span>
@@ -182,14 +186,14 @@ function PriceBreakdownTooltip({
           ) : null}
           {savings > 0 ? (
             <li className="flex items-center justify-between gap-3 text-xs">
-              <span className="text-emerald-700">You save</span>
+              <span className="text-emerald-700">{t("search.youSave")}</span>
               <span className="tabular-nums font-semibold text-emerald-700">
                 {formatStayPrice(savings, currency)}
               </span>
             </li>
           ) : null}
           <li className="flex items-center justify-between gap-3 border-t border-border/70 pt-1.5 text-xs">
-            <span className="font-semibold">Total</span>
+            <span className="font-semibold">{t("search.total")}</span>
             <span className="tabular-nums font-bold">
               {formatStayPrice(breakdown.totalRate, currency)}
             </span>
@@ -218,6 +222,7 @@ export function PropertyCard({
   searchParams,
   guestsLabel,
 }: PropertyCardProps) {
+  const { t } = useLanguage();
   const isFavorite = useFavoritesStore((s) => Boolean(s.items[property.id]));
   const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const detailUrl = `/properties/${property.id}${searchParams ? `?${searchParams}` : ""}`;
@@ -277,7 +282,7 @@ export function PropertyCard({
         <Link
           to={detailUrl}
           className="relative block w-full shrink-0 overflow-hidden sm:min-h-[220px] sm:w-[260px] md:w-[288px]"
-          aria-label={`View ${property.title}`}
+          aria-label={t("search.viewTitle", { title: property.title })}
         >
           {/* Mobile: fixed aspect. Desktop: stretches to match card height. */}
           <div className="relative aspect-[16/11] w-full sm:absolute sm:inset-0 sm:aspect-auto">
@@ -304,7 +309,7 @@ export function PropertyCard({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={isFavorite ? "Remove from favourites" : "Add to favourites"}
+            aria-label={isFavorite ? t("search.removeFav") : t("search.addFav")}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -358,7 +363,9 @@ export function PropertyCard({
                     )}
                   >
                     <AmenityIcon label={pill} />
-                    {pill}
+                    {hasMessage(`search.amenity.${pill}`)
+                      ? t(`search.amenity.${pill}`)
+                      : pill}
                   </span>
                 ))}
               </div>
@@ -368,7 +375,7 @@ export function PropertyCard({
               {showFreeCancellation ? (
                 <span className="inline-flex items-center gap-1.5 font-medium text-sky-700">
                   <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
-                  Free cancellation
+                  {t("search.amenity.Free cancellation")}
                 </span>
               ) : null}
               {boardBasisShown ? (
@@ -380,7 +387,7 @@ export function PropertyCard({
               {property.payAtHotel ? (
                 <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                   <Wallet className="size-3.5 shrink-0" aria-hidden />
-                  Pay at hotel
+                  {t("search.payAtHotel")}
                 </span>
               ) : null}
               {property.highlightAttributes?.map((attr) => (
@@ -389,7 +396,9 @@ export function PropertyCard({
                   className="inline-flex items-center gap-1.5 font-medium text-emerald-700"
                 >
                   <Leaf className="size-3.5 shrink-0" aria-hidden />
-                  {attr}
+                  {hasMessage(`search.amenity.${attr}`)
+                    ? t(`search.amenity.${attr}`)
+                    : attr}
                 </span>
               ))}
             </div>
@@ -407,12 +416,14 @@ export function PropertyCard({
               <div className="flex flex-row items-start justify-end gap-2.5">
                 <div className="min-w-0 text-right">
                   <p className="truncate text-sm font-semibold leading-5 text-foreground">
-                    {reviewLabel(property.rating)}
+                    {t(reviewLabelKey(property.rating))}
                   </p>
                   {property.reviewCount > 0 ? (
                     <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
                       {property.reviewCount.toLocaleString()}{" "}
-                      {property.reviewCount === 1 ? "rating" : "ratings"}
+                      {property.reviewCount === 1
+                        ? t("search.ratingOne")
+                        : t("search.ratingsN")}
                     </p>
                   ) : null}
                 </div>
@@ -422,7 +433,7 @@ export function PropertyCard({
                     "bg-violet-100 text-sm font-bold leading-none text-violet-700",
                     "transition-transform duration-300 group-hover/card:scale-105"
                   )}
-                  aria-label={`Guest rating ${formatReviewScore(property.rating)}`}
+                  aria-label={`${t("search.guestRating")} ${formatReviewScore(property.rating)}`}
                 >
                   {formatReviewScore(property.rating)}
                 </div>
@@ -473,7 +484,7 @@ export function PropertyCard({
                   </p>
                 ) : nights > 1 ? (
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {nights} nights total
+                    {t("search.nightsTotal", { n: nights })}
                   </p>
                 ) : null}
               </div>
@@ -488,7 +499,7 @@ export function PropertyCard({
                 )}
               >
                 <Link to={detailUrl}>
-                  Check Availability
+                  {t("search.checkAvailability")}
                   <ArrowRight
                     className="size-4 transition-transform duration-200 group-hover/book:translate-x-0.5"
                     aria-hidden

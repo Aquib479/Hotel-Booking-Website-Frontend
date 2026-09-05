@@ -7,6 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useLanguage } from "@/context/LanguageContext";
+import { isAppLanguage } from "@/lib/i18n/languages";
 import { LANGUAGE_OPTIONS, PRICE_DISPLAY_OPTIONS } from "../constants";
 import type { LanguagePreference, MemberProfileDetails, PriceDisplayMode } from "../types";
 
@@ -16,16 +18,21 @@ interface DisplayPreferencesSectionProps {
 }
 
 export function DisplayPreferencesSection({ member, onChange }: DisplayPreferencesSectionProps) {
+  const { t, setLanguage } = useLanguage();
   return (
     <SectionCard
-      title="Display preferences"
-      description="Language and how prices appear while you browse"
+      title={t("account.display")}
+      description={t("account.displayHint")}
     >
       <div className="space-y-4">
-        <FormField label="Language" htmlFor="pref-language">
+        <FormField label={t("account.language")} htmlFor="pref-language">
           <Select
             value={member.language}
-            onValueChange={(v) => onChange({ language: v as LanguagePreference })}
+            onValueChange={(v) => {
+              const next = v as LanguagePreference;
+              onChange({ language: next });
+              if (isAppLanguage(next)) setLanguage(next);
+            }}
           >
             <SelectTrigger id="pref-language" className="max-w-xs">
               <SelectValue />
@@ -40,7 +47,7 @@ export function DisplayPreferencesSection({ member, onChange }: DisplayPreferenc
           </Select>
         </FormField>
 
-        <FormField label="Price display" htmlFor="pref-price-display">
+        <FormField label={t("account.priceDisplay")} htmlFor="pref-price-display">
           <Select
             value={member.priceDisplay}
             onValueChange={(v) => onChange({ priceDisplay: v as PriceDisplayMode })}
@@ -51,13 +58,13 @@ export function DisplayPreferencesSection({ member, onChange }: DisplayPreferenc
             <SelectContent>
               {PRICE_DISPLAY_OPTIONS.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {t(`account.price.${opt.value}`)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <p className="mt-1.5 text-xs text-muted-foreground">
-            {PRICE_DISPLAY_OPTIONS.find((o) => o.value === member.priceDisplay)?.hint}
+            {t(`account.price.${member.priceDisplay}Hint`)}
           </p>
         </FormField>
       </div>

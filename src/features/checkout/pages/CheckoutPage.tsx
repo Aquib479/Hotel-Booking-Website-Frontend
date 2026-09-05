@@ -31,6 +31,7 @@ import { CheckoutCTA } from "../components/CheckoutCTA";
 import { NoActiveDraftState } from "../components/NoActiveDraftState";
 import { GuestCheckoutPrompt } from "../components/GuestCheckoutPrompt";
 import { usePaymentMethodSelection } from "../components/DirectPaymentMethods";
+import { useLanguage } from "@/context/LanguageContext";
 
 const GUEST_CHECKOUT_KEY = "resthalf-checkout-guest-mode";
 
@@ -51,12 +52,13 @@ function buildConfirmedSnapshot(
   draft: CheckoutDraft,
   guest: GuestDetailsValues,
   bookingId: string,
-  confirmationCode?: string
+  confirmationCode: string | undefined,
+  hotelFallback: string
 ): ConfirmedCheckoutSnapshot {
   return {
     bookingId,
     confirmationCode,
-    hotelName: draft.hotelMeta?.name ?? "Your booking",
+    hotelName: draft.hotelMeta?.name ?? hotelFallback,
     hotelImageUrl: draft.hotelMeta?.imageUrl || draft.roomImageUrl || undefined,
     mode: draft.mode,
     checkIn: draft.checkIn,
@@ -74,6 +76,7 @@ function buildConfirmedSnapshot(
 }
 
 export function CheckoutPage() {
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const { isAuthenticated, user } = useAuth();
   const { currency } = useCurrency();
@@ -115,19 +118,17 @@ export function CheckoutPage() {
   const payAmountLabel = formatPrice(totalPrice, draftCurrency);
 
   const step1DisabledReason = useMemo(() => {
-    if (!form.isValid) return "Fill in your details to continue";
+    if (!form.isValid) return t("checkout.fillDetails");
     return undefined;
-  }, [form.isValid]);
+  }, [form.isValid, t]);
 
   const step2DisabledReason = useMemo(() => {
-    if (isRefreshingPrice) return "Updating price for selected currency…";
-    if (!termsAccepted) return "Accept the terms to continue";
-    if (!form.isValid) return "Fill in your details to continue";
-    if (!selectedMethod) return "Select a payment method";
+    if (isRefreshingPrice) return t("checkout.updatingPrice");
+    if (!termsAccepted) return t("checkout.acceptTerms");
+    if (!form.isValid) return t("checkout.fillDetails");
+    if (!selectedMethod) return t("checkout.selectPay");
     if (!isPaymentDetailsValid) {
-      return selectedMethod === "upi"
-        ? "Enter a valid UPI ID to continue"
-        : "Enter valid card details to continue";
+      return selectedMethod === "upi" ? t("checkout.validUpi") : t("checkout.validCard");
     }
     return undefined;
   }, [
@@ -136,6 +137,7 @@ export function CheckoutPage() {
     form.isValid,
     selectedMethod,
     isPaymentDetailsValid,
+    t,
   ]);
 
   const handleHoldExpire = useCallback(() => {
@@ -153,13 +155,14 @@ export function CheckoutPage() {
         draft,
         form.values,
         bookingId,
-        confirmationCode
+        confirmationCode,
+        t("checkout.yourBooking")
       );
       clearDraft();
       setConfirmed(snapshot);
       setStep(3);
     },
-    [clearDraft, draft, form.values]
+    [clearDraft, draft, form.values, t]
   );
 
   const persistCardIfNeeded = useCallback(
@@ -191,7 +194,7 @@ export function CheckoutPage() {
 
           const priced = await booking.runPricing();
           if (!priced && useBookingStore.getState().status === "error") {
-            setPaymentError(useBookingStore.getState().error ?? "Pricing failed");
+            setPaymentError(useBookingStore.getState().error ?? t("checkout.pricingFailed"));
             return;
           }
 
@@ -208,16 +211,14 @@ export function CheckoutPage() {
           const roomId =
             draft.roomId || useHotelStore.getState().selected?.roomId || "";
           if (!roomId) {
-            setPaymentError(
-              "Missing roomId for this rate. Please go back and select the room again."
-            );
+            setPaymentError(t("checkout.missingRoom"));
             return;
           }
 
           const rateId =
             draft.rateIds?.[0] || useHotelStore.getState().selected?.rateIds?.[0];
           if (!rateId) {
-            setPaymentError("Missing rateId. Please go back and select a rate again.");
+            setPaymentError(t("checkout.missingRate"));
             return;
           }
 
@@ -249,8 +250,7 @@ export function CheckoutPage() {
 
           if (!bookingId) {
             setPaymentError(
-              useBookingStore.getState().error ??
-                "Booking completed without an ID. Check Kibana logs."
+              useBookingStore.getState().error ?? t("checkout.payFailedShort")
             );
             return;
           }
@@ -266,7 +266,7 @@ export function CheckoutPage() {
         }
 
         if (!draft.bookingId) {
-          setPaymentError("No active booking hold. Please go back and try again.");
+          setPaymentError(t("checkout.noHold"));
           return;
         }
 
@@ -292,26 +292,24 @@ export function CheckoutPage() {
                 );
               },
               onError: () => {
-                setPaymentError("Payment failed. Please try again.");
+                setPaymentError(t("checkout.payFailed"));
               },
               onClose: () => {
-                setPaymentError(
-                  "Payment window closed. You can try again before the hold expires."
-                );
+                setPaymentError(t("checkout.payClosed"));
               },
             });
           } else if (result.redirectUrl) {
             await persistCardIfNeeded(method);
             window.location.href = result.redirectUrl;
           } else {
-            setPaymentError("Payment gateway is unavailable. Please try again.");
+            setPaymentError(t("checkout.payUnavailable"));
           }
         } else {
           await persistCardIfNeeded(method);
           finishConfirmed(draft.bookingId);
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Payment failed";
+        const message = err instanceof Error ? err.message : t("checkout.payFailedShort");
         setPaymentError(message);
       } finally {
         setIsSubmitting(false);
@@ -324,6 +322,7 @@ export function CheckoutPage() {
       finishConfirmed,
       validatePaymentDetails,
       persistCardIfNeeded,
+      t,
     ]
   );
 
@@ -350,7 +349,7 @@ export function CheckoutPage() {
 
   if (confirmed && step === 3) {
     return (
-      <CheckoutLayout confirmed title="Checkout">
+      <CheckoutLayout confirmed title={t("checkout.title")}>
         <CheckoutStepIndicator current={3} />
         <CheckoutConfirmed snapshot={confirmed} />
       </CheckoutLayout>
@@ -375,7 +374,7 @@ export function CheckoutPage() {
   const supplierName = draft.hotelMeta?.name;
 
   const ctaLabel =
-    step === 1 ? "Continue to payment" : `Pay ${payAmountLabel} now`;
+    step === 1 ? t("checkout.continuePayment") : t("checkout.payNow", { amount: payAmountLabel });
   const disabledReason = step === 1 ? step1DisabledReason : step2DisabledReason;
   const isActionDisabled =
     Boolean(disabledReason) ||
@@ -421,7 +420,7 @@ export function CheckoutPage() {
           {isRefreshingPrice ? (
             <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin text-brand" />
-              Updating price for {currency}…
+              {t("checkout.updatingFor", { currency })}
             </div>
           ) : null}
 
@@ -456,7 +455,7 @@ export function CheckoutPage() {
                 className="-mt-2 w-fit gap-1 px-0 text-muted-foreground hover:text-foreground"
               >
                 <ChevronLeft className="size-4" />
-                Back to customer information
+                {t("checkout.backCustomer")}
               </Button>
 
               <PaymentSection

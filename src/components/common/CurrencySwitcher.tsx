@@ -8,6 +8,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   CURRENCIES,
   DEFAULT_CURRENCY,
@@ -26,6 +27,7 @@ export function CurrencySwitcher({
   variant = "default",
 }: CurrencySwitcherProps) {
   const { currency, setCurrency, currencies } = useCurrency();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -82,7 +84,7 @@ export function CurrencySwitcher({
 
       <DialogContent className="max-h-[85vh] gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b border-border px-5 py-4 text-left">
-          <DialogTitle>Select currency</DialogTitle>
+          <DialogTitle>{t("currency.title")}</DialogTitle>
         </DialogHeader>
 
         <div className="border-b border-border px-4 py-3">
@@ -91,7 +93,7 @@ export function CurrencySwitcher({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search currency"
+              placeholder={t("currency.search")}
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
@@ -101,7 +103,7 @@ export function CurrencySwitcher({
           {!query.trim() && (
             <div className="mb-2">
               <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Popular
+                {t("currency.popular")}
               </p>
               {featured.map((c) => (
                 <CurrencyRow
@@ -113,14 +115,14 @@ export function CurrencySwitcher({
                 />
               ))}
               <p className="mt-2 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                All currencies
+                {t("currency.all")}
               </p>
             </div>
           )}
 
           {filtered.length === 0 ? (
             <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-              No currencies found
+              {t("currency.none")}
             </p>
           ) : (
             filtered.map((c) => (

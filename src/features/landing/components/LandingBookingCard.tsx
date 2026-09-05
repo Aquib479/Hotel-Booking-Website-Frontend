@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { SearchPanel, buildSearchParams } from "@/components/common/search";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function LandingBookingCard() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   return (
     <div className="relative">
@@ -10,7 +12,7 @@ export function LandingBookingCard() {
       <div className="relative rounded-md border border-border/80 bg-white p-5 shadow-xl shadow-brand/5 sm:p-6">
         <SearchPanel
           variant="landing"
-          submitLabel="Search hotels"
+          submitLabel={t("landing.searchHotels")}
           onSubmit={(values) =>
             navigate(`/search?${buildSearchParams(values).toString()}`)
           }

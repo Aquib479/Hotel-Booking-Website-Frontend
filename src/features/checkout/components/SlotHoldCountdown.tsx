@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 import { useSlotHold } from "../hooks/useSlotHold";
 
 interface SlotHoldCountdownProps {
@@ -9,6 +10,7 @@ interface SlotHoldCountdownProps {
 }
 
 export function SlotHoldCountdown({ holdExpiresAt, onExpire }: SlotHoldCountdownProps) {
+  const { t } = useLanguage();
   const { minutes, seconds, isExpired, isWarning, isCritical } = useSlotHold(holdExpiresAt);
 
   useEffect(() => {
@@ -45,17 +47,15 @@ export function SlotHoldCountdown({ holdExpiresAt, onExpire }: SlotHoldCountdown
               isCritical ? "text-red-700" : isWarning ? "text-amber-800" : "text-foreground"
             )}
           >
-            Slot reserved · {display}
+            {t("checkout.slotReserved", { time: display })}
           </p>
-          <p className="text-xs text-muted-foreground">
-            Complete payment before your hold expires
-          </p>
+          <p className="text-xs text-muted-foreground">{t("checkout.completeBeforeHold")}</p>
         </div>
       </div>
       <span className="sr-only">
         {isExpired
-          ? "Your slot hold has expired"
-          : `${minutes} minutes and ${seconds} seconds remaining on your slot hold`}
+          ? t("checkout.holdExpiredSr")
+          : t("checkout.holdRemaining", { minutes, seconds })}
       </span>
     </div>
   );

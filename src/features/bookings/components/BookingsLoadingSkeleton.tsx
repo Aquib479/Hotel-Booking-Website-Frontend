@@ -1,10 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { CardImageRow } from "@/components/common/CardImageRow";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function BookingsLoadingSkeleton() {
+  const { t } = useLanguage();
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Loading bookings">
+    <div className="space-y-4" aria-busy="true" aria-label={t("bookings.loading")}>
       {Array.from({ length: 3 }).map((_, i) => (
         <Card key={i} padding="none">
           <CardImageRow

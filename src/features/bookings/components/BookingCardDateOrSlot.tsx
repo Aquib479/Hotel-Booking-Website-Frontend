@@ -1,6 +1,7 @@
 import type { BookingMode, RestSlot } from "@/lib/booking/types";
 import { getBookingDateOrSlotDisplay } from "@/lib/booking/dateSlotDisplay";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface BookingCardDateOrSlotProps {
   mode: BookingMode;
@@ -23,10 +24,11 @@ export function BookingCardDateOrSlot({
   emphasized = false,
   className,
 }: BookingCardDateOrSlotProps) {
+  const { language } = useLanguage();
   const display = getBookingDateOrSlotDisplay(
     mode,
     { slotDate, slotWindow, checkIn, checkOut, nights },
-    { compact: true }
+    { compact: true, language }
   );
 
   if (!display) return null;

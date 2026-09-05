@@ -1,5 +1,7 @@
 import type { LegalDocument, LegalSection } from "../types";
 import { LegalTableOfContents } from "./LegalTableOfContents";
+import { useLanguage } from "@/context/LanguageContext";
+import { dateLocaleCode } from "@/lib/i18n/languages";
 
 function LegalSectionBlock({ section }: { section: LegalSection }) {
   return (
@@ -44,7 +46,8 @@ interface LegalPageLayoutProps {
 }
 
 export function LegalPageLayout({ document }: LegalPageLayoutProps) {
-  const formattedDate = new Date(document.lastUpdated).toLocaleDateString(undefined, {
+  const { language, t } = useLanguage();
+  const formattedDate = new Date(document.lastUpdated).toLocaleDateString(dateLocaleCode(language), {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -53,7 +56,7 @@ export function LegalPageLayout({ document }: LegalPageLayoutProps) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-8 sm:py-14">
       <header className="max-w-3xl border-b border-border pb-8">
-        <p className="text-sm text-muted-foreground">Last updated {formattedDate}</p>
+        <p className="text-sm text-muted-foreground">{t("support.lastUpdated", { date: formattedDate })}</p>
         <h1 className="mt-2 text-3xl font-bold text-foreground sm:text-4xl">{document.title}</h1>
         {document.intro && <p className="mt-4 text-muted-foreground">{document.intro}</p>}
       </header>

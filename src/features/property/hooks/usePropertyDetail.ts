@@ -27,7 +27,7 @@ function mapContentGuestReviews(
     const author =
       item.ReviewerName?.trim() ||
       item.reviewerName?.trim() ||
-      "Guest";
+      "hotel.guest";
     const title = item.Title?.trim() || item.title?.trim() || "";
     const text = item.Text?.trim() || item.text?.trim() || "";
     const comment = text || title;
@@ -37,7 +37,7 @@ function mapContentGuestReviews(
     const review: Review = {
       id: `content-review-${index}`,
       author,
-      date: source ? `Via ${source}` : "Guest review",
+      date: source ? `hotel.viaSource|${source}` : "hotel.guestReview",
       rating,
       comment,
       title: title && text ? title : undefined,
@@ -50,7 +50,7 @@ function mapContentGuestReviews(
 function mapGuestReviewDetails(details: GuestReviewDetail[] | null | undefined): Review[] {
   if (!details?.length) return [];
   return details.flatMap((item, index) => {
-    const author = item.reviewer?.name?.trim() || "Guest";
+    const author = item.reviewer?.name?.trim() || "hotel.guest";
     const title = item.title?.trim() || "";
     const summary = item.summary?.trim() || "";
     const paragraphs = (item.text ?? [])
@@ -62,7 +62,7 @@ function mapGuestReviewDetails(details: GuestReviewDetail[] | null | undefined):
     const rating = Number(item.score ?? 0) || 0;
     const date = item.dateSubmitted
       ? formatReviewDate(item.dateSubmitted)
-      : "Guest review";
+      : "hotel.guestReview";
 
     const managementResponses = (item.managementResponses ?? [])
       .map((response) => {
@@ -159,15 +159,19 @@ function buildPropertyDetail(hotel: Hotel, rooms: Room[]): PropertyDetail {
 
   const roomTypeLabels = [...new Set(rooms.map((r) => r.roomType).filter(Boolean))];
   const highlights: string[] = [];
-  if (hotel.rating) highlights.push(`${hotel.rating}-star rated hotel`);
-  if (roomTypeLabels.length) highlights.push(`Room types: ${roomTypeLabels.join(", ")}`);
+  if (hotel.rating) highlights.push(`hotel.hl.starRated|${hotel.rating}`);
+  if (roomTypeLabels.length) highlights.push(`hotel.hl.roomTypes|${roomTypeLabels.join(", ")}`);
   highlights.push(
     hotel.source === "direct"
-      ? "RestHalf Exclusive · instant confirmation"
-      : `Partner rate via ${hotel.source}`
+      ? "hotel.hl.exclusiveInstant"
+      : `hotel.hl.partnerVia|${hotel.source}`
   );
   if (rooms.length > 0)
-    highlights.push(`${rooms.length} room${rooms.length !== 1 ? "s" : ""} available`);
+    highlights.push(
+      rooms.length === 1
+        ? `hotel.hl.roomAvailable|${rooms.length}`
+        : `hotel.hl.roomsAvailable|${rooms.length}`
+    );
 
   const allAmenities = [...new Set(rooms.flatMap((r) => r.amenities))];
   const iconMap: Record<string, string> = {
@@ -187,9 +191,9 @@ function buildPropertyDetail(hotel: Hotel, rooms: Room[]): PropertyDetail {
     reviewCount: 0,
     images,
     photoCount: images.length,
-    description: `${hotel.name} offers comfortable accommodation${
-      hotel.city ? ` in ${hotel.city}` : ""
-    }. Rooms feature quality bedding and essential amenities for a restful stay.`,
+    description: hotel.city
+      ? `hotel.descFallbackCity|${hotel.city}`
+      : "hotel.descFallback",
     highlights,
     detailAmenities: allAmenities.map((label) => ({
       icon: iconMap[label] ?? "sparkles",
@@ -203,10 +207,10 @@ function buildPropertyDetail(hotel: Hotel, rooms: Room[]): PropertyDetail {
       starRating: Math.round(hotel.rating ?? 4),
     },
     policies: [
-      "Slot check-in at selected time window",
-      "Flexible slot changes up to 2 hours before arrival",
-      "No smoking in rooms",
-      "Valid ID required at check-in",
+      "hotel.pol.slotCheckin",
+      "hotel.pol.flexibleSlot",
+      "hotel.pol.noSmoking",
+      "hotel.pol.validId",
     ],
     reviews: [],
     mapImage: "",
@@ -240,9 +244,9 @@ function buildZentrumPropertyDetail(
     .filter((n): n is string => Boolean(n));
   const description =
     content?.descriptions?.find((d) => d.text)?.text ||
-    `${name} offers comfortable accommodation${
-      address?.city?.name ? ` in ${address.city.name}` : ""
-    }.`;
+    (address?.city?.name
+      ? `hotel.descShortCity|${address.city.name}`
+      : "hotel.descShort");
 
   const reviewEntry = Array.isArray(content?.reviews)
     ? content?.reviews[0]
@@ -322,13 +326,13 @@ function buildZentrumPropertyDetail(
     photoCount: uniqueImages.length,
     description,
     highlights: [
-      starRating ? `${starRating}-star property` : "Partner hotel",
+      starRating ? `hotel.hl.starProperty|${starRating}` : "hotel.hl.partnerHotel",
       searchHotel?.refundable || searchHotel?.freeCancellation
-        ? "Free cancellation available"
-        : "See rate policies at checkout",
+        ? "hotel.hl.freeCancel"
+        : "hotel.hl.seePolicies",
       searchHotel?.freeBreakfast || /breakfast/i.test(searchHotel?.boardBasisLabel ?? "")
-        ? "Free breakfast options"
-        : "Multiple board bases",
+        ? "hotel.hl.freeBreakfast"
+        : "hotel.hl.boardBases",
       ...(searchHotel?.offerLabel ? [searchHotel.offerLabel] : []),
     ],
     detailAmenities: facilities.slice(0, 12).map((label) => ({
@@ -343,9 +347,9 @@ function buildZentrumPropertyDetail(
       starRating: Math.round(starRating) || starRating,
     },
     policies: [
-      "Rates confirmed at pricing step before payment",
-      "Cancellation rules vary by rate plan",
-      "Valid ID required at check-in",
+      "hotel.pol.ratesConfirmed",
+      "hotel.pol.cancelVary",
+      "hotel.pol.validId",
     ],
     reviews: reviewsFromContent(content),
     mapImage: "",
@@ -416,7 +420,7 @@ export function usePropertyDetail(id: string | undefined): UsePropertyDetailResu
           if (cancelled) return;
           const after = useSearchStore.getState();
           if (after.status === "error") {
-            setError(after.error ?? "Failed to refresh prices");
+            setError(after.error ?? "hotel.refreshFail");
             setIsLoading(false);
             return;
           }
@@ -426,7 +430,7 @@ export function usePropertyDetail(id: string | undefined): UsePropertyDetailResu
           useSearchStore.getState();
         if (!token) {
           if (!cancelled) {
-            setError("No active search token. Run a hotel search first.");
+            setError("hotel.noSearchToken");
             setIsLoading(false);
           }
           return;
@@ -486,14 +490,14 @@ export function usePropertyDetail(id: string | undefined): UsePropertyDetailResu
         if (cancelled) return;
         if (!hotel) {
           setProperty(null);
-          setError("Hotel not found");
+          setError("hotel.notFound");
         } else {
           setProperty(buildPropertyDetail(hotel, fetchedRooms));
           setRooms(fetchedRooms);
         }
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load hotel");
+        setError(err instanceof Error ? err.message : "hotel.loadFail");
       } finally {
         if (!cancelled) setIsLoading(false);
       }

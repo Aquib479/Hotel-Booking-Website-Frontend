@@ -1,7 +1,9 @@
 import { formatPrice } from "@/lib/currency/format";
 import { LaneBadge } from "@/components/common/LaneBadge";
 import { cn } from "@/lib/utils";
+import { REFUND_TIMELINE_KEY, REFUND_TIMELINE_TEXT } from "../constants";
 import type { BookingDetail, RefundPreview } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface RefundBreakdownCardProps {
   booking: BookingDetail;
@@ -9,6 +11,7 @@ interface RefundBreakdownCardProps {
 }
 
 export function RefundBreakdownCard({ booking, preview }: RefundBreakdownCardProps) {
+  const { t } = useLanguage();
   const isZeroRefund = preview.refundAmount === 0;
 
   return (
@@ -25,14 +28,14 @@ export function RefundBreakdownCard({ booking, preview }: RefundBreakdownCardPro
 
       <dl className="space-y-3 text-sm">
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Amount paid</dt>
+          <dt className="text-muted-foreground">{t("bookings.amountPaid")}</dt>
           <dd className="font-medium text-foreground">
             {formatPrice(preview.amountPaid, preview.currency)}
           </dd>
         </div>
 
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Refund per policy</dt>
+          <dt className="text-muted-foreground">{t("bookings.refundPerPolicy")}</dt>
           <dd className="text-right font-medium text-foreground">
             {preview.refundPercentage}% — {preview.policyExplanation}
           </dd>
@@ -40,7 +43,7 @@ export function RefundBreakdownCard({ booking, preview }: RefundBreakdownCardPro
 
         {preview.nonRefundableAmount > 0 && (
           <div className="flex justify-between gap-4 border-t border-border pt-3">
-            <dt className="text-muted-foreground">Non-refundable</dt>
+            <dt className="text-muted-foreground">{t("bookings.nonRefundable")}</dt>
             <dd className="text-right text-foreground">
               {formatPrice(preview.nonRefundableAmount, preview.currency)}
               {preview.nonRefundableNote && (
@@ -60,7 +63,7 @@ export function RefundBreakdownCard({ booking, preview }: RefundBreakdownCardPro
         )}
       >
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          You will receive
+          {t("bookings.youWillReceive")}
         </p>
         <p
           className={cn(
@@ -72,12 +75,16 @@ export function RefundBreakdownCard({ booking, preview }: RefundBreakdownCardPro
         </p>
         {isZeroRefund && (
           <p className="mt-2 text-sm font-medium text-red-700">
-            No refund applies for this cancellation.
+            {t("bookings.noRefundApplies")}
           </p>
         )}
       </div>
 
-      <p className="mt-4 text-xs text-muted-foreground">{preview.timelineText}</p>
+      <p className="mt-4 text-xs text-muted-foreground">
+        {preview.timelineText === REFUND_TIMELINE_TEXT
+          ? t(REFUND_TIMELINE_KEY)
+          : preview.timelineText}
+      </p>
     </div>
   );
 }

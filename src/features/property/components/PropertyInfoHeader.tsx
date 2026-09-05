@@ -1,5 +1,6 @@
 import { Heart, MapPin, Share2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface PropertyInfoHeaderProps {
   region: string;
@@ -23,6 +24,7 @@ export function PropertyInfoHeader({
   onToggleSave,
   onShare,
 }: PropertyInfoHeaderProps) {
+  const { t } = useLanguage();
   const handleShare = async () => {
     if (onShare) {
       onShare();
@@ -50,7 +52,7 @@ export function PropertyInfoHeader({
           {starRating > 0 ? (
             <span
               className="inline-flex items-center gap-0.5"
-              aria-label={`${starRating} star hotel`}
+              aria-label={t("search.starHotel", { n: starRating })}
             >
               {Array.from({ length: Math.min(5, starRating) }).map((_, i) => (
                 <Star
@@ -79,7 +81,7 @@ export function PropertyInfoHeader({
           className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3.5 py-2 text-sm font-medium text-foreground shadow-sm transition hover:border-brand/30 hover:text-brand"
         >
           <Share2 className="size-4" />
-          Share
+          {t("hotel.share")}
         </button>
         <button
           type="button"
@@ -94,7 +96,7 @@ export function PropertyInfoHeader({
           <Heart
             className={cn("size-4", isSaved && "fill-red-500 text-red-500")}
           />
-          {isSaved ? "Saved" : "Save"}
+          {isSaved ? t("hotel.saved") : t("hotel.save")}
         </button>
       </div>
     </div>

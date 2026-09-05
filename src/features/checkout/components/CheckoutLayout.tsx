@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface CheckoutLayoutProps {
   children: ReactNode;
@@ -15,13 +16,15 @@ export function CheckoutLayout({
   summary,
   stickyCta,
   confirmed = false,
-  title = "Checkout",
+  title,
 }: CheckoutLayoutProps) {
+  const { t } = useLanguage();
+  const heading = title ?? t("checkout.title");
   if (confirmed) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
-        {title ? (
-          <h1 className="mb-8 text-2xl font-bold text-foreground sm:text-3xl">{title}</h1>
+        {heading ? (
+          <h1 className="mb-8 text-2xl font-bold text-foreground sm:text-3xl">{heading}</h1>
         ) : null}
         {children}
       </div>
@@ -30,7 +33,7 @@ export function CheckoutLayout({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
-      <h1 className="mb-8 text-2xl font-bold text-foreground sm:text-3xl">{title}</h1>
+      <h1 className="mb-8 text-2xl font-bold text-foreground sm:text-3xl">{heading}</h1>
 
       {/* Mobile: summary on top */}
       {summary ? <div className="mb-6 lg:hidden">{summary}</div> : null}

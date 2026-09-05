@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { CurrencySwitcher } from "@/components/common/CurrencySwitcher";
+import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
 import { AccountMenuButton } from "@/features/account/components/AccountMenuButton";
+import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 import { SITE_NAV_LINKS } from "./site-nav";
 
@@ -18,6 +20,7 @@ export function SiteNavbar({
   className,
 }: SiteNavbarProps) {
   const location = useLocation();
+  const { t } = useLanguage();
   const isHome = location.pathname === "/";
   const isInline = variant === "inline";
   const [scrolled, setScrolled] = useState(false);
@@ -49,7 +52,7 @@ export function SiteNavbar({
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-8">
         <Link
           to="/"
-          aria-label="RestHalf home"
+          aria-label={t("nav.homeAria")}
           className="inline-flex shrink-0 items-center"
         >
           <img
@@ -60,13 +63,13 @@ export function SiteNavbar({
         </Link>
 
         <nav
-          aria-label="Primary"
+          aria-label={t("nav.aria")}
           className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 md:flex"
         >
           {SITE_NAV_LINKS.map((link) =>
             link.href.startsWith("/") && !link.href.includes("#") ? (
               <NavLink
-                key={link.label}
+                key={link.id}
                 to={link.href}
                 end={link.href === "/"}
                 className={({ isActive }) =>
@@ -78,21 +81,22 @@ export function SiteNavbar({
                   )
                 }
               >
-                {link.label}
+                {t(`nav.${link.id}`)}
               </NavLink>
             ) : (
               <a
-                key={link.label}
+                key={link.id}
                 href={link.href}
                 className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
               >
-                {link.label}
+                {t(`nav.${link.id}`)}
               </a>
             ),
           )}
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <LanguageSwitcher />
           <CurrencySwitcher />
           <AccountMenuButton />
         </div>

@@ -3,8 +3,10 @@ import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PropertyCard } from "@/features/search/components/PropertyCard";
 import { useFavoritesStore } from "@/store";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function Favourites() {
+  const { t } = useLanguage();
   const items = useFavoritesStore((s) => s.items);
   const favorites = Object.values(items);
 
@@ -15,20 +17,22 @@ export default function Favourites() {
           <div>
             <p className="flex items-center gap-2 text-sm font-medium text-brand">
               <Heart className="size-4 fill-red-500 text-red-500" />
-              Saved hotels
+              {t("saved.hotels")}
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Saved
+              {t("saved.title")}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               {favorites.length === 0
-                ? "Hotels you mark with a heart will appear here."
-                : `${favorites.length} hotel${favorites.length === 1 ? "" : "s"} saved`}
+                ? t("saved.emptyHint")
+                : favorites.length === 1
+                  ? t("saved.countOne")
+                  : t("saved.countMany", { n: favorites.length })}
             </p>
           </div>
           {favorites.length > 0 && (
             <Button asChild variant="outline">
-              <Link to="/search">Find more hotels</Link>
+              <Link to="/search">{t("saved.findMore")}</Link>
             </Button>
           )}
         </div>
@@ -38,12 +42,12 @@ export default function Favourites() {
             <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-red-50">
               <Heart className="size-7 text-red-400" />
             </div>
-            <p className="text-lg font-semibold text-foreground">No favourites yet</p>
+            <p className="text-lg font-semibold text-foreground">{t("saved.empty")}</p>
             <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-              Browse hotels and tap the heart icon to save them here for later.
+              {t("saved.emptyBody")}
             </p>
             <Button asChild className="mt-6">
-              <Link to="/search">Find hotels</Link>
+              <Link to="/search">{t("saved.find")}</Link>
             </Button>
           </div>
         ) : (

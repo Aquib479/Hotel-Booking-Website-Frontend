@@ -15,8 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CONTACT_SUBJECT_OPTIONS } from "../constants/legalContent";
+import { getContactSubjectOptions } from "../constants/legalContent";
 import type { ContactFormValues, ContactSubjectCategory } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
 
 const INITIAL: ContactFormValues = {
   name: "",
@@ -31,6 +32,7 @@ interface ContactFormProps {
 }
 
 export function ContactForm({ onSubmitted }: ContactFormProps) {
+  const { t } = useLanguage();
   const { user, isAuthenticated } = useAuth();
   const [values, setValues] = useState<ContactFormValues>(INITIAL);
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
@@ -82,8 +84,8 @@ export function ContactForm({ onSubmitted }: ContactFormProps) {
     return (
       <FormAlert
         variant="success"
-        title="We've received your message"
-        message={`Our team will reply to ${values.email} as soon as possible. For urgent booking issues, WhatsApp is usually fastest.`}
+        title={t("support.received")}
+        message={t("support.receivedBody", { email: values.email })}
         action={
           <Button
             type="button"
@@ -94,7 +96,7 @@ export function ContactForm({ onSubmitted }: ContactFormProps) {
               setValues((v) => ({ ...INITIAL, name: v.name, email: v.email }));
             }}
           >
-            Send another message
+            {t("support.sendAnother")}
           </Button>
         }
       />
@@ -102,10 +104,10 @@ export function ContactForm({ onSubmitted }: ContactFormProps) {
   }
 
   return (
-    <SectionCard title="Send us a message">
+    <SectionCard title={t("support.sendMessage")}>
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Name" htmlFor="contact-name" required>
+          <FormField label={t("support.name")} htmlFor="contact-name" required>
             <Input
               id="contact-name"
               required
@@ -113,7 +115,7 @@ export function ContactForm({ onSubmitted }: ContactFormProps) {
               onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
             />
           </FormField>
-          <FormField label="Email" htmlFor="contact-email" required>
+          <FormField label={t("support.email")} htmlFor="contact-email" required>
             <Input
               id="contact-email"
               type="email"
@@ -125,7 +127,7 @@ export function ContactForm({ onSubmitted }: ContactFormProps) {
         </div>
 
         {isAuthenticated && (
-          <FormField label="Related booking" htmlFor="contact-booking" optional>
+          <FormField label={t("support.relatedBooking")} htmlFor="contact-booking" optional>
             <Select
               value={values.bookingId || "none"}
               onValueChange={(v) =>
@@ -134,11 +136,11 @@ export function ContactForm({ onSubmitted }: ContactFormProps) {
             >
               <SelectTrigger id="contact-booking" className="h-10 w-full">
                 <SelectValue
-                  placeholder={loadingBookings ? "Loading bookings…" : "Select a booking"}
+                  placeholder={loadingBookings ? t("support.loadingBookings") : t("support.selectBooking")}
                 />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No specific booking</SelectItem>
+                <SelectItem value="none">{t("support.noBooking")}</SelectItem>
                 {bookings.map((b) => (
                   <SelectItem key={b.id} value={b.id}>
                     {b.confirmationCode} — {b.hotelName}
@@ -149,7 +151,7 @@ export function ContactForm({ onSubmitted }: ContactFormProps) {
           </FormField>
         )}
 
-        <FormField label="Subject" htmlFor="contact-category" required>
+        <FormField label={t("support.subject")} htmlFor="contact-category" required>
           <Select
             value={values.category}
             onValueChange={(v) =>
@@ -160,7 +162,7 @@ export function ContactForm({ onSubmitted }: ContactFormProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {CONTACT_SUBJECT_OPTIONS.map((opt) => (
+              {getContactSubjectOptions(t).map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}
                 </SelectItem>
@@ -169,14 +171,14 @@ export function ContactForm({ onSubmitted }: ContactFormProps) {
           </Select>
         </FormField>
 
-        <FormField label="Message" htmlFor="contact-message" required>
+        <FormField label={t("support.message")} htmlFor="contact-message" required>
           <Textarea
             id="contact-message"
             required
             rows={5}
             value={values.message}
             onChange={(e) => setValues((v) => ({ ...v, message: e.target.value }))}
-            placeholder="Tell us how we can help…"
+            placeholder={t("support.messagePh")}
           />
         </FormField>
 
@@ -184,10 +186,10 @@ export function ContactForm({ onSubmitted }: ContactFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="animate-spin" />
-              Sending…
+              {t("support.sending")}
             </>
           ) : (
-            "Send message"
+            t("support.send")
           )}
         </Button>
       </form>

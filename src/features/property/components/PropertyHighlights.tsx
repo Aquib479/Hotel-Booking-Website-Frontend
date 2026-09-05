@@ -1,3 +1,5 @@
+import { useLanguage } from "@/context/LanguageContext";
+import { hasMessage, translateStored } from "@/lib/i18n/messages";
 import {
   Bath,
   Coffee,
@@ -44,6 +46,7 @@ export function PropertyHighlights({
   items,
   amenities = [],
 }: PropertyHighlightsProps) {
+  const { t, language } = useLanguage();
   const labels = [...items, ...amenities.map((a) => a.label)]
     .map((l) => l.trim())
     .filter(Boolean);
@@ -67,7 +70,11 @@ export function PropertyHighlights({
             className="flex min-w-0 items-center gap-2 rounded-full border border-border bg-white px-3 py-1.5 text-sm text-muted-foreground"
           >
             <Icon className="size-3.5 shrink-0 text-brand" />
-            <span className="truncate">{label}</span>
+            <span className="truncate">
+              {hasMessage(`search.amenity.${label}`)
+                ? t(`search.amenity.${label}`)
+                : translateStored(language, label)}
+            </span>
           </div>
         );
       })}

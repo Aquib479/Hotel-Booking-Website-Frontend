@@ -3,16 +3,22 @@ import { Separator } from "@/components/ui/separator";
 import { HotelSummaryHeader } from "@/features/checkout/components/HotelSummaryHeader";
 import type { BookingDetail } from "../types";
 import { BookingCardDateOrSlot } from "./BookingCardDateOrSlot";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface BookingDetailSummaryCardProps {
   booking: BookingDetail;
 }
 
 export function BookingDetailSummaryCard({ booking }: BookingDetailSummaryCardProps) {
+  const { t } = useLanguage();
   const guestLabel = [
-    `${booking.guests.adults} adult${booking.guests.adults !== 1 ? "s" : ""}`,
+    booking.guests.adults === 1
+      ? t("common.adultCountOne")
+      : t("common.adultCountN", { n: booking.guests.adults }),
     booking.guests.children > 0
-      ? `${booking.guests.children} child${booking.guests.children !== 1 ? "ren" : ""}`
+      ? booking.guests.children === 1
+        ? t("common.childCountOne")
+        : t("common.childCountN", { n: booking.guests.children })
       : null,
   ]
     .filter(Boolean)
@@ -43,12 +49,12 @@ export function BookingDetailSummaryCard({ booking }: BookingDetailSummaryCardPr
 
           <dl className="space-y-2.5 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Guests</dt>
+              <dt className="text-muted-foreground">{t("common.guests")}</dt>
               <dd className="font-medium text-foreground">{guestLabel}</dd>
             </div>
             {booking.ratePlanName && (
               <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Rate plan</dt>
+                <dt className="text-muted-foreground">{t("bookings.ratePlan")}</dt>
                 <dd className="max-w-[60%] text-right font-medium text-foreground">
                   {booking.ratePlanName}
                 </dd>
@@ -56,7 +62,7 @@ export function BookingDetailSummaryCard({ booking }: BookingDetailSummaryCardPr
             )}
             {booking.roomType && (
               <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Room type</dt>
+                <dt className="text-muted-foreground">{t("bookings.roomType")}</dt>
                 <dd className="font-medium capitalize text-foreground">{booking.roomType}</dd>
               </div>
             )}

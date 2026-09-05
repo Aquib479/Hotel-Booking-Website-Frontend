@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useLanguage } from "@/context/LanguageContext";
 import type { CurrencyCode } from "@/lib/currency/types";
 import { CURRENCIES } from "@/lib/currency/types";
 import {
@@ -87,6 +88,7 @@ export function useCheckoutCurrencyReprice(
   saveDraft: (next: CheckoutDraft) => void
 ): { isRefreshingPrice: boolean; priceRefreshError: string | null } {
   const { currency } = useCurrency();
+  const { t } = useLanguage();
   const [isRefreshingPrice, setIsRefreshingPrice] = useState(false);
   const [priceRefreshError, setPriceRefreshError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
@@ -116,7 +118,7 @@ export function useCheckoutCurrencyReprice(
 
         const search = useSearchStore.getState();
         if (search.status === "error") {
-          setPriceRefreshError(search.error ?? "Failed to refresh price");
+          setPriceRefreshError(search.error ?? t("checkout.refreshFail"));
           return;
         }
 
@@ -127,16 +129,14 @@ export function useCheckoutCurrencyReprice(
 
         const hotel = useHotelStore.getState();
         if (hotel.status === "error") {
-          setPriceRefreshError(hotel.error ?? "Failed to load rates");
+          setPriceRefreshError(hotel.error ?? t("checkout.loadRatesFail"));
           return;
         }
 
         const groups = buildDisplayRoomGroups(hotel.roomsRates);
         const match = rematchCheckoutRate(groups, snapshot);
         if (!match) {
-          setPriceRefreshError(
-            "This room is unavailable in the selected currency. Go back and choose another rate."
-          );
+          setPriceRefreshError(t("checkout.roomUnavailable"));
           return;
         }
 
@@ -144,7 +144,7 @@ export function useCheckoutCurrencyReprice(
           .getState()
           .selectRecommendation(match.option.recommendationId);
         if (!selected) {
-          setPriceRefreshError("Could not select a rate for the new currency.");
+          setPriceRefreshError(t("checkout.rateSelectFail"));
           return;
         }
 
@@ -169,7 +169,7 @@ export function useCheckoutCurrencyReprice(
       } catch (err) {
         if (cancelled || requestId !== requestIdRef.current) return;
         setPriceRefreshError(
-          err instanceof Error ? err.message : "Failed to refresh price"
+          err instanceof Error ? err.message : t("checkout.refreshFail")
         );
       } finally {
         if (!cancelled && requestId === requestIdRef.current) {
@@ -190,6 +190,7 @@ export function useCheckoutCurrencyReprice(
     draft?.checkIn,
     draft?.checkOut,
     saveDraft,
+    t,
   ]);
 
   return { isRefreshingPrice, priceRefreshError };

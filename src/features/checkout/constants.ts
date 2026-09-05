@@ -1,4 +1,6 @@
 import type { RestSlot } from "@/lib/booking/types";
+import type { AppLanguage } from "@/lib/i18n/languages";
+import { translate } from "@/lib/i18n/messages";
 import {
   DEFAULT_PHONE_COUNTRY_CODE,
   PHONE_COUNTRY_CODES,
@@ -19,24 +21,25 @@ export const SLOT_WINDOW_LABELS: Record<RestSlot, string> = {
   "24h": "Full 24 hours",
 };
 
-export function getSlotWindowLabel(slot: RestSlot): string {
+export function getSlotWindowLabel(slot: RestSlot, language: AppLanguage = "en"): string {
+  if (slot === "24h") return translate(language, "common.full24");
   return SLOT_WINDOW_LABELS[slot];
 }
 
 export const PAYMENT_METHODS: {
   id: PaymentMethod;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
 }[] = [
   {
     id: "card",
-    label: "Credit / debit card",
-    description: "Visa, Mastercard, Amex, JCB, RuPay",
+    labelKey: "checkout.card",
+    descriptionKey: "checkout.cardDesc",
   },
   {
     id: "upi",
-    label: "UPI",
-    description: "Pay instantly with any UPI app",
+    labelKey: "checkout.upi",
+    descriptionKey: "checkout.upiDesc",
   },
 ];
 
@@ -57,8 +60,8 @@ export const UPI_HANDLE_SUGGESTIONS = [
   "@axl",
 ] as const;
 
-export const CHECKOUT_STEPS: { id: 1 | 2 | 3; label: string }[] = [
-  { id: 1, label: "Customer information" },
-  { id: 2, label: "Payment information" },
-  { id: 3, label: "Booking confirmed" },
+export const CHECKOUT_STEPS: { id: 1 | 2 | 3; labelKey: string }[] = [
+  { id: 1, labelKey: "checkout.customer" },
+  { id: 2, labelKey: "checkout.payment" },
+  { id: 3, labelKey: "checkout.confirmed" },
 ];

@@ -5,6 +5,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useLanguage } from "@/context/LanguageContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLockBodyScroll } from "@/lib/hooks/useLockBodyScroll";
 import { cn } from "@/lib/utils";
@@ -32,9 +33,10 @@ export function LocationSearchField({
   value,
   onChange,
   variant = "hero",
-  label = "Location",
+  label,
   lockPage = false,
 }: LocationSearchFieldProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   useLockBodyScroll(lockPage && open);
   const [query, setQuery] = useState("");
@@ -43,6 +45,7 @@ export function LocationSearchField({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debouncedQuery = useDebounce(query, 350);
+  const resolvedLabel = label === undefined ? t("common.location") : label;
 
   useEffect(() => {
     if (!open) return;
@@ -69,14 +72,14 @@ export function LocationSearchField({
         if (!cancelled) {
           setSuggestions([]);
           setLoading(false);
-          setError(err instanceof Error ? err.message : "Failed to load locations");
+          setError(err instanceof Error ? err.message : t("common.locationFail"));
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [debouncedQuery, open]);
+  }, [debouncedQuery, open, t]);
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
@@ -97,7 +100,7 @@ export function LocationSearchField({
   };
 
   const trimmedQuery = query.trim();
-  const showLabel = Boolean(label);
+  const showLabel = Boolean(resolvedLabel);
 
   return (
     <Popover modal={lockPage} open={open} onOpenChange={handleOpenChange}>
@@ -114,7 +117,7 @@ export function LocationSearchField({
           {showLabel ? (
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <MapPin className="size-3.5 shrink-0" />
-              {label}
+              {resolvedLabel}
             </span>
           ) : (
             <MapPin className="size-4 shrink-0 text-muted-foreground" />
@@ -128,7 +131,7 @@ export function LocationSearchField({
                 : "font-medium text-muted-foreground"
             )}
           >
-            {value?.label || value?.city || "Where to?"}
+            {value?.label || value?.city || t("common.whereTo")}
           </span>
         </button>
       </PopoverTrigger>
@@ -149,7 +152,7 @@ export function LocationSearchField({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Type at least 3 characters..."
+              placeholder={t("common.locationHint")}
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             {loading && (
@@ -161,7 +164,7 @@ export function LocationSearchField({
         <ul className="max-h-64 overflow-y-auto p-1">
           {trimmedQuery.length < MIN_QUERY_LENGTH && (
             <li className="p-3 text-center text-sm text-muted-foreground">
-              Type at least {MIN_QUERY_LENGTH} characters to search locations.
+              {t("common.locationMinChars", { n: MIN_QUERY_LENGTH })}
             </li>
           )}
 
@@ -174,7 +177,7 @@ export function LocationSearchField({
             !loading &&
             suggestions.length === 0 && (
               <li className="px-3 py-6 text-center text-sm text-muted-foreground">
-                No locations found. Try a different spelling.
+                {t("common.noLocations")}
               </li>
             )}
 

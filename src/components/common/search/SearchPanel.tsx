@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { addMonths, startOfDay } from "date-fns";
+import { enUS, id as localeId } from "date-fns/locale";
 import {
   CalendarDays,
   ChevronDown,
@@ -22,6 +23,7 @@ import {
   parseOccupancyLabel,
   type OccupancySelection,
 } from "@/components/common/OccupancyPicker";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   getAvailableSlots,
   resolveSlotSelection,
@@ -88,8 +90,10 @@ function DateField({
   disabled?: { before: Date; after?: Date };
   variant: SearchPanelVariant;
 }) {
+  const { language } = useLanguage();
+  const dateFnsLocale = language === "id" ? localeId : enUS;
   const [open, setOpen] = useState(false);
-  const isPlaceholder = value === "Add date";
+  const isPlaceholder = !selected;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -127,6 +131,7 @@ function DateField({
             setOpen(false);
           }}
           disabled={disabled}
+          locale={dateFnsLocale}
         />
       </PopoverContent>
     </Popover>
@@ -144,12 +149,19 @@ function StayDateRangeField({
   onChange: (range: { checkIn?: Date; checkOut?: Date }) => void;
   variant: SearchPanelVariant;
 }) {
+  const { t, language } = useLanguage();
+  const localeCode = language === "id" ? "id-ID" : "en-GB";
+  const dateOpts: Intl.DateTimeFormatOptions = {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  };
   const label =
     checkIn && checkOut
-      ? `${checkIn.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })} - ${checkOut.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}`
+      ? `${checkIn.toLocaleDateString(localeCode, dateOpts)} - ${checkOut.toLocaleDateString(localeCode, dateOpts)}`
       : checkIn
-        ? `${checkIn.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })} - Add checkout`
-        : "Add dates";
+        ? `${checkIn.toLocaleDateString(localeCode, dateOpts)} - ${t("common.addCheckout")}`
+        : t("common.addDates");
 
   return (
     <BookingDateRangeCalendar
@@ -167,7 +179,7 @@ function StayDateRangeField({
         >
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <CalendarDays className="size-3.5" />
-            Dates
+            {t("common.dates")}
           </span>
           <span
             className={cn(
@@ -188,7 +200,7 @@ function StayDateRangeField({
 
 export function SearchPanel({
   variant = "hero",
-  submitLabel = "Search",
+  submitLabel,
   initialLocation,
   initialMode,
   initialCheckIn,
@@ -198,6 +210,8 @@ export function SearchPanel({
   initialGuests,
   onSubmit,
 }: SearchPanelProps) {
+  const { t, language } = useLanguage();
+  const localeCode = language === "id" ? "id-ID" : "en-GB";
   const [location, setLocation] = useState<LocationSuggestion | null>(() =>
     resolveLocation(initialLocation),
   );
@@ -217,7 +231,8 @@ export function SearchPanel({
 
   const isHero = variant === "hero";
   const isLanding = variant === "landing";
-  const locationLabel = isHero || isLanding ? "Location" : "Where";
+  const locationLabel = isHero || isLanding ? t("common.location") : t("common.where");
+  const resolvedSubmitLabel = submitLabel ?? t("common.search");
   const isRest = mode === "rest";
   const searchTimezone = getTimezoneForCity(
     location?.city ?? "",
@@ -250,35 +265,33 @@ export function SearchPanel({
 
   const formatDate = (date?: Date) =>
     date
-      ? date.toLocaleDateString(undefined, {
+      ? date.toLocaleDateString(localeCode, {
           day: "2-digit",
           month: "short",
           year: "numeric",
         })
-      : "Add date";
+      : t("common.addDate");
 
   const handleSubmit = async () => {
     if (isLoading) return;
 
     if (!location || !(location.city || location.label).trim()) {
-      setFormError("Please select a location");
+      setFormError(t("err.location"));
       return;
     }
     if (occupancy.adults < 1) {
-      setFormError("Please add guests");
+      setFormError(t("err.guests"));
       return;
     }
 
     if (isRest) {
       if (!restDate) {
-        setFormError("Please select a rest date");
+        setFormError(t("err.restDate"));
         return;
       }
       const available = getAvailableSlots(restDate, searchTimezone);
       if (available.length === 0) {
-        setSlotError(
-          "No bookable slots on this date. Please choose another day.",
-        );
+        setSlotError(t("err.noSlots"));
         return;
       }
       const resolved = resolveSlotSelection(slot, restDate, searchTimezone);
@@ -290,11 +303,11 @@ export function SearchPanel({
       setSlotError(null);
     } else {
       if (!checkIn || !checkOut) {
-        setFormError("Please select check-in and check-out dates");
+        setFormError(t("err.dates"));
         return;
       }
       if (checkOut <= checkIn) {
-        setFormError("Check-out must be after check-in");
+        setFormError(t("err.checkoutAfter"));
         return;
       }
     }
@@ -307,7 +320,7 @@ export function SearchPanel({
         onSubmit({
           location,
           mode,
-          guests: formatOccupancyLabel(occupancy),
+          guests: formatOccupancyLabel(occupancy, t),
           rooms: occupancy.rooms,
           adults: occupancy.adults,
           children: occupancy.children,
@@ -336,7 +349,7 @@ export function SearchPanel({
       >
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Users className="size-3.5" />
-          People
+          {t("common.people")}
         </span>
         <span
           className={cn(
@@ -345,7 +358,7 @@ export function SearchPanel({
             "font-semibold text-foreground",
           )}
         >
-          <span className="truncate">{formatOccupancyLabel(occupancy)}</span>
+          <span className="truncate">{formatOccupancyLabel(occupancy, t)}</span>
           <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
         </span>
       </button>
@@ -393,7 +406,7 @@ export function SearchPanel({
         {isRest ? (
           <>
             <DateField
-              label="Date"
+              label={t("common.date")}
               value={formatDate(restDate)}
               selected={restDate}
               onSelect={(date) => {
@@ -469,7 +482,7 @@ export function SearchPanel({
           ) : !isHero && !isLanding ? (
             <Search className="mr-2 size-4" />
           ) : null}
-          {isLoading ? "Searching..." : submitLabel}
+          {isLoading ? t("common.searching") : resolvedSubmitLabel}
         </Button>
       </div>
       {formError && (

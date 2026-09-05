@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface PasswordStrengthMeterProps {
   password: string;
@@ -14,14 +15,21 @@ function scorePassword(password: string): number {
   return Math.min(score, 4);
 }
 
-const LABELS = ["Too weak", "Weak", "Fair", "Good", "Strong"] as const;
+const STRENGTH_KEYS = [
+  "auth.weak",
+  "auth.strength.weak",
+  "auth.fair",
+  "auth.good",
+  "auth.strong",
+] as const;
 const COLORS = ["bg-red-400", "bg-orange-400", "bg-amber-400", "bg-lime-500", "bg-emerald-500"];
 
 export function PasswordStrengthMeter({ password }: PasswordStrengthMeterProps) {
+  const { t } = useLanguage();
   if (!password) return null;
 
   const score = scorePassword(password);
-  const label = LABELS[score];
+  const label = t(STRENGTH_KEYS[score]);
 
   return (
     <div className="mt-2" aria-live="polite">
@@ -36,7 +44,7 @@ export function PasswordStrengthMeter({ password }: PasswordStrengthMeterProps) 
           />
         ))}
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">Password strength: {label}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{t("auth.passwordStrength", { label })}</p>
     </div>
   );
 }

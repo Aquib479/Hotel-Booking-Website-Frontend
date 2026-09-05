@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { HotelInfo } from "../types";
 import type { BookingLane } from "@/lib/booking/types";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface HotelInfoCardProps {
   hotel: HotelInfo;
@@ -12,6 +13,7 @@ interface HotelInfoCardProps {
 }
 
 export function HotelInfoCard({ hotel, lane }: HotelInfoCardProps) {
+  const { t } = useLanguage();
   return (
     <Card padding="none">
       <CardImageRow
@@ -33,8 +35,8 @@ export function HotelInfoCard({ hotel, lane }: HotelInfoCardProps) {
         <LaneBadge lane={lane} />
         <p className="line-clamp-2 font-semibold leading-snug text-foreground">{hotel.name}</p>
         <p className="text-sm text-muted-foreground">
-          {hotel.starRating}-star hotel
-          {hotel.supplierName && lane === "wholesale" && ` · via ${hotel.supplierName}`}
+          {t("search.starHotel", { n: hotel.starRating })}
+          {hotel.supplierName && lane === "wholesale" && ` · ${t("hotel.viaSupplier", { name: hotel.supplierName })}`}
         </p>
       </CardImageRow>
 

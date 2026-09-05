@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface SearchPaginationProps {
   page: number;
@@ -30,6 +31,7 @@ export function SearchPagination({
   onPageChange,
   onPerPageChange,
 }: SearchPaginationProps) {
+  const { t } = useLanguage();
   const pages = getPageNumbers(page, totalPages);
 
   return (
@@ -39,7 +41,7 @@ export function SearchPagination({
           type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          aria-label="Previous page"
+          aria-label={t("search.prevPage")}
           className="flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted disabled:opacity-40"
         >
           <ChevronLeft className="size-4" />
@@ -71,7 +73,7 @@ export function SearchPagination({
           type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          aria-label="Next page"
+          aria-label={t("search.nextPage")}
           className="flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted disabled:opacity-40"
         >
           <ChevronRight className="size-4" />
@@ -79,7 +81,7 @@ export function SearchPagination({
       </div>
 
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>Show:</span>
+        <span>{t("search.show")}</span>
         <Select value={String(perPage)} onValueChange={(v) => onPerPageChange(Number(v))}>
           <SelectTrigger className="h-9 w-16 border-border bg-white">
             <SelectValue />

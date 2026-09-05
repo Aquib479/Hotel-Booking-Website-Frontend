@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { useLanguage } from "@/context/LanguageContext";
 import { CANCEL_REASONS, SUPPORT_CONTACT_HREF } from "../constants";
 import type { CancelReasonId } from "../types";
 
@@ -20,15 +21,14 @@ export function CancelReasonStep({
   onSelect,
   onDetailChange,
 }: CancelReasonStepProps) {
+  const { t } = useLanguage();
   const selectedConfig = CANCEL_REASONS.find((r) => r.id === selected);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-foreground">Why are you cancelling?</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          This helps us improve — your refund amount will be shown on the next step.
-        </p>
+        <h1 className="text-xl font-bold text-foreground">{t("bookings.whyCancel")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("bookings.whyCancelHint")}</p>
       </div>
 
       <RadioGroup
@@ -48,7 +48,7 @@ export function CancelReasonStep({
             )}
           >
             <RadioGroupItem id={`cancel-reason-${option.id}`} value={option.id} />
-            <span className="text-sm font-medium text-foreground">{option.label}</span>
+            <span className="text-sm font-medium text-foreground">{t(option.labelKey)}</span>
           </Label>
         ))}
       </RadioGroup>
@@ -56,18 +56,17 @@ export function CancelReasonStep({
       {selectedConfig?.escalatesToSupport && (
         <Alert className="border-amber-200 bg-amber-50 text-amber-900">
           <AlertDescription>
-            We&apos;re sorry to hear that — you may want to{" "}
+            {t("bookings.hotelIssueHint")}{" "}
             <a href={SUPPORT_CONTACT_HREF} className="font-medium underline">
-              contact support
-            </a>{" "}
-            first. They may be able to help without cancelling.
+              {t("bookings.contactSupport")}
+            </a>
           </AlertDescription>
         </Alert>
       )}
 
       {(selected === "other" || selected === "hotel_issue") && (
         <FormField
-          label="Additional details"
+          label={t("bookings.moreDetails")}
           htmlFor="cancel-reason-detail"
           optional={selected === "hotel_issue"}
           required={selected === "other"}
@@ -77,7 +76,7 @@ export function CancelReasonStep({
             rows={3}
             value={reasonDetail}
             onChange={(e) => onDetailChange(e.target.value)}
-            placeholder="Tell us a bit more…"
+            placeholder={t("bookings.moreDetailsPh")}
           />
         </FormField>
       )}

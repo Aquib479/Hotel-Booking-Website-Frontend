@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { User } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/features/auth/context/AuthProvider";
+import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 import { AccountMenuNav } from "@/features/account/components/AccountMenuNav";
 
@@ -11,6 +12,7 @@ interface AccountMenuButtonProps {
 }
 
 export function AccountMenuButton({ isOverlay = false }: AccountMenuButtonProps) {
+  const { t } = useLanguage();
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -19,14 +21,14 @@ export function AccountMenuButton({ isOverlay = false }: AccountMenuButtonProps)
     return (
       <Link
         to="/login"
-        aria-label="Log in"
+        aria-label={t("auth.menuLogin")}
         className={cn(
           "flex size-8 items-center justify-center rounded-full border transition-colors",
           isOverlay
             ? "border-white/35 bg-white/10 text-white hover:bg-white/20"
             : "border-border bg-muted text-muted-foreground hover:text-foreground"
         )}
-        title="Log in"
+        title={t("auth.menuLogin")}
       >
         <User className="size-5" />
       </Link>
@@ -36,8 +38,8 @@ export function AccountMenuButton({ isOverlay = false }: AccountMenuButtonProps)
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        aria-label="Account menu"
-        title={user?.fullName ?? "Account"}
+        aria-label={t("auth.accountMenu")}
+        title={user?.fullName ?? t("account.account")}
         className={cn(
           "flex size-8 items-center justify-center rounded-full border transition-colors",
           isOverlay
@@ -68,7 +70,7 @@ export function AccountMenuButton({ isOverlay = false }: AccountMenuButtonProps)
             navigate("/account");
           }}
         >
-          Open account settings
+          {t("account.openSettings")}
         </button>
       </PopoverContent>
     </Popover>

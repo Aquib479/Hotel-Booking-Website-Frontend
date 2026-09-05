@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth/context/AuthProvider";
+import { useLanguage } from "@/context/LanguageContext";
 import { ACCOUNT_MENU_ITEMS } from "../constants/menu";
 import type { AccountSection } from "../types";
 import { ACCOUNT_SECTIONS } from "../constants";
@@ -14,12 +15,22 @@ interface AccountMenuNavProps {
   onNavigate?: () => void;
 }
 
+function menuItemI18nId(id: string): string {
+  const mapped: Record<string, string> = {
+    "list-property": "listProperty",
+    "rate-app": "rateApp",
+    "sign-out": "signOut",
+  };
+  return mapped[id] ?? id;
+}
+
 export function AccountMenuNav({
   activeSection,
   onSectionChange,
   variant = "sidebar",
   onNavigate,
 }: AccountMenuNavProps) {
+  const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, logout } = useAuth();
@@ -33,7 +44,7 @@ export function AccountMenuNav({
   };
 
   return (
-    <nav aria-label="Account menu">
+    <nav aria-label={t("auth.accountMenu")}>
       <ul className={cn("flex flex-col gap-0.5", isPopover && "gap-0")}>
         {ACCOUNT_MENU_ITEMS.map((item) => {
           if (item.action === "sign-out") {
@@ -49,7 +60,7 @@ export function AccountMenuNav({
                   )}
                 >
                   <item.icon className="size-4 shrink-0 opacity-70" aria-hidden />
-                  {item.label}
+                  {t(`account.${menuItemI18nId(item.id)}`)}
                 </button>
               </li>
             );
@@ -78,7 +89,7 @@ export function AccountMenuNav({
                 aria-current={isActive ? "page" : undefined}
               >
                 <item.icon className="size-4 shrink-0 opacity-70" aria-hidden />
-                {item.label}
+                {t(`account.${menuItemI18nId(item.id)}`)}
               </Link>
 
               {item.id === "account" && isAccountPage && onSectionChange && (
@@ -99,7 +110,7 @@ export function AccountMenuNav({
                         )}
                         aria-current={activeSection === section.id ? "page" : undefined}
                       >
-                        {section.label}
+                        {t(`account.section.${section.id}`)}
                       </button>
                     </li>
                   ))}

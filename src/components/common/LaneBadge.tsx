@@ -1,16 +1,14 @@
 import type { BookingLane } from "@/lib/booking/types";
+import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 
-const LANE_STYLES: Record<
-  BookingLane,
-  { label: string; className: string }
-> = {
+const LANE_STYLES: Record<BookingLane, { labelKey: string; className: string }> = {
   direct: {
-    label: "RestHalf Exclusive",
+    labelKey: "common.exclusive",
     className: "bg-brand/15 text-brand",
   },
   wholesale: {
-    label: "Partner rate",
+    labelKey: "common.partnerRate",
     className: "bg-slate-100 text-slate-600",
   },
 };
@@ -22,6 +20,7 @@ interface LaneBadgeProps {
 
 /** Single source of truth for lane labels/colors — used on cards, detail, checkout */
 export function LaneBadge({ lane, className }: LaneBadgeProps) {
+  const { t } = useLanguage();
   const config = LANE_STYLES[lane];
 
   return (
@@ -32,7 +31,7 @@ export function LaneBadge({ lane, className }: LaneBadgeProps) {
         className
       )}
     >
-      {config.label}
+      {t(config.labelKey)}
     </span>
   );
 }
