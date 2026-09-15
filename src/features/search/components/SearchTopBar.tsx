@@ -1,4 +1,5 @@
 import { SearchPanel } from "@/components/common/search";
+import { toLocationSuggestion } from "@/components/common/search/location-api";
 import type { SearchQuery } from "../types";
 
 interface SearchTopBarProps {
@@ -13,7 +14,11 @@ export function SearchTopBar({ query, onSearch }: SearchTopBarProps) {
         <SearchPanel
           variant="page"
           submitLabel="Update Search"
-          initialLocation={query.location}
+          initialLocation={toLocationSuggestion(
+            query.location,
+            query.destinationId,
+            query.country,
+          )}
           initialMode={query.mode}
           initialCheckIn={query.checkIn}
           initialCheckOut={query.checkOut}
@@ -23,6 +28,8 @@ export function SearchTopBar({ query, onSearch }: SearchTopBarProps) {
           onSubmit={(values) =>
             onSearch({
               location: values.location.city,
+              destinationId: values.location.destinationId,
+              country: values.location.country,
               mode: values.mode,
               checkIn: values.checkIn,
               checkOut: values.checkOut,

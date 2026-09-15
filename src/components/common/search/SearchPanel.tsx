@@ -45,7 +45,11 @@ const fieldStyles: Record<SearchPanelVariant, string> = {
 function resolveLocation(initial?: string | LocationSuggestion): LocationSuggestion {
   if (!initial) return DEFAULT_LOCATION;
   if (typeof initial === "string") return toLocationSuggestion(initial);
-  return initial;
+  return {
+    ...initial,
+    destinationId: initial.destinationId,
+    label: initial.label || [initial.city, initial.country].filter(Boolean).join(", "),
+  };
 }
 
 function DateField({

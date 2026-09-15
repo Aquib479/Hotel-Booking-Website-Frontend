@@ -1,35 +1,20 @@
 import type { LocationSuggestion, SearchFormValues } from "./types";
+import { api } from "@/services/api";
 
-interface NominatimAddress {
-  city?: string;
-  town?: string;
-  village?: string;
-  state?: string;
-  region?: string;
-  country?: string;
-}
+type DestinationAutocompleteItem = {
+  id: string;
+  cityName: string;
+  countryName: string;
+  label: string;
+};
 
-interface NominatimResult {
-  place_id: number;
-  name?: string;
-  display_name: string;
-  address?: NominatimAddress;
-}
-
-const FALLBACK_LOCATIONS: LocationSuggestion[] = [
-  { id: "fb-bangalore", city: "Bangalore", state: "Karnataka", country: "India", label: "Bangalore, Karnataka, India" },
-  { id: "fb-mumbai", city: "Mumbai", state: "Maharashtra", country: "India", label: "Mumbai, Maharashtra, India" },
-  { id: "fb-delhi", city: "New Delhi", state: "Delhi", country: "India", label: "New Delhi, Delhi, India" },
-  { id: "fb-toronto", city: "Toronto", state: "Ontario", country: "Canada", label: "Toronto, Ontario, Canada" },
-  { id: "fb-london", city: "London", state: "England", country: "United Kingdom", label: "London, England, United Kingdom" },
-  { id: "fb-paris", city: "Paris", state: "Île-de-France", country: "France", label: "Paris, Île-de-France, France" },
-  { id: "fb-tokyo", city: "Tokyo", state: "Tokyo", country: "Japan", label: "Tokyo, Tokyo, Japan" },
-  { id: "fb-new-york", city: "New York", state: "New York", country: "United States", label: "New York, New York, United States" },
-  { id: "fb-dubai", city: "Dubai", state: "Dubai", country: "United Arab Emirates", label: "Dubai, Dubai, United Arab Emirates" },
-  { id: "fb-sydney", city: "Sydney", state: "New South Wales", country: "Australia", label: "Sydney, New South Wales, Australia" },
-  { id: "fb-zurich", city: "Zurich", state: "Zurich", country: "Switzerland", label: "Zurich, Zurich, Switzerland" },
-  { id: "fb-maldives", city: "Malé", state: "Kaafu Atoll", country: "Maldives", label: "Malé, Kaafu Atoll, Maldives" },
-];
+/** Sensible default until user picks from autocomplete (no destinationId yet). */
+export const DEFAULT_LOCATION: LocationSuggestion = {
+  id: "default-jakarta",
+  city: "Jakarta",
+  country: "Indonesia",
+  label: "Jakarta, Indonesia",
+};
 
 export const GUEST_OPTIONS = [
   "1 adult",
@@ -39,22 +24,22 @@ export const GUEST_OPTIONS = [
   "3+ adults",
 ] as const;
 
-export const DEFAULT_LOCATION: LocationSuggestion = FALLBACK_LOCATIONS[0];
-
-export function toLocationSuggestion(city: string): LocationSuggestion {
-  const match = FALLBACK_LOCATIONS.find(
-    (loc) =>
-      loc.city.toLowerCase() === city.toLowerCase() ||
-      loc.label.toLowerCase().includes(city.toLowerCase())
-  );
-
-  if (match) return match;
+export function toLocationSuggestion(
+  city: string,
+  destinationId?: string | null,
+  country?: string | null,
+): LocationSuggestion {
+  const trimmed = city.trim();
+  if (!trimmed && !destinationId) return DEFAULT_LOCATION;
 
   return {
-    id: `query-${city}`,
-    city,
-    country: "",
-    label: city,
+    id: destinationId || `query-${trimmed}`,
+    destinationId: destinationId || undefined,
+    city: trimmed || DEFAULT_LOCATION.city,
+    country: country?.trim() || "",
+    label: country?.trim()
+      ? `${trimmed}, ${country.trim()}`
+      : trimmed || DEFAULT_LOCATION.label,
   };
 }
 
@@ -64,6 +49,13 @@ export function buildSearchParams(values: SearchFormValues): URLSearchParams {
     guests: values.guests,
     mode: values.mode,
   };
+
+  if (values.location.destinationId) {
+    params.destinationId = values.location.destinationId;
+  }
+  if (values.location.country) {
+    params.country = values.location.country;
+  }
 
   if (values.mode === "stay") {
     if (values.checkIn) params.checkIn = values.checkIn.toISOString();
@@ -76,78 +68,35 @@ export function buildSearchParams(values: SearchFormValues): URLSearchParams {
   return new URLSearchParams(params);
 }
 
-function formatSuggestion(result: NominatimResult): LocationSuggestion | null {
-  const address = result.address;
-  if (!address?.country) return null;
-
-  const city =
-    address.city ??
-    address.town ??
-    address.village ??
-    result.name ??
-    result.display_name.split(",")[0]?.trim();
-
-  if (!city) return null;
-
-  const state = address.state ?? address.region;
-  const country = address.country;
-  const label = [city, state, country].filter(Boolean).join(", ");
-
-  return { id: String(result.place_id), city, state, country, label };
+function mapAutocompleteItem(
+  item: DestinationAutocompleteItem,
+): LocationSuggestion {
+  return {
+    id: item.id,
+    destinationId: item.id,
+    city: item.cityName,
+    country: item.countryName,
+    label: item.label,
+  };
 }
 
-function filterFallback(query: string): LocationSuggestion[] {
-  const q = query.trim().toLowerCase();
-  if (q.length < 2) return [];
-
-  return FALLBACK_LOCATIONS.filter(
-    (loc) =>
-      loc.city.toLowerCase().includes(q) ||
-      loc.state?.toLowerCase().includes(q) ||
-      loc.country.toLowerCase().includes(q) ||
-      loc.label.toLowerCase().includes(q)
-  );
-}
-
-export async function searchLocations(query: string): Promise<LocationSuggestion[]> {
+/** Debounced callers should use React Query; this is the fetch function. */
+export async function searchLocations(
+  query: string,
+): Promise<LocationSuggestion[]> {
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
-
-  const fallback = filterFallback(trimmed);
 
   try {
     const params = new URLSearchParams({
       q: trimmed,
-      format: "json",
-      addressdetails: "1",
-      limit: "8",
+      limit: "20",
     });
-
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?${params.toString()}`,
-      { headers: { "Accept-Language": "en" } }
+    const results = await api.get<DestinationAutocompleteItem[]>(
+      `/destinations/autocomplete?${params.toString()}`,
     );
-
-    if (!response.ok) return fallback;
-
-    const data = (await response.json()) as NominatimResult[];
-    const remote = data
-      .map(formatSuggestion)
-      .filter((item): item is LocationSuggestion => item !== null);
-
-    const seen = new Set<string>();
-    const merged: LocationSuggestion[] = [];
-
-    for (const item of [...fallback, ...remote]) {
-      const key = item.label.toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
-        merged.push(item);
-      }
-    }
-
-    return merged.slice(0, 8);
+    return results.map(mapAutocompleteItem);
   } catch {
-    return fallback;
+    return [];
   }
 }

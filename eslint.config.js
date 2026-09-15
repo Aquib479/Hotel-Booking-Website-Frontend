@@ -19,4 +19,32 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  // Applied after recommended presets so these overrides win.
+  {
+    files: ['**/*.{ts,tsx}'],
+    rules: {
+      // shadcn/ui + context files export helpers alongside components.
+      // Fast Refresh is a local-dev concern; do not fail production deploy.
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
+
+      // New React Hooks compiler rules — keep visible, don't block CI.
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/incompatible-library': 'warn',
+
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
 ])

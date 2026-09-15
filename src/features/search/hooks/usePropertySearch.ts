@@ -160,7 +160,9 @@ export function usePropertySearch() {
 
   const query: SearchQuery = useMemo(
     () => ({
-      location: searchParams.get("location") ?? "Bangalore",
+      location: searchParams.get("location") ?? "Jakarta",
+      destinationId: searchParams.get("destinationId") ?? undefined,
+      country: searchParams.get("country") ?? undefined,
       mode: (searchParams.get("mode") as SearchQuery["mode"]) ?? "stay",
       checkIn: parseDate(searchParams.get("checkIn")),
       checkOut: parseDate(searchParams.get("checkOut")),
@@ -271,6 +273,14 @@ export function usePropertySearch() {
       const mode = next.mode ?? query.mode;
       const updates: Record<string, string | null> = {
         location: next.location ?? query.location,
+        destinationId:
+          next.destinationId !== undefined
+            ? next.destinationId || null
+            : query.destinationId ?? null,
+        country:
+          next.country !== undefined
+            ? next.country || null
+            : query.country ?? null,
         guests: next.guests ?? query.guests,
         mode,
         page: "1",

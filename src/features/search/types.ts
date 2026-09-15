@@ -53,6 +53,9 @@ export interface Property {
 
 export interface SearchQuery {
   location: string;
+  /** Local destination master id for bedbank code resolution */
+  destinationId?: string;
+  country?: string;
   mode: BookingMode;
   checkIn?: Date;
   checkOut?: Date;
