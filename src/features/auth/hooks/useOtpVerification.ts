@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAbsoluteCountdown } from "@/lib/hooks/useAbsoluteCountdown";
+import { useLanguage } from "@/context/LanguageContext";
 import { OTP_LENGTH, OTP_RESEND_COOLDOWN_SECONDS } from "../constants";
 import { sendOtp, verifyOtp as apiVerifyOtp } from "../api";
 
 export function useOtpVerification(phoneE164: string) {
+  const { t } = useLanguage();
   const [digits, setDigits] = useState<string[]>(() => Array(OTP_LENGTH).fill(""));
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +39,7 @@ export function useOtpVerification(phoneE164: string) {
     async (overrideCode?: string) => {
       const attempt = overrideCode ?? code;
       if (attempt.length !== OTP_LENGTH) {
-        setError("Enter the full 6-digit code");
+        setError(t("auth.otpFull"));
         return false;
       }
       setIsVerifying(true);
@@ -45,7 +47,7 @@ export function useOtpVerification(phoneE164: string) {
       try {
         const ok = await apiVerifyOtp(phoneE164, attempt);
         if (!ok) {
-          setError("Incorrect or expired code. Try again.");
+          setError(t("auth.otpWrong"));
           return false;
         }
         return true;
@@ -53,7 +55,7 @@ export function useOtpVerification(phoneE164: string) {
         setIsVerifying(false);
       }
     },
-    [code, phoneE164]
+    [code, phoneE164, t]
   );
 
   const resend = useCallback(async () => {

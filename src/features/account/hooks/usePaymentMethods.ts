@@ -33,23 +33,19 @@ export function usePaymentMethods() {
     [user, methods]
   );
 
-  const setDefault = useCallback(
-    (id: string) => {
-      if (!user) return;
-      const next = methods.map((m) => ({ ...m, isDefault: m.id === id }));
-      setMethods(next);
-      persistPaymentMethods(user.id, next);
-    },
-    [user, methods]
-  );
-
   const addMethod = useCallback(
     (method: Omit<SavedPaymentMethod, "id">) => {
       if (!user) return;
+      const duplicate = methods.find(
+        (m) =>
+          m.type === method.type &&
+          m.maskedIdentifier === method.maskedIdentifier &&
+          m.expiry === method.expiry
+      );
+      if (duplicate) return;
       const entry: SavedPaymentMethod = {
         ...method,
         id: crypto.randomUUID(),
-        isDefault: methods.length === 0,
       };
       const next = [...methods, entry];
       setMethods(next);
@@ -58,5 +54,5 @@ export function usePaymentMethods() {
     [user, methods]
   );
 
-  return { methods, isLoading, addMethod, removeMethod, setDefault, reload: load };
+  return { methods, isLoading, addMethod, removeMethod, reload: load };
 }

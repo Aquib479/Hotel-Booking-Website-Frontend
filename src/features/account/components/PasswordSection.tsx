@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PasswordStrengthMeter } from "@/features/auth/components/PasswordStrengthMeter";
+import { useLanguage } from "@/context/LanguageContext";
 import { FormAlert, FormField } from "@/components/common/form";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ interface PasswordSectionProps {
 }
 
 export function PasswordSection({ hasPassword, isSaving, onSubmit }: PasswordSectionProps) {
+  const { t } = useLanguage();
   const [current, setCurrent] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -23,7 +25,7 @@ export function PasswordSection({ hasPassword, isSaving, onSubmit }: PasswordSec
     setError(null);
     setSuccess(false);
     if (newPassword !== confirm) {
-      setError("Passwords don't match");
+      setError(t("account.passwordMismatch"));
       return;
     }
     const result = await onSubmit(current, newPassword);
@@ -33,22 +35,24 @@ export function PasswordSection({ hasPassword, isSaving, onSubmit }: PasswordSec
       setNewPassword("");
       setConfirm("");
     } else {
-      setError(result.error ?? "Couldn't update password");
+      setError(
+        result.error === "Password must be at least 8 characters"
+          ? t("auth.err.passwordMin")
+          : t("account.passwordUpdateFail")
+      );
     }
   };
 
   return (
     <SectionCard
-      title={hasPassword ? "Change password" : "Set a password"}
+      title={hasPassword ? t("account.changePassword") : t("account.setPassword")}
       description={
-        hasPassword
-          ? "Update your password for email or phone login"
-          : "You signed in with Google — add a password to log in without social auth"
+        hasPassword ? t("account.changePasswordHint") : t("account.setPasswordHint")
       }
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         {hasPassword && (
-          <FormField label="Current password" htmlFor="current-password">
+          <FormField label={t("account.currentPassword")} htmlFor="current-password">
             <Input
               id="current-password"
               type="password"
@@ -58,7 +62,7 @@ export function PasswordSection({ hasPassword, isSaving, onSubmit }: PasswordSec
             />
           </FormField>
         )}
-        <FormField label="New password" htmlFor="new-password">
+        <FormField label={t("account.newPassword")} htmlFor="new-password">
           <Input
             id="new-password"
             type="password"
@@ -69,9 +73,9 @@ export function PasswordSection({ hasPassword, isSaving, onSubmit }: PasswordSec
           <PasswordStrengthMeter password={newPassword} />
         </FormField>
         <FormField
-          label="Confirm new password"
+          label={t("account.confirmPassword")}
           htmlFor="confirm-password"
-          error={confirm && newPassword !== confirm ? "Passwords don't match" : undefined}
+          error={confirm && newPassword !== confirm ? t("account.passwordMismatch") : undefined}
         >
           <Input
             id="confirm-password"
@@ -84,14 +88,22 @@ export function PasswordSection({ hasPassword, isSaving, onSubmit }: PasswordSec
         </FormField>
         {error && <FormAlert message={error} />}
         {success && (
-          <FormAlert variant="success" title="Password updated" message="Your password has been saved." />
+          <FormAlert
+            variant="success"
+            title={t("account.passwordUpdated")}
+            message={t("account.passwordUpdatedHint")}
+          />
         )}
         <Button
           type="submit"
           variant="brand"
           disabled={isSaving || !newPassword || newPassword !== confirm}
         >
-          {isSaving ? "Saving…" : hasPassword ? "Update password" : "Set password"}
+          {isSaving
+            ? t("common.saving")
+            : hasPassword
+              ? t("account.updatePassword")
+              : t("account.setPasswordBtn")}
         </Button>
       </form>
     </SectionCard>

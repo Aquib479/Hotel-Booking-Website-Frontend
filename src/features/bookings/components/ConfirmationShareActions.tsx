@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CalendarPlus, Share2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/context/LanguageContext";
 import type { BookingDetail } from "../types";
 import { downloadBookingCalendarEvent } from "../lib/calendarExport";
 
@@ -9,6 +10,7 @@ interface ConfirmationShareActionsProps {
 }
 
 export function ConfirmationShareActions({ booking }: ConfirmationShareActionsProps) {
+  const { t } = useLanguage();
   const detailHref = `/bookings/${booking.id}`;
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
@@ -16,8 +18,11 @@ export function ConfirmationShareActions({ booking }: ConfirmationShareActionsPr
     if (!canShare) return;
     try {
       await navigator.share({
-        title: `RestHalf booking — ${booking.hotelName}`,
-        text: `Booking ${booking.confirmationCode} at ${booking.hotelName}`,
+        title: t("bookings.shareTitle", { hotel: booking.hotelName }),
+        text: t("bookings.shareText", {
+          code: booking.confirmationCode,
+          hotel: booking.hotelName,
+        }),
         url: window.location.origin + detailHref,
       });
     } catch {
@@ -34,12 +39,12 @@ export function ConfirmationShareActions({ booking }: ConfirmationShareActionsPr
         onClick={() => downloadBookingCalendarEvent(booking)}
       >
         <CalendarPlus />
-        Add to calendar
+        {t("bookings.addCalendar")}
       </Button>
 
       <Button variant="brand" className="flex-1 sm:min-w-[160px] sm:flex-none" asChild>
         <Link to={detailHref}>
-          View booking details
+          {t("bookings.viewDetails")}
           <ArrowRight />
         </Link>
       </Button>
@@ -52,7 +57,7 @@ export function ConfirmationShareActions({ booking }: ConfirmationShareActionsPr
           onClick={() => void handleShare()}
         >
           <Share2 />
-          Share
+          {t("common.share")}
         </Button>
       )}
     </div>

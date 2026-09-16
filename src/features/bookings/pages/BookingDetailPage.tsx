@@ -16,8 +16,10 @@ import { BookingActionBar } from "../components/BookingActionBar";
 import { RefundStatusTracker } from "../components/RefundStatusTracker";
 import { BookingSupportPrompt } from "../components/BookingSupportPrompt";
 import { classifyBookingStatus } from "../utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function BookingDetailPage() {
+  const { language, t } = useLanguage();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const fromStatus = (location.state as { fromStatus?: BookingTabStatus } | null)?.fromStatus;
@@ -35,10 +37,8 @@ export function BookingDetailPage() {
   if (error === "network") {
     return (
       <main className="mx-auto max-w-lg px-6 py-16 text-center">
-        <h1 className="text-2xl font-bold text-foreground">Something went wrong</h1>
-        <p className="mt-3 text-muted-foreground">
-          We couldn&apos;t load this booking. Please try again.
-        </p>
+        <h1 className="text-2xl font-bold text-foreground">{t("common.somethingWrong")}</h1>
+        <p className="mt-3 text-muted-foreground">{t("bookings.loadFail")}</p>
       </main>
     );
   }
@@ -46,15 +46,15 @@ export function BookingDetailPage() {
   if (error === "not_found" || !booking || !eligibility) {
     return (
       <NoActiveDraftState
-        title="Booking not found"
-        body="We couldn't find this booking on your account. It may have been removed or you may not have access."
-        cta="Back to My Bookings"
+        title={t("bookings.notFound")}
+        body={t("bookings.notFoundBody")}
+        cta={t("bookings.back")}
         searchHref="/bookings"
       />
     );
   }
 
-  const banner = resolveStatusBannerMessage(booking);
+  const banner = resolveStatusBannerMessage(booking, new Date(), language);
   const status = classifyBookingStatus(booking);
   const showRefundTracker =
     status === "cancelled" &&

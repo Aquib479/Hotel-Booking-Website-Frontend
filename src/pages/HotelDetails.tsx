@@ -1,13 +1,19 @@
 import { useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { parseISO } from "date-fns";
 import type { RestSlot } from "@/lib/booking/types";
 import { supportsStayMode } from "@/lib/booking/availability";
-import { normalizeStayDates } from "@/lib/booking/stayDates";
 import { usePropertyDetail } from "@/features/property/hooks/usePropertyDetail";
 import { ImageGallery } from "@/features/property/components/ImageGallery";
 import { PropertyInfoHeader } from "@/features/property/components/PropertyInfoHeader";
+import { PropertyHighlights } from "@/features/property/components/PropertyHighlights";
+import { BestPriceCard } from "@/features/property/components/BestPriceCard";
 import { DetailTabs } from "@/features/property/components/DetailTabs";
 import {
   MessagesContent,
@@ -17,9 +23,23 @@ import {
 } from "@/features/property/components/PropertyTabContent";
 import { BookingSidebar } from "@/features/property/components/BookingSidebar";
 import { HotelInfoCard } from "@/features/property/components/HotelInfoCard";
-import { LocationMap } from "@/features/property/components/LocationMap";
+import { RoomsRatesPanel } from "@/features/property/components/RoomsRatesPanel";
+import { extractRatePolicies } from "@/features/property/utils/roomsRatesDisplay";
 import type { DetailTab } from "@/features/property/types";
 import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/context/CurrencyContext";
+import { formatPrice } from "@/lib/currency/format";
+import { toSupportedCurrency } from "@/lib/currency/pricing";
+import {
+  buildCheckoutDraft,
+  saveCheckoutDraftToStorage,
+} from "@/features/checkout";
+import {
+  useHotelStore,
+  useFavoritesStore,
+  type SelectedRateOption,
+} from "@/store";
+import { useLanguage } from "@/context/LanguageContext";
 
 function parseDateParam(value: string | null): Date | undefined {
   if (!value) return undefined;
@@ -27,44 +47,61 @@ function parseDateParam(value: string | null): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
+function scrollToId(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 export default function HotelDetails() {
+  const { t } = useLanguage();
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { currency } = useCurrency();
   const nightlyAmountRaw = searchParams.get("nightlyAmount");
   const nightlyAmount = nightlyAmountRaw ? Number(nightlyAmountRaw) : undefined;
-  const { property, isLoading, error } = usePropertyDetail(id, {
+  const { property, isLoading, error, isZentrum } = usePropertyDetail(id, {
     nightlyAmount:
-      nightlyAmount && Number.isFinite(nightlyAmount) ? nightlyAmount : undefined,
+      nightlyAmount != null && Number.isFinite(nightlyAmount)
+        ? nightlyAmount
+        : undefined,
     nightlyCurrency: searchParams.get("nightlyCurrency"),
     supplierName: searchParams.get("supplier"),
   });
+  const selected = useHotelStore((s) => s.selected);
+  const roomsRates = useHotelStore((s) => s.roomsRates);
+  const selectRecommendation = useHotelStore((s) => s.selectRecommendation);
+  const ratePolicies = extractRatePolicies(roomsRates);
+  const isFavorite = useFavoritesStore((s) =>
+    id ? Boolean(s.items[id]) : false,
+  );
+  const toggleFavorite = useFavoritesStore((s) => s.toggle);
 
   const [activeTab, setActiveTab] = useState<DetailTab>("details");
-  const [isSaved, setIsSaved] = useState(false);
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#fafafa]">
+      <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 bg-[#f7f7f8]">
         <Loader2 className="size-8 animate-spin text-brand" />
-        <p className="text-sm text-muted-foreground">Loading hotel details…</p>
+        <p className="text-sm text-muted-foreground">{t("hotel.loading")}</p>
       </div>
     );
   }
 
   if (!property || error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#fafafa]">
-        <p className="text-lg font-semibold">{error ?? "Hotel not found"}</p>
+      <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 bg-[#f7f7f8]">
+        <p className="text-lg font-semibold">{t(error ?? "hotel.notFound")}</p>
         <Button asChild>
-          <Link to="/search">Back to search</Link>
+          <Link to="/search">{t("hotel.backSearch")}</Link>
         </Button>
       </div>
     );
   }
 
   const rawMode = searchParams.get("mode") as "rest" | "stay" | null;
-  const mode: "rest" | "stay" =
-    property.lane === "wholesale"
+  const mode: "rest" | "stay" = isZentrum
+    ? "stay"
+    : property.lane === "wholesale"
       ? "stay"
       : property.slotDuration === "12h"
         ? "rest"
@@ -72,7 +109,8 @@ export default function HotelDetails() {
           ? "stay"
           : "rest";
 
-  const isDualMode = property.lane === "direct" && property.slotDuration === "24h";
+  const isDualMode =
+    !isZentrum && property.lane === "direct" && property.slotDuration === "24h";
 
   const handleModeChange = (next: "rest" | "stay") => {
     setSearchParams(
@@ -81,59 +119,127 @@ export default function HotelDetails() {
         params.set("mode", next);
         return params;
       },
-      { replace: true }
+      { replace: true },
     );
   };
 
-  const stay = normalizeStayDates(
-    parseDateParam(searchParams.get("checkIn")),
-    parseDateParam(searchParams.get("checkOut")),
-  );
-
   const initialBooking = {
-    checkIn: stay.checkIn,
-    checkOut: stay.checkOut,
+    checkIn: parseDateParam(searchParams.get("checkIn")),
+    checkOut: parseDateParam(searchParams.get("checkOut")),
     restDate: parseDateParam(searchParams.get("restDate")),
     slot: (searchParams.get("slot") as RestSlot) ?? undefined,
     guests: searchParams.get("guests") ?? undefined,
   };
 
-  return (
-    <div className="min-h-screen bg-[#fafafa]">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
-        {property.images.length > 0 && (
-          <ImageGallery
-            images={property.images}
-            photoCount={property.photoCount}
-            title={property.title}
-          />
-        )}
+  const selectedDisplayPrice = selected
+    ? formatPrice(
+        selected.totalRate,
+        toSupportedCurrency(selected.currency || currency)
+      )
+    : null;
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px] lg:items-start">
-          <div>
-            <PropertyInfoHeader
-              region={property.region}
-              title={property.displayTitle}
-              rating={property.rating}
-              reviewCount={property.reviewCount}
-              isSaved={isSaved}
-              onToggleSave={() => setIsSaved((v) => !v)}
+  const goToCheckout = (rate: SelectedRateOption) => {
+    const draft = buildCheckoutDraft({
+      propertyId: property.id,
+      lane: "wholesale",
+      mode: "stay",
+      currency,
+      hotelTimezone: property.timezone,
+      guestsLabel: searchParams.get("guests") ?? "2 adults",
+      checkIn: initialBooking.checkIn,
+      checkOut: initialBooking.checkOut,
+    });
+    draft.source = "zentrumhub";
+    draft.recommendationId = rate.recommendationId;
+    draft.rateIds = rate.rateIds;
+    draft.roomId = rate.roomId;
+    draft.roomName = rate.roomName;
+    draft.roomTypeLabel = rate.roomTypeLabel;
+    draft.boardBasis = rate.boardBasis;
+    draft.refundable = rate.refundable;
+    draft.cancellationText = rate.cancellationText;
+    draft.bedSummary = rate.bedSummary;
+    draft.maxGuests = rate.maxGuests;
+    draft.rooms = 1;
+    draft.roomFacilities = rate.facilities;
+    draft.roomImageUrl = rate.imageUrl;
+    draft.totalPrice = rate.totalRate;
+    draft.currency = (rate.currency as typeof draft.currency) || draft.currency;
+    draft.hotelMeta = {
+      name: property.title,
+      address: property.address,
+      city: property.city,
+      country: property.country,
+      imageUrl: property.image,
+      starRating: property.starRating,
+      rating: property.rating,
+      reviewCount: property.reviewCount,
+    };
+    saveCheckoutDraftToStorage(draft);
+    navigate("/checkout");
+  };
+
+  const handleReserve = (recommendationId: string) => {
+    const rate = selectRecommendation(recommendationId);
+    if (rate) goToCheckout(rate);
+  };
+
+  const handleTabChange = (tab: DetailTab) => {
+    setActiveTab(tab);
+    if (tab === "reviews") {
+      requestAnimationFrame(() => scrollToId("hotel-reviews"));
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f7f7f8]">
+      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-8 sm:py-7">
+        <PropertyInfoHeader
+          region={property.region}
+          title={property.displayTitle || property.title}
+          address={property.address || property.region}
+          starRating={property.starRating}
+          rating={property.rating}
+          reviewCount={property.reviewCount}
+          isSaved={isFavorite}
+          onToggleSave={() => toggleFavorite(property)}
+          onScrollToReviews={() => handleTabChange("reviews")}
+        />
+
+        {property.images.length > 0 ? (
+          <div className="mt-5">
+            <ImageGallery
+              images={property.images}
+              photoCount={property.photoCount}
+              title={property.title}
+            />
+          </div>
+        ) : null}
+
+        <div className="mt-7 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+          <div className="min-w-0 space-y-6">
+            <PropertyHighlights
+              items={property.highlights}
+              amenities={property.detailAmenities}
+              onShowMore={() => {
+                setActiveTab("details");
+                requestAnimationFrame(() => scrollToId("hotel-amenities"));
+              }}
             />
 
-            <DetailTabs activeTab={activeTab} onTabChange={setActiveTab} />
+            <DetailTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
             {activeTab === "details" && (
-              <>
-                <PropertyDetailsContent property={property} />
-                <LocationMap
-                  latitude={property.latitude}
-                  longitude={property.longitude}
-                  address={property.address}
-                />
-              </>
+              <PropertyDetailsContent
+                property={property}
+                onViewReviews={() => handleTabChange("reviews")}
+              />
             )}
             {activeTab === "policies" && (
-              <PoliciesContent policies={property.policies} />
+              <PoliciesContent
+                policies={property.policies}
+                ratePolicies={isZentrum ? ratePolicies : undefined}
+              />
             )}
             {activeTab === "reviews" && (
               <ReviewsContent
@@ -145,25 +251,55 @@ export default function HotelDetails() {
             {activeTab === "messages" && <MessagesContent />}
           </div>
 
-          <div className="sticky top-24 space-y-4 self-start">
-            <BookingSidebar
-              key={`${property.id}-${mode}`}
-              propertyId={property.id}
-              lane={property.lane}
-              priceUsd={property.priceUsd}
-              priceIdr={property.priceIdr}
-              mode={mode}
-              onModeChange={isDualMode ? handleModeChange : undefined}
-              hotelTimezone={property.timezone}
-              wholesalePricing={property.wholesalePricing}
-              slotDuration={property.slotDuration}
-              ringFencedRooms={property.ringFencedRooms}
-              supplierName={property.supplierName}
-              initialBooking={initialBooking}
-            />
+          <aside className="sticky top-24 space-y-4 self-start">
+            {!isZentrum && (
+              <BookingSidebar
+                key={`${property.id}-${mode}`}
+                propertyId={property.id}
+                lane={property.lane}
+                priceUsd={property.priceUsd}
+                priceIdr={property.priceIdr}
+                mode={mode}
+                onModeChange={isDualMode ? handleModeChange : undefined}
+                hotelTimezone={property.timezone}
+                wholesalePricing={property.wholesalePricing}
+                slotDuration={property.slotDuration}
+                ringFencedRooms={property.ringFencedRooms}
+                supplierName={property.supplierName}
+                initialBooking={initialBooking}
+              />
+            )}
+            {isZentrum && (
+              <BestPriceCard
+                roomName={selected?.roomName}
+                roomTypeLabel={selected?.roomTypeLabel}
+                boardBasis={selected?.boardBasis}
+                refundable={selected?.refundable}
+                maxGuests={selected?.maxGuests}
+                bedSummary={selected?.bedSummary}
+                imageUrl={selected?.imageUrl || property.image}
+                includes={selected?.includes}
+                views={selected?.views}
+                areaLabel={selected?.areaLabel}
+                priceLabel={selectedDisplayPrice}
+                onScrollToRooms={() => {
+                  setActiveTab("details");
+                  requestAnimationFrame(() => scrollToId("hotel-rooms"));
+                }}
+              />
+            )}
             <HotelInfoCard hotel={property.hotelInfo} lane={property.lane} />
-          </div>
+          </aside>
         </div>
+
+        {isZentrum && activeTab === "details" ? (
+          <div className="mt-10 border-t border-border pt-8">
+            <RoomsRatesPanel
+              fallbackImage={property.image}
+              onReserve={handleReserve}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -3,6 +3,8 @@ import { useRef } from "react";
 import { cn } from "@/lib/utils";
 import { AMENITY_FILTER_OPTIONS } from "../constants";
 import type { AmenityFilter } from "@/lib/booking/types";
+import { useLanguage } from "@/context/LanguageContext";
+import { hasMessage } from "@/lib/i18n/messages";
 
 interface AmenityFilterBarProps {
   selectedAmenities: AmenityFilter[];
@@ -13,6 +15,7 @@ export function AmenityFilterBar({
   selectedAmenities,
   onToggleAmenity,
 }: AmenityFilterBarProps) {
+  const { t } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -24,7 +27,7 @@ export function AmenityFilterBar({
       <button
         type="button"
         onClick={() => scroll("left")}
-        aria-label="Scroll amenities left"
+        aria-label={t("search.scrollAmenitiesLeft")}
         className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground hover:text-foreground sm:flex"
       >
         <ChevronLeft className="size-4" />
@@ -49,7 +52,9 @@ export function AmenityFilterBar({
                   : "border-border bg-white text-foreground hover:border-foreground/30"
               )}
             >
-              {amenity}
+              {hasMessage(`search.amenity.${amenity}`)
+                ? t(`search.amenity.${amenity}`)
+                : amenity}
             </button>
           );
         })}
@@ -58,7 +63,7 @@ export function AmenityFilterBar({
       <button
         type="button"
         onClick={() => scroll("right")}
-        aria-label="Scroll amenities right"
+        aria-label={t("search.scrollAmenitiesRight")}
         className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-muted-foreground hover:text-foreground sm:flex"
       >
         <ChevronRight className="size-4" />

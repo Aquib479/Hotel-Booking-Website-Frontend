@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/context/LanguageContext";
 import type { NoDraftReason } from "../types";
 
 interface NoActiveDraftStateProps {
@@ -10,19 +11,6 @@ interface NoActiveDraftStateProps {
   searchHref?: string;
 }
 
-const COPY: Record<NoDraftReason, { title: string; body: string; cta: string }> = {
-  missing: {
-    title: "No active booking",
-    body: "We couldn't find an active booking. Start a new search to book a rest slot or stay.",
-    cta: "Back to search",
-  },
-  expired: {
-    title: "Your slot hold expired",
-    body: "Someone else may have booked it — search again to check availability and reserve a new slot.",
-    cta: "Search again",
-  },
-};
-
 export function NoActiveDraftState({
   reason = "missing",
   title,
@@ -30,7 +18,19 @@ export function NoActiveDraftState({
   cta,
   searchHref = "/search",
 }: NoActiveDraftStateProps) {
-  const defaults = COPY[reason];
+  const { t } = useLanguage();
+  const defaults =
+    reason === "expired"
+      ? {
+          title: t("checkout.holdExpiredTitle"),
+          body: t("checkout.holdExpiredBody"),
+          cta: t("checkout.searchAgain"),
+        }
+      : {
+          title: t("checkout.noDraftTitle"),
+          body: t("checkout.noDraftBody"),
+          cta: t("checkout.backSearch"),
+        };
 
   return (
     <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">

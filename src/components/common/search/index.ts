@@ -2,7 +2,6 @@ export { SearchPanel } from "./SearchPanel";
 export { LocationSearchField } from "./LocationSearchField";
 export {
   buildSearchParams,
-  DEFAULT_LOCATION,
   GUEST_OPTIONS,
   searchLocations,
   toLocationSuggestion,

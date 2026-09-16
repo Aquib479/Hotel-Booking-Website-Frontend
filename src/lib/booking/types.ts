@@ -30,6 +30,7 @@ export const AMENITY_FILTER_OPTIONS = [
   "Airport shuttle",
   "Breakfast",
   "Gym",
+  "Kitchen",
 ] as const;
 
 export type AmenityFilter = (typeof AMENITY_FILTER_OPTIONS)[number];

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   CANCEL_REASONS,
   SUPPORT_CONTACT_HREF,
@@ -27,20 +28,26 @@ export function WholesaleCancelRequestStep({
   isSubmitting,
   submittedRef,
 }: WholesaleCancelRequestStepProps) {
+  const { t } = useLanguage();
   const [reason, setReason] = useState<CancelReasonId | null>(null);
   const [detail, setDetail] = useState("");
+  const supplier = booking.supplierName ?? t("bookings.partnerFallback");
 
   if (submittedRef) {
     return (
       <div className="space-y-4 text-center">
-        <h1 className="text-xl font-bold text-foreground">Request submitted</h1>
+        <h1 className="text-xl font-bold text-foreground">{t("bookings.requestSubmitted")}</h1>
         <p className="text-sm text-muted-foreground">
-          We&apos;ll process your cancellation with {booking.supplierName ?? "our partner"} and
-          confirm within {WHOLESALE_CANCEL_RESPONSE_HOURS} hours.
+          {t("bookings.wholesaleSubmitted", {
+            supplier,
+            hours: WHOLESALE_CANCEL_RESPONSE_HOURS,
+          })}
         </p>
-        <p className="font-mono text-sm text-foreground">Reference: {submittedRef}</p>
+        <p className="font-mono text-sm text-foreground">
+          {t("bookings.referenceLabel", { ref: submittedRef })}
+        </p>
         <Button variant="brand" asChild>
-          <Link to={`/bookings/${booking.id}`}>Back to booking</Link>
+          <Link to={`/bookings/${booking.id}`}>{t("bookings.backToBooking")}</Link>
         </Button>
       </div>
     );
@@ -49,10 +56,8 @@ export function WholesaleCancelRequestStep({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-foreground">Request cancellation</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Partner bookings are cancelled through our support team — this isn&apos;t instant.
-        </p>
+        <h1 className="text-xl font-bold text-foreground">{t("bookings.requestCancel")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("bookings.wholesaleHint")}</p>
       </div>
 
       <Alert>
@@ -60,14 +65,14 @@ export function WholesaleCancelRequestStep({
           {booking.hotelName} · Ref {booking.confirmationCode}
           {booking.payment.supplierBookingRef && (
             <span className="block font-mono text-xs">
-              Supplier ref: {booking.payment.supplierBookingRef}
+              {t("bookings.supplierRefShort", { ref: booking.payment.supplierBookingRef })}
             </span>
           )}
         </AlertDescription>
       </Alert>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium text-foreground">Reason for cancellation</p>
+        <p className="text-sm font-medium text-foreground">{t("bookings.wholesaleReason")}</p>
         <RadioGroup
           value={reason ?? ""}
           onValueChange={(v) => setReason(v as CancelReasonId)}
@@ -85,26 +90,26 @@ export function WholesaleCancelRequestStep({
               )}
             >
               <RadioGroupItem id={`wholesale-reason-${option.id}`} value={option.id} />
-              <span className="text-sm">{option.label}</span>
+              <span className="text-sm">{t(option.labelKey)}</span>
             </Label>
           ))}
         </RadioGroup>
       </div>
 
-      <FormField label="Additional details" htmlFor="wholesale-cancel-detail" optional>
+      <FormField label={t("bookings.moreDetails")} htmlFor="wholesale-cancel-detail" optional>
         <Textarea
           id="wholesale-cancel-detail"
           rows={3}
           value={detail}
           onChange={(e) => setDetail(e.target.value)}
-          placeholder="Any additional details (optional)"
+          placeholder={t("bookings.wholesaleDetailsPh")}
         />
       </FormField>
 
       <p className="text-xs text-muted-foreground">
-        Prefer to talk to someone?{" "}
+        {t("bookings.preferTalk")}{" "}
         <a href={SUPPORT_CONTACT_HREF} className="text-brand hover:underline">
-          Contact support
+          {t("bookings.contactSupport")}
         </a>
       </p>
 
@@ -115,7 +120,7 @@ export function WholesaleCancelRequestStep({
         disabled={!reason || isSubmitting}
         onClick={() => reason && void onSubmit(reason, detail)}
       >
-        {isSubmitting ? "Submitting…" : "Submit cancellation request"}
+        {isSubmitting ? t("bookings.submitting") : t("bookings.submitCancelReq")}
       </Button>
     </div>
   );

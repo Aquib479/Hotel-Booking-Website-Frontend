@@ -3,6 +3,7 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PhoneInput } from "@/features/auth/components/PhoneInput";
+import { useLanguage } from "@/context/LanguageContext";
 import type { GuestDetailsValues } from "../types";
 
 interface GuestDetailsFormProps {
@@ -20,14 +21,13 @@ export function GuestDetailsForm({
   onChange,
   onBlur,
 }: GuestDetailsFormProps) {
+  const { t } = useLanguage();
+
   return (
-    <SectionCard
-      title="Guest details"
-      description="Used for your confirmation and WhatsApp updates"
-    >
+    <SectionCard title={t("checkout.guest")} description={t("checkout.guestHint")}>
       <div className="space-y-4">
         <FormField
-          label="Full name"
+          label={t("auth.fullName")}
           htmlFor="guest-fullname"
           error={touched.fullName ? errors.fullName : undefined}
         >
@@ -43,7 +43,7 @@ export function GuestDetailsForm({
         </FormField>
 
         <FormField
-          label="Email"
+          label={t("support.email")}
           htmlFor="guest-email"
           error={touched.email ? errors.email : undefined}
         >
@@ -58,7 +58,7 @@ export function GuestDetailsForm({
           />
         </FormField>
 
-        <FormField label="Phone number" error={touched.phoneNumber ? errors.phoneNumber : undefined}>
+        <FormField label={t("auth.phone")} error={touched.phoneNumber ? errors.phoneNumber : undefined}>
           <PhoneInput
             countryCode={values.phoneCountryCode}
             nationalNumber={values.phoneNumber}
@@ -70,14 +70,14 @@ export function GuestDetailsForm({
           />
         </FormField>
 
-        <FormField label="Special requests" optional htmlFor="guest-requests">
+        <FormField label={t("bookings.specialRequests")} optional htmlFor="guest-requests">
           <Textarea
             id="guest-requests"
             rows={3}
             value={values.specialRequests}
             onChange={(e) => onChange("specialRequests", e.target.value)}
             onBlur={() => onBlur("specialRequests")}
-            placeholder="Late check-in, accessibility needs, etc."
+            placeholder={t("checkout.requestsPh")}
           />
         </FormField>
       </div>

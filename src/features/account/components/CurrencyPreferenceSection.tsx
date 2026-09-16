@@ -1,4 +1,5 @@
 import { useCurrency } from "@/context/CurrencyContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { FormField } from "@/components/common/form";
 import { SectionCard } from "@/components/common/SectionCard";
 import {
@@ -8,14 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CURRENCY_HELPER_TEXT } from "../constants";
 
 export function CurrencyPreferenceSection() {
+  const { t } = useLanguage();
   const { currency, setCurrency, currencies } = useCurrency();
 
   return (
-    <SectionCard title="Display currency" description={CURRENCY_HELPER_TEXT}>
-      <FormField label="Preferred currency" htmlFor="currency-select">
+    <SectionCard title={t("account.displayCurrency")} description={t("account.currencyHelper")}>
+      <FormField label={t("account.preferredCurrency")} htmlFor="currency-select">
         <Select value={currency} onValueChange={(v) => setCurrency(v as typeof currency)}>
           <SelectTrigger id="currency-select" className="max-w-xs">
             <SelectValue />

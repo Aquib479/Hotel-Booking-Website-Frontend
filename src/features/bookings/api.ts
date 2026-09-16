@@ -202,10 +202,6 @@ export async function fetchBookings(filters: BookingFilters): Promise<BookingsLi
 
   let filtered = all.filter((b) => classifyBookingStatus(b) === filters.status);
 
-  if (filters.lane !== "all") {
-    filtered = filtered.filter((b) => b.lane === filters.lane);
-  }
-
   if (filters.search.trim()) {
     const q = filters.search.trim().toLowerCase();
     filtered = filtered.filter(

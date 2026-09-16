@@ -2,13 +2,23 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { differenceInDays, format, parseISO } from "date-fns";
 import type { AmenityFilter, RestSlot } from "@/lib/booking/types";
+import { AMENITY_FILTER_OPTIONS } from "@/lib/booking/types";
 import { supportsRestMode, supportsStayMode } from "@/lib/booking/availability";
 import { normalizeStayDates } from "@/lib/booking/stayDates";
-import { convertFromIdr, getWholesaleGuestPriceUsdRounded } from "@/lib/currency/format";
+import { convertToUsd } from "@/lib/currency/format";
+import type { CurrencyCode } from "@/lib/currency/types";
+import { CURRENCIES } from "@/lib/currency/types";
+import { defaultPriceMaxForCurrency, getDisplayAmount } from "@/lib/currency/pricing";
+import { useCurrency } from "@/context/CurrencyContext";
 import { api } from "@/services/api";
+import { isZentrumConfigured, type LocationType, type Occupancy } from "@/services/zentrumhub";
+import {
+  formatDateForApi,
+  useSearchStore,
+  type SearchDestination,
+} from "@/store";
 import {
   DEFAULT_PER_PAGE,
-  DEFAULT_PRICE_MAX,
   DEFAULT_PRICE_MIN,
 } from "../constants";
 import { resolvePropertyCoordinates } from "../map-coordinates";
@@ -74,6 +84,7 @@ function mapApiResultToProperty(result: SearchApiResult, slotType: string): Prop
     country: h.country ?? "",
     image: h.imageUrl ?? FALLBACK_IMAGE,
     rating: h.rating ?? 4.0,
+    reviewCount: 0,
     starRating: Math.round(h.rating ?? 4),
     lane: "direct",
     priceUsd: 0,
@@ -81,6 +92,8 @@ function mapApiResultToProperty(result: SearchApiResult, slotType: string): Prop
     roomType: roomType as Property["roomType"],
     maxOccupancy: result.maxOccupancy,
     amenities: [],
+    amenityPills: [],
+    highlightAttributes: [],
     category: "all",
     latitude: coords?.lat ?? null,
     longitude: coords?.lng ?? null,
@@ -89,6 +102,147 @@ function mapApiResultToProperty(result: SearchApiResult, slotType: string): Prop
     timezone: "Asia/Jakarta",
     createdAt: new Date().toISOString(),
   };
+}
+
+function mapZentrumHotelToProperty(
+  hotel: {
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+    country: string;
+    image: string;
+    rating: number;
+    reviewCount: number;
+    starRating: number;
+    latitude: number | null;
+    longitude: number | null;
+    totalRate: number;
+    publishedRate: number;
+    baseRate: number;
+    taxes: number;
+    fees: number;
+    discounts: number;
+    currency: string;
+    amenities: string[];
+    amenityPills: string[];
+    highlightAttributes: string[];
+    freeBreakfast?: boolean;
+    freeCancellation?: boolean;
+    refundable?: boolean;
+    payAtHotel?: boolean;
+    boardBasisLabel?: string;
+    offerLabel?: string;
+  },
+  nights: number
+): Property {
+  const safeNights = Math.max(1, nights);
+  const perNightInApiCurrency = hotel.totalRate > 0 ? hotel.totalRate / safeNights : 0;
+  const apiCurrency = (hotel.currency || "USD").toUpperCase() as CurrencyCode;
+  // Keep a USD estimate only for legacy helpers; display uses priceAmount + priceCurrency.
+  const priceUsd =
+    perNightInApiCurrency <= 0
+      ? 0
+      : CURRENCIES.some((c) => c.code === apiCurrency)
+        ? convertToUsd(perNightInApiCurrency, apiCurrency)
+        : perNightInApiCurrency;
+
+  const amenitySet = new Set(hotel.amenities.map((a) => a.toLowerCase()));
+  if (hotel.freeBreakfast) amenitySet.add("breakfast");
+  if (hotel.freeCancellation || hotel.refundable) amenitySet.add("free cancellation");
+
+  const mappedAmenities = AMENITY_FILTER_OPTIONS.filter((opt) => {
+    const needle = opt.toLowerCase();
+    if (amenitySet.has(needle)) return true;
+    return [...amenitySet].some(
+      (a) => a.includes(needle) || needle.includes(a) || fuzzyAmenityMatch(a, needle)
+    );
+  }) as AmenityFilter[];
+
+  const roomType = inferRoomTypeFromAmenities(hotel.name, mappedAmenities);
+
+  // Star filters use whole numbers; round official class for filter matching only.
+  const starForFilter =
+    hotel.starRating > 0 && hotel.starRating <= 5
+      ? Math.round(hotel.starRating)
+      : 0;
+
+  return {
+    id: hotel.id,
+    title: hotel.name,
+    address: hotel.address,
+    city: hotel.city,
+    country: hotel.country,
+    image: hotel.image || FALLBACK_IMAGE,
+    rating: hotel.rating,
+    reviewCount: hotel.reviewCount,
+    starRating: hotel.starRating > 0 ? hotel.starRating : starForFilter,
+    lane: "wholesale",
+    priceAmount: perNightInApiCurrency,
+    priceCurrency: apiCurrency,
+    totalStayAmount: hotel.totalRate > 0 ? hotel.totalRate : undefined,
+    publishedStayAmount:
+      hotel.publishedRate > hotel.totalRate ? hotel.publishedRate : undefined,
+    priceBreakdown:
+      hotel.totalRate > 0
+        ? {
+            baseRate: hotel.baseRate > 0 ? hotel.baseRate : undefined,
+            taxes: hotel.taxes > 0 ? hotel.taxes : undefined,
+            fees: hotel.fees > 0 ? hotel.fees : undefined,
+            discounts: hotel.discounts > 0 ? hotel.discounts : undefined,
+            publishedRate:
+              hotel.publishedRate > 0 ? hotel.publishedRate : undefined,
+            totalRate: hotel.totalRate,
+          }
+        : undefined,
+    priceUsd,
+    priceIdr: 0,
+    roomType,
+    maxOccupancy: 2,
+    amenities: mappedAmenities,
+    amenityPills: hotel.amenityPills,
+    freeBreakfast: hotel.freeBreakfast,
+    freeCancellation: hotel.freeCancellation,
+    refundable: hotel.refundable,
+    payAtHotel: hotel.payAtHotel,
+    boardBasisLabel: hotel.boardBasisLabel,
+    offerLabel: hotel.offerLabel,
+    highlightAttributes: hotel.highlightAttributes,
+    category: "all",
+    latitude: hotel.latitude,
+    longitude: hotel.longitude,
+    distanceFromAirportKm: 0,
+    slotDuration: "24h",
+    timezone: "UTC",
+    supplierName: "ZentrumHub",
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function fuzzyAmenityMatch(actual: string, filter: string): boolean {
+  const pairs: Record<string, string[]> = {
+    wifi: ["wi-fi", "wireless", "internet"],
+    "air conditioning": ["ac", "a/c", "air-conditioning", "aircon"],
+    "free parking": ["parking"],
+    pool: ["swimming"],
+    gym: ["fitness"],
+    breakfast: ["breakfast"],
+    "airport shuttle": ["shuttle", "airport"],
+    kitchen: ["kitchenette", "kitchen"],
+  };
+  const aliases = pairs[filter] ?? [];
+  return aliases.some((a) => actual.includes(a));
+}
+
+function inferRoomTypeFromAmenities(
+  name: string,
+  _amenities: AmenityFilter[]
+): Property["roomType"] {
+  const n = name.toLowerCase();
+  if (n.includes("suite")) return "suite";
+  if (n.includes("family")) return "family";
+  if (n.includes("single") || n.includes("twin")) return "single";
+  return "double";
 }
 
 function frontendSlotToBackend(slot: RestSlot): "HALF_DAY" | "FULL_DAY" {
@@ -100,10 +254,38 @@ function parseGuestCount(guestsLabel: string): number {
   return match ? Number(match[1]) : 2;
 }
 
+/** Parse labels like "2 Adults, 1 Child · 2 Rooms" into ZentrumHub occupancies. */
+export function parseOccupancies(guestsLabel: string, roomsParam?: number): Occupancy[] {
+  const adultsMatch = guestsLabel.match(/(\d+)\s*adult/i);
+  const kidsMatch =
+    guestsLabel.match(/(\d+)\s*child/i) || guestsLabel.match(/(\d+)\s*kid/i);
+  const roomsMatch = guestsLabel.match(/(\d+)\s*room/i);
+  const numOfAdults = adultsMatch ? Number(adultsMatch[1]) : parseGuestCount(guestsLabel);
+  const kidCount = kidsMatch ? Number(kidsMatch[1]) : 0;
+  const rooms = Math.max(1, roomsParam ?? (roomsMatch ? Number(roomsMatch[1]) : 1));
+  const adultsPerRoom = Math.max(1, Math.ceil(Math.max(1, numOfAdults) / rooms));
+  const kidsPerRoom = Math.floor(kidCount / rooms);
+  const leftoverKids = kidCount % rooms;
+
+  return Array.from({ length: rooms }, (_, index) => {
+    const roomKids = kidsPerRoom + (index < leftoverKids ? 1 : 0);
+    return {
+      numOfAdults: adultsPerRoom,
+      childAges: roomKids > 0 ? Array.from({ length: roomKids }, () => 8) : undefined,
+    };
+  });
+}
+
 function parseDate(value: string | null): Date | undefined {
   if (!value) return undefined;
   const date = parseISO(value);
   return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function parseNumber(value: string | null): number | undefined {
+  if (value == null || value === "") return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
 }
 
 function matchesCountFilter(value: number, filter: CountFilter): boolean {
@@ -118,6 +300,7 @@ function matchesLocation(property: Property, location: string): boolean {
   // Bedbank hotels are already scoped by destinationId; city/address may be empty.
   if (
     property.lane === "wholesale" &&
+    property.supplierName === "MG" &&
     !property.city &&
     !property.country &&
     !property.address
@@ -132,22 +315,25 @@ function matchesLocation(property: Property, location: string): boolean {
   );
 }
 
-function getPropertyPriceUsd(property: Property): number {
-  if (property.lane === "wholesale" && property.wholesalePricing) {
-    return getWholesaleGuestPriceUsdRounded(property.wholesalePricing);
-  }
-  if (property.lane === "wholesale") {
-    return property.priceUsd || convertFromIdr(property.priceIdr, "USD");
-  }
-  return property.priceUsd || convertFromIdr(property.priceIdr, "USD");
+function getPropertyFilterPrice(property: Property, displayCurrency: CurrencyCode): number {
+  return getDisplayAmount(
+    property.lane,
+    property.priceUsd,
+    property.priceIdr,
+    displayCurrency,
+    property.wholesalePricing,
+    property.priceAmount,
+    property.priceCurrency
+  );
 }
 
-function getDefaultFilters(): FilterState {
+function getDefaultFilters(displayCurrency: CurrencyCode = "USD"): FilterState {
   return {
     priceMin: DEFAULT_PRICE_MIN,
-    priceMax: DEFAULT_PRICE_MAX,
+    priceMax: defaultPriceMaxForCurrency(displayCurrency),
     lane: "all",
-    starRating: "any",
+    starRatings: [],
+    guestRatingMin: "any",
     roomType: "any",
     maxOccupancy: "any",
     amenities: [],
@@ -157,44 +343,76 @@ function getDefaultFilters(): FilterState {
   };
 }
 
-function countActiveFilters(filters: FilterState): number {
+function countActiveFilters(filters: FilterState, displayCurrency: CurrencyCode): number {
   let count = 0;
-  if (filters.priceMin !== DEFAULT_PRICE_MIN || filters.priceMax !== DEFAULT_PRICE_MAX) count++;
+  const defaultMax = defaultPriceMaxForCurrency(displayCurrency);
+  if (filters.priceMin !== DEFAULT_PRICE_MIN || filters.priceMax !== defaultMax) count++;
   if (filters.lane !== "all") count++;
-  if (filters.starRating !== "any") count++;
+  if (filters.starRatings.length > 0) count++;
+  if (filters.guestRatingMin !== "any") count++;
   if (filters.roomType !== "any") count++;
   if (filters.maxOccupancy !== "any") count++;
   if (filters.amenities.length > 0) count++;
   if (filters.slotDuration !== "any") count++;
+  if (filters.maxAirportDistance !== "any") count++;
   return count;
+}
+
+function destinationFromQuery(query: SearchQuery): SearchDestination {
+  return {
+    id: query.locationId || query.location,
+    label: query.location,
+    city: query.location,
+    state: query.state,
+    country: query.country || "",
+    type: query.locationType as LocationType | undefined,
+    referenceId: query.referenceId,
+    coordinates:
+      query.lat != null && query.lng != null
+        ? { lat: query.lat, long: query.lng }
+        : undefined,
+  };
 }
 
 export function usePropertySearch() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { currency } = useCurrency();
+  const zhHotels = useSearchStore((s) => s.hotels);
+  const zhStatus = useSearchStore((s) => s.status);
+  const zhError = useSearchStore((s) => s.error);
+  const runSearch = useSearchStore((s) => s.runSearch);
+  const expectedHotelCount = useSearchStore((s) => s.expectedHotelCount);
+  const completedHotelCount = useSearchStore((s) => s.completedHotelCount);
 
-  const query: SearchQuery = useMemo(
-    () => {
-      const rawCheckIn = parseDate(searchParams.get("checkIn"));
-      const rawCheckOut = parseDate(searchParams.get("checkOut"));
-      const stay =
-        searchParams.get("mode") !== "rest"
-          ? normalizeStayDates(rawCheckIn, rawCheckOut)
-          : null;
+  const query: SearchQuery = useMemo(() => {
+    const rawCheckIn = parseDate(searchParams.get("checkIn"));
+    const rawCheckOut = parseDate(searchParams.get("checkOut"));
+    const stay =
+      searchParams.get("mode") !== "rest"
+        ? normalizeStayDates(rawCheckIn, rawCheckOut)
+        : null;
 
-      return {
-        location: searchParams.get("location") ?? "Jakarta",
-        destinationId: searchParams.get("destinationId") ?? undefined,
-        country: searchParams.get("country") ?? undefined,
-        mode: (searchParams.get("mode") as SearchQuery["mode"]) ?? "stay",
-        checkIn: stay?.checkIn ?? rawCheckIn,
-        checkOut: stay?.checkOut ?? rawCheckOut,
-        restDate: parseDate(searchParams.get("restDate")),
-        slot: (searchParams.get("slot") as RestSlot) ?? "12-24",
-        guests: searchParams.get("guests") ?? "2 travellers",
-      };
-    },
-    [searchParams]
-  );
+    return {
+      location: searchParams.get("location") ?? "",
+      destinationId: searchParams.get("destinationId") ?? undefined,
+      mode: (searchParams.get("mode") as SearchQuery["mode"]) ?? "stay",
+      checkIn: stay?.checkIn ?? rawCheckIn,
+      checkOut: stay?.checkOut ?? rawCheckOut,
+      restDate: parseDate(searchParams.get("restDate")),
+      slot: (searchParams.get("slot") as RestSlot) ?? undefined,
+      guests: searchParams.get("guests") ?? "",
+      rooms: parseNumber(searchParams.get("rooms")),
+      adults: parseNumber(searchParams.get("adults")),
+      children: parseNumber(searchParams.get("children")),
+      locationId: searchParams.get("locationId") ?? undefined,
+      locationType: searchParams.get("locationType") ?? undefined,
+      referenceId: searchParams.get("referenceId") ?? undefined,
+      lat: parseNumber(searchParams.get("lat")),
+      lng: parseNumber(searchParams.get("lng")),
+      country: searchParams.get("country") ?? undefined,
+      state: searchParams.get("state") ?? undefined,
+    };
+  }, [searchParams]);
 
   // Keep URL stay dates from drifting into the past (or same-day checkout).
   useEffect(() => {
@@ -219,25 +437,105 @@ export function usePropertySearch() {
     );
   }, [query.mode, query.checkIn, query.checkOut, searchParams, setSearchParams]);
 
+  const hasSearchCriteria = Boolean(
+    query.location.trim() &&
+      query.guests.trim() &&
+      (query.mode === "stay"
+        ? query.checkIn && query.checkOut
+        : query.restDate)
+  );
+
+  const useZentrum = query.mode === "stay" && isZentrumConfigured();
+
   const [filters, setFilters] = useState<FilterState>(() => ({
-    ...getDefaultFilters(),
+    ...getDefaultFilters(currency),
     category: searchParams.get("category") ?? "all",
   }));
+  const [nameQuery, setNameQuery] = useState("");
+
+  // When guest currency changes, reset budget bounds to that currency's scale.
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      priceMin: DEFAULT_PRICE_MIN,
+      priceMax: defaultPriceMaxForCurrency(currency),
+    }));
+  }, [currency]);
+
+  // Clear hotel-name filter when the destination search changes.
+  useEffect(() => {
+    setNameQuery("");
+  }, [query.location, query.locationId, query.checkIn, query.checkOut, query.restDate, query.mode]);
 
   const sort = (searchParams.get("sort") as SortOption) ?? "latest";
   const view = (searchParams.get("view") as ViewMode) ?? "card";
   const page = Number(searchParams.get("page") ?? "1");
   const perPage = Number(searchParams.get("perPage") ?? String(DEFAULT_PER_PAGE));
 
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
-
-  const [directProperties, setDirectProperties] = useState<Property[]>([]);
-  const [directLoading, setDirectLoading] = useState(true);
-  const [directError, setDirectError] = useState<string | null>(null);
+  const [apiProperties, setApiProperties] = useState<Property[]>([]);
+  const [isLoadingLegacy, setIsLoadingLegacy] = useState(false);
+  const [errorLegacy, setErrorLegacy] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const resetSearch = useSearchStore((s) => s.reset);
 
-  // --- Direct inventory search (own Postgres hotels) ---
   useEffect(() => {
+    if (!useZentrum) return;
+
+    if (!hasSearchCriteria || !query.checkIn || !query.checkOut) {
+      resetSearch();
+      return;
+    }
+
+    const criteria = {
+      destination: destinationFromQuery(query),
+      checkIn: formatDateForApi(query.checkIn),
+      checkOut: formatDateForApi(query.checkOut),
+      occupancies: parseOccupancies(query.guests, query.rooms),
+      // Live supplier rates in the guest's selected currency (no client-side FX for ZH).
+      currency,
+      countryOfResidence: undefined,
+    };
+
+    // Debounce collapses React StrictMode double-mount + rapid URL updates
+    // into a single Search Init (avoids ZentrumHub 429s).
+    const timer = window.setTimeout(() => {
+      void runSearch(criteria);
+    }, 450);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    useZentrum,
+    hasSearchCriteria,
+    query.location,
+    query.locationId,
+    query.locationType,
+    query.referenceId,
+    query.lat,
+    query.lng,
+    query.checkIn?.toISOString(),
+    query.checkOut?.toISOString(),
+    query.guests,
+    query.rooms,
+    query.country,
+    query.state,
+    currency,
+    reloadKey,
+    runSearch,
+    resetSearch,
+  ]);
+
+  useEffect(() => {
+    if (useZentrum) return;
+
+    if (!hasSearchCriteria) {
+      setApiProperties([]);
+      setIsLoadingLegacy(false);
+      setErrorLegacy(null);
+      return;
+    }
+
     let cancelled = false;
 
     const dateStr =
@@ -245,7 +543,13 @@ export function usePropertySearch() {
         ? format(query.restDate, "yyyy-MM-dd")
         : query.checkIn
           ? format(query.checkIn, "yyyy-MM-dd")
-          : format(new Date(), "yyyy-MM-dd");
+          : null;
+
+    if (!dateStr) {
+      setApiProperties([]);
+      setIsLoadingLegacy(false);
+      return;
+    }
 
     const slotType =
       query.mode === "rest"
@@ -262,28 +566,30 @@ export function usePropertySearch() {
       params.set("q", query.location.trim());
     }
 
-    setDirectLoading(true);
-    setDirectError(null);
+    setIsLoadingLegacy(true);
+    setErrorLegacy(null);
 
     api
       .get<SearchApiResponse>(`/search?${params.toString()}`)
       .then((res) => {
         if (cancelled) return;
         const mapped = res.results.map((r) => mapApiResultToProperty(r, res.slotType));
-        setDirectProperties(mapped);
-        setDirectLoading(false);
+        setApiProperties(mapped);
+        setIsLoadingLegacy(false);
       })
       .catch(() => {
         if (cancelled) return;
-        setDirectProperties([]);
-        setDirectError("Failed to load hotels. Please try again.");
-        setDirectLoading(false);
+        setApiProperties([]);
+        setErrorLegacy("search.loadError");
+        setIsLoadingLegacy(false);
       });
 
     return () => {
       cancelled = true;
     };
   }, [
+    useZentrum,
+    hasSearchCriteria,
     query.location,
     query.mode,
     query.restDate,
@@ -293,35 +599,6 @@ export function usePropertySearch() {
     reloadKey,
   ]);
 
-  // --- Wholesale (bedbank) search via React Query ---
-  const bedbankParams = query.destinationId && query.mode === "stay"
-    ? {
-        destinationId: query.destinationId,
-        checkIn: query.checkIn,
-        checkOut: query.checkOut,
-        guests: query.guests,
-        city: query.location,
-        country: query.country,
-      }
-    : null;
-
-  const {
-    data: bedbankProperties = [],
-    isLoading: bedbankLoading,
-    error: bedbankError,
-  } = useBedbankSearch(bedbankParams);
-
-  // --- Merged state ---
-  const apiProperties = useMemo(() => {
-    const deduped = new Map<string, Property>();
-    for (const p of bedbankProperties) deduped.set(p.id, p);
-    for (const p of directProperties) deduped.set(p.id, p);
-    return Array.from(deduped.values());
-  }, [directProperties, bedbankProperties]);
-
-  const isLoading = directLoading || bedbankLoading;
-  const error = directError || (bedbankError ? "Wholesale search failed." : null);
-
   const nights = useMemo(() => {
     if (query.mode === "rest") return 1;
     if (query.checkIn && query.checkOut) {
@@ -329,6 +606,34 @@ export function usePropertySearch() {
     }
     return 1;
   }, [query.checkIn, query.checkOut, query.mode]);
+
+  const bedbankParams =
+    query.destinationId && query.mode === "stay"
+      ? {
+          destinationId: query.destinationId,
+          checkIn: query.checkIn,
+          checkOut: query.checkOut,
+          guests: query.guests,
+          city: query.location,
+          country: query.country,
+        }
+      : null;
+
+  const {
+    data: bedbankProperties = [],
+    isLoading: bedbankLoading,
+    error: bedbankError,
+  } = useBedbankSearch(bedbankParams);
+
+  const sourceProperties = useMemo(() => {
+    const primary = useZentrum
+      ? zhHotels.map((h) => mapZentrumHotelToProperty(h, nights))
+      : apiProperties;
+    const deduped = new Map<string, Property>();
+    for (const p of bedbankProperties) deduped.set(p.id, p);
+    for (const p of primary) deduped.set(p.id, p);
+    return Array.from(deduped.values());
+  }, [useZentrum, zhHotels, apiProperties, nights, bedbankProperties]);
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -347,20 +652,56 @@ export function usePropertySearch() {
   const setQuery = useCallback(
     (next: Partial<SearchQuery>) => {
       const mode = next.mode ?? query.mode;
+      const nextLocation = next.location !== undefined ? next.location : query.location;
+      const nextGuests = next.guests !== undefined ? next.guests : query.guests;
       const updates: Record<string, string | null> = {
-        location: next.location ?? query.location,
-        destinationId:
-          next.destinationId !== undefined
-            ? next.destinationId || null
-            : query.destinationId ?? null,
-        country:
-          next.country !== undefined
-            ? next.country || null
-            : query.country ?? null,
-        guests: next.guests ?? query.guests,
+        location: nextLocation.trim() ? nextLocation : null,
+        guests: nextGuests.trim() ? nextGuests : null,
+        rooms:
+          next.rooms != null
+            ? String(next.rooms)
+            : query.rooms != null
+              ? String(query.rooms)
+              : null,
+        adults:
+          next.adults != null
+            ? String(next.adults)
+            : query.adults != null
+              ? String(query.adults)
+              : null,
+        children:
+          next.children != null
+            ? String(next.children)
+            : query.children != null
+              ? String(query.children)
+              : null,
         mode,
         page: "1",
       };
+
+      const locationChanged =
+        next.location !== undefined ||
+        next.locationId !== undefined ||
+        next.locationType !== undefined ||
+        next.referenceId !== undefined ||
+        next.lat !== undefined ||
+        next.lng !== undefined;
+
+      if (locationChanged) {
+        updates.locationId = next.locationId ?? null;
+        updates.locationType = next.locationType ?? null;
+        updates.referenceId = next.referenceId ?? null;
+        updates.lat = next.lat != null ? String(next.lat) : null;
+        updates.lng = next.lng != null ? String(next.lng) : null;
+        updates.country = next.country ?? null;
+        updates.state = next.state ?? null;
+        updates.destinationId =
+          next.destinationId !== undefined
+            ? next.destinationId || null
+            : null;
+      } else if (next.destinationId !== undefined) {
+        updates.destinationId = next.destinationId || null;
+      }
 
       if (mode === "stay") {
         updates.checkIn =
@@ -372,7 +713,7 @@ export function usePropertySearch() {
       } else {
         updates.restDate =
           next.restDate?.toISOString() ?? (query.restDate ? query.restDate.toISOString() : null);
-        updates.slot = next.slot ?? query.slot ?? "12-24";
+        updates.slot = next.slot ?? query.slot ?? null;
         updates.checkIn = null;
         updates.checkOut = null;
       }
@@ -382,26 +723,75 @@ export function usePropertySearch() {
     [query, updateParams]
   );
 
-  const sourceProperties = apiProperties;
+  // Show hotels as they stream in; keep full-page spinner only before the first batch.
+  const isSearching =
+    useZentrum && (zhStatus === "init" || zhStatus === "polling");
+  const isLoading = !hasSearchCriteria
+    ? false
+    : (useZentrum
+        ? isSearching && zhHotels.length === 0
+        : isLoadingLegacy) ||
+      (bedbankLoading && bedbankProperties.length === 0 && sourceProperties.length === 0);
+
+  const error =
+    (useZentrum ? zhError : errorLegacy) ||
+    (bedbankError ? "search.loadError" : null);
 
   const filteredProperties = useMemo(() => {
+    const hotelName = nameQuery.trim().toLowerCase();
+
     let results = sourceProperties.filter((property) => {
-      if (!matchesLocation(property, query.location)) return false;
+      if (!useZentrum && !matchesLocation(property, query.location)) return false;
 
-      const price = getPropertyPriceUsd(property);
-      if (price < filters.priceMin || price > filters.priceMax) return false;
-
-      if (filters.lane !== "all" && property.lane !== filters.lane) return false;
-      if (filters.category === "resthalf-exclusive" && property.lane !== "direct") return false;
       if (
-        filters.category !== "all" &&
-        filters.category !== "resthalf-exclusive" &&
-        property.category !== filters.category
+        hotelName &&
+        !property.title.toLowerCase().includes(hotelName) &&
+        !property.address.toLowerCase().includes(hotelName) &&
+        !property.city.toLowerCase().includes(hotelName)
       ) {
         return false;
       }
 
-      if (!matchesCountFilter(property.starRating, filters.starRating)) return false;
+      const price = getPropertyFilterPrice(property, currency);
+      // Ignore $0 placeholder rates so incomplete content doesn't wipe results
+      if (price > 0 && (price < filters.priceMin || price > filters.priceMax)) return false;
+      if (
+        price === 0 &&
+        (filters.priceMin > DEFAULT_PRICE_MIN ||
+          filters.priceMax < defaultPriceMaxForCurrency(currency))
+      ) {
+        return false;
+      }
+
+      if (filters.lane !== "all" && property.lane !== filters.lane) return false;
+
+      // Category chips are RestHalf-oriented; don't empty ZH partner inventory.
+      if (!useZentrum) {
+        if (filters.category === "resthalf-exclusive" && property.lane !== "direct") return false;
+        if (
+          filters.category !== "all" &&
+          filters.category !== "resthalf-exclusive" &&
+          property.category !== filters.category
+        ) {
+          return false;
+        }
+      }
+
+      // Star filter: multi-select OR of rounded official star class
+      if (filters.starRatings.length > 0) {
+        const roundedStars = Math.round(property.starRating);
+        if (!roundedStars || !filters.starRatings.includes(roundedStars)) {
+          return false;
+        }
+      }
+
+      if (
+        filters.guestRatingMin !== "any" &&
+        (property.rating <= 0 || property.rating < Number(filters.guestRatingMin))
+      ) {
+        return false;
+      }
+
       if (filters.roomType !== "any" && property.roomType !== filters.roomType) return false;
       if (!matchesCountFilter(property.maxOccupancy, filters.maxOccupancy)) return false;
 
@@ -412,19 +802,25 @@ export function usePropertySearch() {
         return false;
       }
 
-      if (filters.slotDuration !== "any" && property.slotDuration !== filters.slotDuration) {
-        return false;
+      // Slot duration only applies to RestHalf inventory
+      if (!useZentrum) {
+        if (filters.slotDuration !== "any" && property.slotDuration !== filters.slotDuration) {
+          return false;
+        }
       }
 
       if (
+        !useZentrum &&
         filters.maxAirportDistance !== "any" &&
         property.distanceFromAirportKm > Number(filters.maxAirportDistance)
       ) {
         return false;
       }
 
-      if (query.mode === "rest" && !supportsRestMode(property)) return false;
-      if (query.mode === "stay" && !supportsStayMode(property)) return false;
+      if (!useZentrum) {
+        if (query.mode === "rest" && !supportsRestMode(property)) return false;
+        if (query.mode === "stay" && !supportsStayMode(property)) return false;
+      }
 
       return true;
     });
@@ -432,9 +828,9 @@ export function usePropertySearch() {
     results = [...results].sort((a, b) => {
       switch (sort) {
         case "price-asc":
-          return getPropertyPriceUsd(a) - getPropertyPriceUsd(b);
+          return getPropertyFilterPrice(a, currency) - getPropertyFilterPrice(b, currency);
         case "price-desc":
-          return getPropertyPriceUsd(b) - getPropertyPriceUsd(a);
+          return getPropertyFilterPrice(b, currency) - getPropertyFilterPrice(a, currency);
         case "rating":
           return b.rating - a.rating;
         case "soonest-slot":
@@ -447,10 +843,38 @@ export function usePropertySearch() {
     });
 
     return results;
-  }, [filters, query.location, query.mode, sort, sourceProperties]);
+  }, [
+    currency,
+    filters,
+    nameQuery,
+    query.location,
+    query.mode,
+    sort,
+    sourceProperties,
+    useZentrum,
+  ]);
 
-  const totalResults = filteredProperties.length;
-  const totalPages = Math.max(1, Math.ceil(totalResults / perPage));
+  const activeFilterCount = countActiveFilters(filters, currency);
+  const hasClientResultNarrowing = activeFilterCount > 0 || nameQuery.trim().length > 0;
+
+  /**
+   * Stable total for the toolbar (Agoda/Trip-style):
+   * - While searching / no filters: prefer API expectedHotelCount once known
+   * - With filters applied: show how many currently match
+   */
+  const loadedResults = filteredProperties.length;
+  const displayTotalResults =
+    useZentrum && !hasClientResultNarrowing
+      ? Math.max(expectedHotelCount, loadedResults)
+      : loadedResults;
+  const isStreamingResults =
+    useZentrum &&
+    isSearching &&
+    !hasClientResultNarrowing &&
+    (expectedHotelCount === 0 || loadedResults < expectedHotelCount);
+
+  const totalResults = displayTotalResults;
+  const totalPages = Math.max(1, Math.ceil(Math.max(loadedResults, 1) / perPage));
   const currentPage = Math.min(page, totalPages);
 
   const paginatedProperties = useMemo(() => {
@@ -470,8 +894,6 @@ export function usePropertySearch() {
     return counts;
   }, [sourceProperties]);
 
-  const activeFilterCount = countActiveFilters(filters);
-
   const setSort = (value: SortOption) => updateParams({ sort: value, page: "1" });
   const setView = (value: ViewMode) => updateParams({ view: value });
   const setPage = (value: number) => updateParams({ page: String(value) });
@@ -488,17 +910,8 @@ export function usePropertySearch() {
   };
 
   const clearFilters = () => {
-    setFilters(getDefaultFilters());
+    setFilters(getDefaultFilters(currency));
     updateParams({ category: null, page: "1" });
-  };
-
-  const toggleFavorite = (id: string) => {
-    setFavorites((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
   };
 
   const toggleAmenity = (amenity: AmenityFilter) => {
@@ -514,23 +927,36 @@ export function usePropertySearch() {
 
   return {
     query,
+    hasSearchCriteria,
     filters,
+    nameQuery,
     sort,
     view,
     page: currentPage,
     perPage,
     totalPages,
     totalResults,
+    loadedResults,
+    expectedHotelCount,
+    completedHotelCount,
+    isStreamingResults,
+    isSearching,
     nights,
     paginatedProperties,
     filteredProperties,
     categoryCounts,
     activeFilterCount,
-    favorites,
     isLoading,
     error,
-    reload: () => setReloadKey((key) => key + 1),
+    useZentrum,
+    searchStatus: zhStatus,
+    reload: () => {
+      // Clear dedupe so Try again actually re-hits Search Init.
+      useSearchStore.setState({ criteriaKey: null, status: "idle", error: null });
+      setReloadKey((key) => key + 1);
+    },
     setQuery,
+    setNameQuery,
     setSort,
     setView,
     setPage,
@@ -538,7 +964,6 @@ export function usePropertySearch() {
     setCategory,
     updateFilters,
     clearFilters,
-    toggleFavorite,
     toggleAmenity,
   };
 }

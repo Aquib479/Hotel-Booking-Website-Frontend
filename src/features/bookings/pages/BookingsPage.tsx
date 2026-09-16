@@ -7,10 +7,12 @@ import { useBookingFilters } from "../hooks/useBookingFilters";
 import { useBookingsList } from "../hooks/useBookingsList";
 import { useRequireAuth } from "../hooks/useRequireAuth";
 import { BOOKINGS_PER_PAGE } from "../constants";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function BookingsPage() {
+  const { t } = useLanguage();
   const { isAuthenticated } = useRequireAuth("/bookings");
-  const { filters, setStatus, setLane, setSearch, setPage } = useBookingFilters();
+  const { filters, setStatus, setSearch, setPage } = useBookingFilters();
   const { bookings, total, counts, isLoading, error } = useBookingsList(filters);
 
   if (!isAuthenticated) {
@@ -25,10 +27,8 @@ export function BookingsPage() {
       status={filters.status}
       counts={counts}
       search={filters.search}
-      lane={filters.lane}
       onStatusChange={setStatus}
       onSearchChange={setSearch}
-      onLaneChange={setLane}
       pagination={
         totalPages > 1 ? (
           <div className="flex items-center justify-center gap-3">
@@ -38,10 +38,10 @@ export function BookingsPage() {
               disabled={filters.page <= 1}
               onClick={() => setPage(filters.page - 1)}
             >
-              Previous
+              {t("common.previous")}
             </Button>
             <span className="text-sm text-muted-foreground">
-              Page {filters.page} of {totalPages}
+              {t("common.pageOf", { page: filters.page, total: totalPages })}
             </span>
             <Button
               variant="outline"
@@ -49,7 +49,7 @@ export function BookingsPage() {
               disabled={filters.page >= totalPages}
               onClick={() => setPage(filters.page + 1)}
             >
-              Next
+              {t("common.next")}
             </Button>
           </div>
         ) : undefined

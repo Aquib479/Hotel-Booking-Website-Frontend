@@ -4,6 +4,7 @@ import { formatRestSlotDisplay } from "@/lib/booking/dateSlotDisplay";
 import { cn } from "@/lib/utils";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useLanguage } from "@/context/LanguageContext";
 import type { BookingDetail } from "../types";
 import { SLOT_STARTING_SOON_HOURS } from "../constants";
 import { getMinutesUntilSlotStart, isSlotStartingSoon } from "../utils";
@@ -20,16 +21,18 @@ interface ConfirmationSlotInstructionsProps {
 }
 
 export function ConfirmationSlotInstructions({ booking }: ConfirmationSlotInstructionsProps) {
+  const { language, t } = useLanguage();
   if (booking.lane !== "direct" || booking.mode !== "rest") return null;
   if (!booking.slotDate || !booking.slotWindow) return null;
 
-  const slotDisplay = formatRestSlotDisplay(booking.slotDate, booking.slotWindow);
-  const windowLabel = getSlotWindowLabel(booking.slotWindow);
+  const slotDisplay = formatRestSlotDisplay(booking.slotDate, booking.slotWindow, { language });
+  const windowLabel = getSlotWindowLabel(booking.slotWindow, language);
   const startingSoon = isSlotStartingSoon(booking);
   const minutesUntil = getMinutesUntilSlotStart(booking);
+  const duration = booking.slotWindow === "24h" ? "24h" : "12h";
 
   return (
-    <SectionCard title="Check-in instructions">
+    <SectionCard title={t("bookings.checkinTitle")}>
       {startingSoon && minutesUntil !== null && minutesUntil >= 0 && (
         <Alert
           className={cn(
@@ -38,54 +41,40 @@ export function ConfirmationSlotInstructions({ booking }: ConfirmationSlotInstru
               : "border-brand/30 bg-brand/5"
           )}
         >
-          <Clock
-            className={cn(
-              minutesUntil <= 60 ? "text-amber-600" : "text-brand"
-            )}
-          />
-          <AlertTitle>Slot starts in {formatMinutesUntilStart(minutesUntil)}</AlertTitle>
-          <AlertDescription>
-            Head to the hotel soon — your window is {windowLabel}
-          </AlertDescription>
+          <Clock className={cn(minutesUntil <= 60 ? "text-amber-600" : "text-brand")} />
+          <AlertTitle>
+            {t("bookings.slotStartsIn", { time: formatMinutesUntilStart(minutesUntil) })}
+          </AlertTitle>
+          <AlertDescription>{t("bookings.headToHotel", { window: windowLabel })}</AlertDescription>
         </Alert>
       )}
 
       <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
         <li className="flex gap-2">
           <MapPin className="mt-0.5 size-4 shrink-0 text-brand" />
-          <span>
-            Go to the front desk at <strong className="text-foreground">{booking.hotelName}</strong>
-            , {booking.address}.
-          </span>
+          <span>{t("bookings.goFrontDesk", { hotel: booking.hotelName, address: booking.address })}</span>
         </li>
         <li className="flex gap-2">
-          <span className="mt-0.5 size-4 shrink-0 text-center text-xs font-bold text-brand">
-            #
-          </span>
-          <span>
-            Show your booking reference{" "}
-            <strong className="font-mono text-foreground">{booking.confirmationCode}</strong> at
-            check-in.
-          </span>
+          <span className="mt-0.5 size-4 shrink-0 text-center text-xs font-bold text-brand">#</span>
+          <span>{t("bookings.showRef", { code: booking.confirmationCode })}</span>
         </li>
         <li className="flex gap-2">
           <Clock className="mt-0.5 size-4 shrink-0 text-brand" />
           <span>
-            Your slot is <strong className="text-foreground">{slotDisplay.primary}</strong>,{" "}
-            {windowLabel} ({booking.slotWindow === "24h" ? "24h" : "12h"} window). Arrive within
-            this window — late arrival may shorten your rest time.
+            {t("bookings.slotWindowHint", {
+              slot: slotDisplay.primary,
+              window: windowLabel,
+              duration,
+            })}
           </span>
         </li>
       </ul>
 
-      <p className="mt-4 text-xs text-muted-foreground">
-        Same details are in your WhatsApp confirmation. Keep that message handy if you&apos;re
-        heading straight from the airport.
-      </p>
+      <p className="mt-4 text-xs text-muted-foreground">{t("bookings.whatsAppHandy")}</p>
 
       {minutesUntil !== null && minutesUntil >= 0 && minutesUntil <= SLOT_STARTING_SOON_HOURS * 60 && (
         <span className="sr-only">
-          Your rest slot starts in {formatMinutesUntilStart(minutesUntil)}
+          {t("bookings.restStartsIn", { time: formatMinutesUntilStart(minutesUntil) })}
         </span>
       )}
     </SectionCard>

@@ -1,6 +1,9 @@
 import { format, isToday, parseISO } from "date-fns";
+import { enUS, id as idLocale } from "date-fns/locale";
 import type { BookingMode, RestSlot } from "./types";
 import { getSlotWindowLabel } from "@/features/checkout/constants";
+import type { AppLanguage } from "@/lib/i18n/languages";
+import { translate } from "@/lib/i18n/messages";
 
 export interface RestSlotDisplay {
   primary: string;
@@ -15,14 +18,17 @@ export interface StayRangeDisplay {
 export function formatRestSlotDisplay(
   slotDate: string,
   slotWindow: RestSlot,
-  options?: { compact?: boolean }
+  options?: { compact?: boolean; language?: AppLanguage }
 ): RestSlotDisplay {
+  const language = options?.language ?? "en";
+  const locale = language === "id" ? idLocale : enUS;
   const date = parseISO(slotDate);
-  const dateLabel = options?.compact && isToday(date)
-    ? `Today · ${format(date, "MMM d")}`
-    : format(date, "EEE, MMM d, yyyy");
-  const windowLabel = getSlotWindowLabel(slotWindow);
-  const duration = slotWindow === "24h" ? "24h slot" : "12h slot";
+  const dateLabel =
+    options?.compact && isToday(date)
+      ? `${translate(language, "common.today")} · ${format(date, "MMM d", { locale })}`
+      : format(date, "EEE, MMM d, yyyy", { locale });
+  const windowLabel = getSlotWindowLabel(slotWindow, language);
+  const duration = slotWindow === "24h" ? translate(language, "common.slot24") : translate(language, "common.slot12");
 
   return {
     primary: dateLabel,
@@ -33,15 +39,20 @@ export function formatRestSlotDisplay(
 export function formatStayRangeDisplay(
   checkIn: string,
   checkOut: string,
-  nights?: number
+  nights?: number,
+  language: AppLanguage = "en"
 ): StayRangeDisplay {
-  const inDate = format(parseISO(checkIn), "MMM d");
-  const outDate = format(parseISO(checkOut), "MMM d, yyyy");
+  const locale = language === "id" ? idLocale : enUS;
+  const inDate = format(parseISO(checkIn), "MMM d", { locale });
+  const outDate = format(parseISO(checkOut), "MMM d, yyyy", { locale });
   const nightCount = nights ?? 1;
 
   return {
     primary: `${inDate} – ${outDate}`,
-    secondary: `${nightCount} night${nightCount !== 1 ? "s" : ""}`,
+    secondary:
+      nightCount === 1
+        ? translate(language, "common.nightOne")
+        : translate(language, "common.nightsN", { n: nightCount }),
   };
 }
 
@@ -54,13 +65,17 @@ export function getBookingDateOrSlotDisplay(
     checkOut?: string;
     nights?: number;
   },
-  options?: { compact?: boolean }
+  options?: { compact?: boolean; language?: AppLanguage }
 ): RestSlotDisplay | StayRangeDisplay | null {
+  const language = options?.language ?? "en";
   if (mode === "rest" && fields.slotDate && fields.slotWindow) {
-    return formatRestSlotDisplay(fields.slotDate, fields.slotWindow, options);
+    return formatRestSlotDisplay(fields.slotDate, fields.slotWindow, {
+      compact: options?.compact,
+      language,
+    });
   }
   if (fields.checkIn && fields.checkOut) {
-    return formatStayRangeDisplay(fields.checkIn, fields.checkOut, fields.nights);
+    return formatStayRangeDisplay(fields.checkIn, fields.checkOut, fields.nights, language);
   }
   return null;
 }

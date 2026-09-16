@@ -3,7 +3,8 @@ import { CheckCircle } from "lucide-react";
 import { formatPrice } from "@/lib/currency/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { BOOKINGS_STATUS_PARAM } from "../constants";
+import { useLanguage } from "@/context/LanguageContext";
+import { BOOKINGS_STATUS_PARAM, REFUND_TIMELINE_KEY, REFUND_TIMELINE_TEXT } from "../constants";
 import type { CancelBookingResult } from "../types";
 
 interface CancelConfirmationStepProps {
@@ -17,6 +18,7 @@ export function CancelConfirmationStep({
   hotelName,
   result,
 }: CancelConfirmationStepProps) {
+  const { t } = useLanguage();
   const isZeroRefund = result.refundAmount === 0;
 
   return (
@@ -26,10 +28,9 @@ export function CancelConfirmationStep({
       </div>
 
       <div>
-        <h1 className="text-xl font-bold text-foreground">Booking cancelled</h1>
+        <h1 className="text-xl font-bold text-foreground">{t("bookings.bookingCancelled")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Your booking at <span className="font-medium text-foreground">{hotelName}</span> has been
-          cancelled.
+          {t("bookings.cancelledAtHotel", { hotel: hotelName })}
         </p>
       </div>
 
@@ -38,28 +39,31 @@ export function CancelConfirmationStep({
           {!isZeroRefund ? (
             <>
               <p className="font-semibold text-foreground">
-                Refund: {formatPrice(result.refundAmount, result.currency)}
+                {t("bookings.refundLabel", {
+                  amount: formatPrice(result.refundAmount, result.currency),
+                })}
               </p>
-              <p className="mt-1 text-muted-foreground">{result.timelineText}</p>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Cancellation is complete. Refund processing is separate — track progress on your
-                booking detail page.
+              <p className="mt-1 text-muted-foreground">
+                {result.timelineText === REFUND_TIMELINE_TEXT
+                  ? t(REFUND_TIMELINE_KEY)
+                  : result.timelineText}
               </p>
+              <p className="mt-3 text-xs text-muted-foreground">{t("bookings.cancelComplete")}</p>
             </>
           ) : (
-            <p className="font-medium text-foreground">
-              No refund applies. Your booking status is now cancelled.
-            </p>
+            <p className="font-medium text-foreground">{t("bookings.noRefundStatus")}</p>
           )}
         </CardContent>
       </Card>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Button variant="brand" asChild>
-          <Link to={`/bookings?${BOOKINGS_STATUS_PARAM}=cancelled`}>View cancelled bookings</Link>
+          <Link to={`/bookings?${BOOKINGS_STATUS_PARAM}=cancelled`}>
+            {t("bookings.viewCancelled")}
+          </Link>
         </Button>
         <Button variant="outline" asChild>
-          <Link to={`/bookings/${bookingId}`}>View booking details</Link>
+          <Link to={`/bookings/${bookingId}`}>{t("bookings.viewDetails")}</Link>
         </Button>
       </div>
     </div>

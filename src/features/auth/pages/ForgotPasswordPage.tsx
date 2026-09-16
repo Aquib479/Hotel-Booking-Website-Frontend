@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { getDefaultPhoneCountryCode } from "@/lib/phone/constants";
 import { isValidE164, toE164 } from "@/lib/phone/validation";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { FormField } from "@/components/common/form";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -14,24 +15,25 @@ import type { ForgotPasswordValues } from "../types";
 import { AuthLayout } from "../components/AuthLayout";
 import { PhoneInput } from "../components/PhoneInput";
 
-function validateField(
-  field: keyof ForgotPasswordValues,
-  values: ForgotPasswordValues
-): string | undefined {
-  if (field === "phoneCountryCode") {
-    return values.phoneCountryCode ? undefined : "Country code is required";
-  }
-  if (field !== "phoneNumber") return undefined;
-  if (!values.phoneNumber.trim()) return "Phone number is required";
-  if (!isValidE164(values.phoneCountryCode, values.phoneNumber)) {
-    return "Enter a valid phone number with country code";
-  }
-  return undefined;
-}
-
 export function ForgotPasswordPage() {
+  const { t } = useLanguage();
   const { currency } = useCurrency();
   const { buildAuthPath } = useAuthRedirect();
+
+  const validateField = useCallback(
+    (field: keyof ForgotPasswordValues, values: ForgotPasswordValues): string | undefined => {
+      if (field === "phoneCountryCode") {
+        return values.phoneCountryCode ? undefined : t("auth.err.countryRequired");
+      }
+      if (field !== "phoneNumber") return undefined;
+      if (!values.phoneNumber.trim()) return t("auth.err.phoneRequired");
+      if (!isValidE164(values.phoneCountryCode, values.phoneNumber)) {
+        return t("auth.err.phoneInvalid");
+      }
+      return undefined;
+    },
+    [t]
+  );
 
   const initial = useMemo(
     (): ForgotPasswordValues => ({
@@ -64,20 +66,20 @@ export function ForgotPasswordPage() {
   );
 
   return (
-    <AuthLayout title="Reset your password" subtitle="We'll send instructions if an account exists">
+    <AuthLayout title={t("auth.reset")} subtitle={t("auth.resetSubtitle")}>
       {submitted ? (
         <div className="space-y-4">
           <Alert className="border-brand/30 bg-brand/5">
-            <AlertDescription>{FORGOT_PASSWORD_CONFIRMATION}</AlertDescription>
+            <AlertDescription>{FORGOT_PASSWORD_CONFIRMATION(t)}</AlertDescription>
           </Alert>
           <Button variant="link" className="h-auto p-0" asChild>
-            <Link to={buildAuthPath("/login")}>Back to log in</Link>
+            <Link to={buildAuthPath("/login")}>{t("auth.backLogin")}</Link>
           </Button>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <FormField
-            label="Phone number"
+            label={t("auth.phone")}
             error={form.touched.phoneNumber ? form.errors.phoneNumber : undefined}
           >
             <PhoneInput
@@ -93,11 +95,11 @@ export function ForgotPasswordPage() {
           </FormField>
 
           <Button type="submit" variant="brand" size="lg" className="w-full" disabled={isLoading}>
-            {isLoading ? "Sending…" : "Send reset instructions"}
+            {isLoading ? t("common.sending") : t("auth.sendReset")}
           </Button>
 
           <Button variant="link" className="w-full" asChild>
-            <Link to={buildAuthPath("/login")}>Back to log in</Link>
+            <Link to={buildAuthPath("/login")}>{t("auth.backLogin")}</Link>
           </Button>
         </form>
       )}

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 import type { BookingRecord } from "../types";
 import { classifyBookingStatus } from "../utils";
 
@@ -8,6 +9,7 @@ interface BookingCardStatusPillProps {
 }
 
 export function BookingCardStatusPill({ booking, className }: BookingCardStatusPillProps) {
+  const { t } = useLanguage();
   const tabStatus = classifyBookingStatus(booking);
 
   if (booking.refundStatus === "pending") {
@@ -18,7 +20,7 @@ export function BookingCardStatusPill({ booking, className }: BookingCardStatusP
           className
         )}
       >
-        Refund pending
+        {t("bookings.refundPending")}
       </span>
     );
   }
@@ -31,7 +33,7 @@ export function BookingCardStatusPill({ booking, className }: BookingCardStatusP
           className
         )}
       >
-        Cancelled
+        {t("bookings.cancelled")}
       </span>
     );
   }
@@ -44,7 +46,7 @@ export function BookingCardStatusPill({ booking, className }: BookingCardStatusP
           className
         )}
       >
-        Completed
+        {t("bookings.completed")}
       </span>
     );
   }
@@ -56,7 +58,7 @@ export function BookingCardStatusPill({ booking, className }: BookingCardStatusP
         className
       )}
     >
-      Upcoming
+      {t("bookings.upcoming")}
     </span>
   );
 }

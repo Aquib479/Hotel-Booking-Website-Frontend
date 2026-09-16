@@ -1,10 +1,13 @@
+import { useLanguage } from "@/context/LanguageContext";
 import { LegalPageLayout } from "../components/LegalPageLayout";
-import { PRIVACY_POLICY } from "../constants/legalContent";
+import { getLegalDocument } from "../constants/legalContent";
 
 export function PrivacyPage() {
+  const { language } = useLanguage();
+
   return (
     <main>
-      <LegalPageLayout document={PRIVACY_POLICY} />
+      <LegalPageLayout document={getLegalDocument("privacy", language)} />
     </main>
   );
 }

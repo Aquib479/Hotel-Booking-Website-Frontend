@@ -1,5 +1,7 @@
 import type { BookingLane } from "@/lib/booking/types";
 import { DIRECT_CANCEL_HOURS_BEFORE_SLOT } from "@/lib/booking/cancellation";
+import type { AppLanguage } from "@/lib/i18n/languages";
+import { translate } from "@/lib/i18n/messages";
 
 export type FaqCategoryId =
   | "half-day-booking"
@@ -75,38 +77,42 @@ export interface CancellationPolicySummary {
 /** Shared cancellation copy — single source for checkout summary, booking detail, and legal page */
 export function getCancellationPolicySummary(
   lane: BookingLane,
-  supplierName?: string
+  supplierName?: string,
+  language: AppLanguage = "en",
 ): CancellationPolicySummary {
   const hours = DIRECT_CANCEL_HOURS_BEFORE_SLOT;
-  const supplier = supplierName ?? "our partner supplier";
+  const supplier = supplierName ?? translate(language, "policy.partnerSupplier");
 
   if (lane === "direct") {
     return {
-      headline: `Free cancellation up to ${hours} hours before slot start`,
+      headline: translate(language, "policy.directHeadline", { hours }),
       bullets: [
-        `Cancel free of charge up to ${hours} hours before your slot begins.`,
-        `Cancellations within ${hours} hours are charged the full slot rate.`,
-        "No-shows are non-refundable.",
-        "Refunds are processed within 5–7 business days to your original payment method.",
+        translate(language, "policy.directB1", { hours }),
+        translate(language, "policy.directB2", { hours }),
+        translate(language, "policy.directB3"),
+        translate(language, "policy.directB4"),
       ],
     };
   }
 
   return {
-    headline: "Subject to partner cancellation policy",
+    headline: translate(language, "policy.wholesaleHeadline"),
     bullets: [
-      `This rate is provided by ${supplier}.`,
-      "Cancellation and refund rules follow the supplier's policy at time of booking.",
-      "RestHalf cannot override partner policies once the handoff is complete.",
-      "Contact RestHalf support if you need help before completing payment with the partner.",
+      translate(language, "policy.wholesaleB1", { supplier }),
+      translate(language, "policy.wholesaleB2"),
+      translate(language, "policy.wholesaleB3"),
+      translate(language, "policy.wholesaleB4"),
     ],
   };
 }
 
-export function formatSupplierCancellationBullets(supplierName?: string): string[] {
-  return getCancellationPolicySummary("wholesale", supplierName).bullets;
+export function formatSupplierCancellationBullets(
+  supplierName?: string,
+  language: AppLanguage = "en",
+): string[] {
+  return getCancellationPolicySummary("wholesale", supplierName, language).bullets;
 }
 
-export function formatDirectCancellationBullets(): string[] {
-  return getCancellationPolicySummary("direct").bullets;
+export function formatDirectCancellationBullets(language: AppLanguage = "en"): string[] {
+  return getCancellationPolicySummary("direct", undefined, language).bullets;
 }

@@ -1,10 +1,13 @@
+import { useLanguage } from "@/context/LanguageContext";
 import { LegalPageLayout } from "../components/LegalPageLayout";
-import { TERMS_OF_SERVICE } from "../constants/legalContent";
+import { getLegalDocument } from "../constants/legalContent";
 
 export function TermsPage() {
+  const { language } = useLanguage();
+
   return (
     <main>
-      <LegalPageLayout document={TERMS_OF_SERVICE} />
+      <LegalPageLayout document={getLegalDocument("terms", language)} />
     </main>
   );
 }

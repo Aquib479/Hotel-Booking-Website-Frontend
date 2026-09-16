@@ -1,82 +1,104 @@
-import { Link, NavLink } from "react-router-dom";
-import { User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { CurrencySwitcher } from "@/components/common/CurrencySwitcher";
-import { useAuth } from "@/features/auth/context/AuthProvider";
+import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
+import { AccountMenuButton } from "@/features/account/components/AccountMenuButton";
+import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 import { SITE_NAV_LINKS } from "./site-nav";
 
-type SiteNavbarVariant = "default" | "overlay";
+type SiteNavbarVariant = "default" | "inline";
 
 interface SiteNavbarProps {
+  /** Renders without sticky/fixed positioning (used inside search sticky chrome). */
   variant?: SiteNavbarVariant;
+  className?: string;
 }
 
-export function SiteNavbar({ variant = "default" }: SiteNavbarProps) {
-  const isOverlay = variant === "overlay";
-  const { isAuthenticated, user } = useAuth();
+export function SiteNavbar({
+  variant = "default",
+  className,
+}: SiteNavbarProps) {
+  const location = useLocation();
+  const { t } = useLanguage();
+  const isHome = location.pathname === "/";
+  const isInline = variant === "inline";
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    if (!isHome || isInline) {
+      setScrolled(false);
+      return;
+    }
+
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isHome, isInline]);
+
+  const isTransparentHome = !isInline && isHome && !scrolled;
 
   return (
     <header
       className={cn(
-        "z-50 w-full",
-        isOverlay
-          ? "absolute top-0 bg-transparent"
-          : "sticky top-0 border-b border-border bg-white/95 backdrop-blur-md"
+        "z-[60] w-full transition-[background-color,border-color,box-shadow,backdrop-filter,transform] duration-300",
+        !isInline && (isHome ? "fixed top-0" : "sticky top-0"),
+        isTransparentHome
+          ? "border-b border-transparent bg-transparent"
+          : "border-b border-border/80 bg-white/95 shadow-sm backdrop-blur-md",
+        className,
       )}
     >
-      <div className="mx-auto flex items-center justify-between px-4 py-4 sm:px-12">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-8">
         <Link
           to="/"
-          className="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
+          aria-label={t("nav.homeAria")}
+          className="inline-flex shrink-0 items-center"
         >
-          RestHalf
+          <img
+            src="/resthalf-logo.png"
+            alt="RestHalf.com"
+            className="h-12 w-auto max-w-[240px] origin-left scale-x-110 rounded-md object-contain object-left sm:h-14 sm:max-w-[280px]"
+          />
         </Link>
 
         <nav
-          aria-label="Primary"
+          aria-label={t("nav.aria")}
           className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 md:flex"
         >
           {SITE_NAV_LINKS.map((link) =>
             link.href.startsWith("/") && !link.href.includes("#") ? (
               <NavLink
-                key={link.label}
+                key={link.id}
                 to={link.href}
+                end={link.href === "/"}
                 className={({ isActive }) =>
                   cn(
-                    "text-sm font-medium transition-colors",
-                    isActive ? "font-bold text-foreground" : "text-foreground"
+                    "border-b-2 pb-0.5 text-sm font-medium transition-colors",
+                    isActive
+                      ? "border-sky-400 font-semibold text-foreground"
+                      : "border-transparent text-foreground/80 hover:text-foreground",
                   )
                 }
               >
-                {link.label}
+                {t(`nav.${link.id}`)}
               </NavLink>
             ) : (
               <a
-                key={link.label}
+                key={link.id}
                 href={link.href}
-                className="text-sm font-medium transition-colors"
+                className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
               >
-                {link.label}
+                {t(`nav.${link.id}`)}
               </a>
-            )
+            ),
           )}
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <CurrencySwitcher variant={isOverlay ? "overlay" : "default"} />
-          <Link
-            to={isAuthenticated ? "/account" : "/login"}
-            aria-label={isAuthenticated ? "Account settings" : "Log in"}
-            className={cn(
-              "flex size-8 items-center justify-center rounded-full border transition-colors",
-              isOverlay
-                ? "border-foreground/15 bg-transparent text-foreground hover:bg-transparent hover:text-foreground"
-                : "border-border bg-muted text-muted-foreground hover:text-foreground"
-            )}
-            title={isAuthenticated ? user?.fullName : "Log in"}
-          >
-            <User className="size-5" />
-          </Link>
+          <LanguageSwitcher />
+          <CurrencySwitcher />
+          <AccountMenuButton />
         </div>
       </div>
     </header>

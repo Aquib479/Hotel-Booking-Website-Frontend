@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RefundBreakdownCard } from "./RefundBreakdownCard";
 import type { BookingDetail, RefundPreview } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface RefundPreviewStepProps {
   booking: BookingDetail;
@@ -20,13 +21,12 @@ export function RefundPreviewStep({
   error,
   onRetry,
 }: RefundPreviewStepProps) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-foreground">Your refund preview</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Review exactly what you&apos;ll get back before confirming cancellation.
-        </p>
+        <h1 className="text-xl font-bold text-foreground">{t("bookings.refundPreviewTitle")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("bookings.refundPreviewHint")}</p>
       </div>
 
       {isLoading && (
@@ -44,7 +44,7 @@ export function RefundPreviewStep({
           message={error}
           action={
             <Button type="button" variant="link" className="h-auto p-0" onClick={onRetry}>
-              Try again
+              {t("common.tryAgain")}
             </Button>
           }
         />

@@ -4,6 +4,8 @@ import type { BookingLane, BookingMode, RestSlot } from "@/lib/booking/types";
 import type { CurrencyCode } from "@/lib/currency/types";
 import { SLOT_HOLD_MINUTES } from "./constants";
 import type { CheckoutDraft, CheckoutGuests } from "./types";
+import type { AppLanguage } from "@/lib/i18n/languages";
+import { translate } from "@/lib/i18n/messages";
 
 export function parseGuestsLabel(label: string): CheckoutGuests {
   const travellersMatch = label.match(/(\d+)\s*travellers?/i);
@@ -22,14 +24,25 @@ export function parseGuestsLabel(label: string): CheckoutGuests {
   };
 }
 
-export function formatGuestsSummary(guests: CheckoutGuests): string {
+export function formatGuestsSummary(
+  guests: CheckoutGuests,
+  language: AppLanguage = "en"
+): string {
   const total = guests.adults + guests.children;
   if (guests.children === 0) {
-    return `${total} traveller${total === 1 ? "" : "s"}`;
+    return total === 1
+      ? translate(language, "common.travellerOne")
+      : translate(language, "common.travellersN", { n: total });
   }
-  const parts = [`${guests.adults} adult${guests.adults !== 1 ? "s" : ""}`];
-  parts.push(`${guests.children} child${guests.children !== 1 ? "ren" : ""}`);
-  return parts.join(", ");
+  const adults =
+    guests.adults === 1
+      ? translate(language, "common.adultCountOne")
+      : translate(language, "common.adultCountN", { n: guests.adults });
+  const children =
+    guests.children === 1
+      ? translate(language, "common.childCountOne")
+      : translate(language, "common.childCountN", { n: guests.children });
+  return `${adults}, ${children}`;
 }
 
 interface BuildDraftInput {

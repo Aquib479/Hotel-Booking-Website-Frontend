@@ -7,6 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useLanguage } from "@/context/LanguageContext";
 import type { BookingDetail } from "../types";
 
 interface ConfirmationNextStepsProps {
@@ -14,37 +15,31 @@ interface ConfirmationNextStepsProps {
 }
 
 export function ConfirmationNextSteps({ booking }: ConfirmationNextStepsProps) {
-  const steps = [
-    {
-      text: `Confirmation sent to your WhatsApp${booking.guest.email ? " and email" : ""}`,
-    },
-    {
-      text: "View or manage this booking anytime in My Bookings",
-      link: { to: "/bookings", label: "My Bookings" },
-    },
-  ];
+  const { t } = useLanguage();
+  const confirmText = booking.guest.email
+    ? t("bookings.nextWhatsAppEmail")
+    : t("bookings.nextWhatsApp");
 
   return (
-    <SectionCard title="What happens next">
+    <SectionCard title={t("bookings.next")}>
       <ul className="space-y-3">
-        {steps.map((step) => (
-          <li key={step.text} className="flex gap-3 text-sm">
-            <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-              <Check className="size-3 text-emerald-600" />
-            </span>
-            <span className="text-muted-foreground">
-              {step.text}
-              {step.link && (
-                <>
-                  {" "}
-                  <Link to={step.link.to} className="font-medium text-brand hover:underline">
-                    {step.link.label}
-                  </Link>
-                </>
-              )}
-            </span>
-          </li>
-        ))}
+        <li className="flex gap-3 text-sm">
+          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+            <Check className="size-3 text-emerald-600" />
+          </span>
+          <span className="text-muted-foreground">{confirmText}</span>
+        </li>
+        <li className="flex gap-3 text-sm">
+          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+            <Check className="size-3 text-emerald-600" />
+          </span>
+          <span className="text-muted-foreground">
+            {t("bookings.nextManage")}{" "}
+            <Link to="/bookings" className="font-medium text-brand hover:underline">
+              {t("bookings.title")}
+            </Link>
+          </span>
+        </li>
 
         <li className="flex gap-3 text-sm">
           <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
@@ -55,7 +50,7 @@ export function ConfirmationNextSteps({ booking }: ConfirmationNextStepsProps) {
               <AccordionItem value="policy" className="border-none">
                 <AccordionTrigger className="py-0 hover:no-underline">
                   <span className="text-left text-muted-foreground">
-                    Cancellation:{" "}
+                    {t("bookings.cancellation")}{" "}
                     <span className="text-foreground">{booking.policy.headline}</span>
                   </span>
                 </AccordionTrigger>

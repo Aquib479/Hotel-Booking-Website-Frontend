@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { DETAIL_TABS } from "../data";
 import type { DetailTab } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface DetailTabsProps {
   activeTab: DetailTab;
@@ -8,25 +9,23 @@ interface DetailTabsProps {
 }
 
 export function DetailTabs({ activeTab, onTabChange }: DetailTabsProps) {
+  const { t } = useLanguage();
   return (
-    <div className="mt-8 border-b border-border">
-      <div className="flex gap-6 overflow-x-auto">
+    <div className="sticky top-16 z-20 -mx-4 border-b border-border/80 bg-[#fafafa]/95 px-4 backdrop-blur-md sm:-mx-0 sm:px-0">
+      <div className="flex justify-between gap-1 overflow-x-auto py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {DETAIL_TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              "relative shrink-0 pb-3 text-sm font-medium transition-colors",
+              "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition",
               activeTab === tab.id
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-foreground text-background shadow-sm"
+                : "text-muted-foreground hover:bg-white hover:text-foreground"
             )}
           >
-            {tab.label}
-            {activeTab === tab.id && (
-              <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-foreground" />
-            )}
+            {t(`hotel.tab.${tab.id}`)}
           </button>
         ))}
       </div>

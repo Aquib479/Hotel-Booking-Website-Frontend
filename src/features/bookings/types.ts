@@ -3,8 +3,6 @@ import type { CurrencyCode } from "@/lib/currency/types";
 
 export type BookingTabStatus = "upcoming" | "past" | "cancelled";
 
-export type LaneFilter = "all" | BookingLane;
-
 export type RefundStatus = "none" | "pending" | "refunded" | "failed";
 
 export type RefundStep = "requested" | "processing" | "refunded";
@@ -89,7 +87,6 @@ export interface BookingEligibility {
 
 export interface BookingFilters {
   status: BookingTabStatus;
-  lane: LaneFilter;
   search: string;
   page: number;
 }

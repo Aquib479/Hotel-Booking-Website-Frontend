@@ -1,6 +1,8 @@
 import { useRequireAuth } from "@/features/bookings/hooks/useRequireAuth";
 import { AccountLayout } from "../components/AccountLayout";
 import { ProfileInfoSection } from "../components/ProfileInfoSection";
+import { MemberProfileSection } from "../components/MemberProfileSection";
+import { DisplayPreferencesSection } from "../components/DisplayPreferencesSection";
 import { PhoneNumberSection } from "../components/PhoneNumberSection";
 import { CurrencyPreferenceSection } from "../components/CurrencyPreferenceSection";
 import { PasswordSection } from "../components/PasswordSection";
@@ -31,12 +33,14 @@ export function AccountPage() {
             onSaveName={(name) => profileHook.updateField("fullName", name)}
             onSaveEmail={(email) => profileHook.updateField("email", email)}
           />
+          <MemberProfileSection profile={profile} onChange={profileHook.updateMember} />
           <PhoneNumberSection
             profile={profile}
             onStartChange={profileHook.startPhoneChange}
             onConfirmChange={profileHook.confirmPhoneChange}
             onCancelChange={profileHook.cancelPhoneChange}
           />
+          <DisplayPreferencesSection member={profile.member} onChange={profileHook.updateMember} />
           <CurrencyPreferenceSection />
           <PasswordSection
             hasPassword={profile.hasPassword}
@@ -52,7 +56,6 @@ export function AccountPage() {
           isLoading={paymentMethods.isLoading}
           onAdd={paymentMethods.addMethod}
           onRemove={paymentMethods.removeMethod}
-          onSetDefault={paymentMethods.setDefault}
         />
       )}
 

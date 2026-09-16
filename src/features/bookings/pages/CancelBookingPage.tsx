@@ -18,8 +18,10 @@ import { useRequireAuth } from "../hooks/useRequireAuth";
 import { useCancelFlow } from "../hooks/useCancelFlow";
 import { useRefundPreview } from "../hooks/useRefundPreview";
 import type { CancelBookingResult, CancelReasonId } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function CancelBookingPage() {
+  const { t } = useLanguage();
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated } = useRequireAuth(`/bookings/${id}/cancel`);
   const { booking, isLoading, error } = useBookingDetail(id);
@@ -71,9 +73,9 @@ export function CancelBookingPage() {
   if (error || !booking || !eligibility) {
     return (
       <NoActiveDraftState
-        title="Booking not found"
-        body="We couldn't find this booking to cancel."
-        cta="Back to My Bookings"
+        title={t("bookings.notFound")}
+        body={t("bookings.notFoundCancelBody")}
+        cta={t("bookings.back")}
         searchHref="/bookings"
       />
     );
@@ -98,13 +100,10 @@ export function CancelBookingPage() {
   if (!eligibility.canCancel) {
     return (
       <main className="mx-auto max-w-lg px-6 py-16 text-center">
-        <h1 className="text-xl font-bold text-foreground">Cancellation window has closed</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          The cancellation window has just closed since you opened this page. Your booking is still
-          active.
-        </p>
+        <h1 className="text-xl font-bold text-foreground">{t("bookings.windowClosed")}</h1>
+        <p className="mt-3 text-sm text-muted-foreground">{t("bookings.windowClosedBody")}</p>
         <Button variant="brand" className="mt-6" asChild>
-          <Link to={`/bookings/${booking.id}`}>Back to booking details</Link>
+          <Link to={`/bookings/${booking.id}`}>{t("bookings.backToDetails")}</Link>
         </Button>
       </main>
     );
@@ -129,7 +128,7 @@ export function CancelBookingPage() {
     <div className="flex gap-3">
       {flow.step === "preview" && (
         <Button type="button" variant="outline" className="flex-1" onClick={flow.goBack}>
-          Back
+          {t("common.back")}
         </Button>
       )}
       {flow.step === "reason" && (
@@ -140,7 +139,7 @@ export function CancelBookingPage() {
           disabled={!canContinueReason}
           onClick={flow.goToPreview}
         >
-          Continue
+          {t("common.continue")}
         </Button>
       )}
       {flow.step === "preview" && (
@@ -156,7 +155,7 @@ export function CancelBookingPage() {
           }
           onClick={() => void handleConfirmCancel()}
         >
-          {isSubmitting ? "Cancelling…" : "Confirm cancellation"}
+          {isSubmitting ? t("bookings.cancelling") : t("bookings.confirmCancel")}
         </Button>
       )}
     </div>

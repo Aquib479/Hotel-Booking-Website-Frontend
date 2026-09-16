@@ -4,6 +4,7 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useLanguage } from "@/context/LanguageContext";
 import type { UserProfile } from "../types";
 
 interface ProfileInfoSectionProps {
@@ -19,15 +20,16 @@ export function ProfileInfoSection({
   onSaveName,
   onSaveEmail,
 }: ProfileInfoSectionProps) {
+  const { t } = useLanguage();
   const [fullName, setFullName] = useState(profile.fullName);
   const [email, setEmail] = useState(profile.email);
   const [nameDirty, setNameDirty] = useState(false);
   const [emailDirty, setEmailDirty] = useState(false);
 
   return (
-    <SectionCard title="Profile" description="Your name and contact email">
+    <SectionCard title={t("account.profileTitle")} description={t("account.profileHint")}>
       <div className="space-y-4">
-        <FormField label="Full name" htmlFor="profile-name">
+        <FormField label={t("auth.fullName")} htmlFor="profile-name">
           <Input
             id="profile-name"
             type="text"
@@ -45,12 +47,12 @@ export function ProfileInfoSection({
               disabled={isSaving || fullName.trim() === profile.fullName}
               onClick={() => void onSaveName(fullName).then(() => setNameDirty(false))}
             >
-              {isSaving ? "Saving…" : "Save name"}
+              {isSaving ? t("common.saving") : t("account.saveName")}
             </Button>
           )}
         </FormField>
 
-        <FormField label="Email" htmlFor="profile-email">
+        <FormField label={t("account.email")} htmlFor="profile-email">
           <Input
             id="profile-email"
             type="email"
@@ -63,8 +65,7 @@ export function ProfileInfoSection({
           {profile.pendingEmail && (
             <Alert className="mt-2 border-amber-200 bg-amber-50">
               <AlertDescription className="text-amber-800">
-                Confirmation sent to {profile.pendingEmail}. Your email won&apos;t change until
-                you confirm.
+                {t("account.emailPending", { email: profile.pendingEmail })}
               </AlertDescription>
             </Alert>
           )}
@@ -76,7 +77,7 @@ export function ProfileInfoSection({
               disabled={isSaving || email.trim() === profile.email}
               onClick={() => void onSaveEmail(email).then(() => setEmailDirty(false))}
             >
-              {isSaving ? "Sending…" : "Save email"}
+              {isSaving ? t("common.sending") : t("account.saveEmail")}
             </Button>
           )}
         </FormField>

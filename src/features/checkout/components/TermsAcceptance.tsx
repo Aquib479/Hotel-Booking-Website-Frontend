@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface TermsAcceptanceProps {
   checked: boolean;
@@ -9,6 +10,8 @@ interface TermsAcceptanceProps {
 }
 
 export function TermsAcceptance({ checked, onChange }: TermsAcceptanceProps) {
+  const { t } = useLanguage();
+
   return (
     <Label
       className={cn(
@@ -21,17 +24,17 @@ export function TermsAcceptance({ checked, onChange }: TermsAcceptanceProps) {
         className="mt-0.5"
       />
       <span className="text-sm text-muted-foreground">
-        I agree to the{" "}
+        {t("checkout.termsAgree")}{" "}
         <Link to="/terms" className="font-medium text-brand hover:underline" target="_blank">
-          Terms of Service
+          {t("footer.terms")}
         </Link>{" "}
-        and{" "}
+        {t("checkout.and")}{" "}
         <Link
           to="/cancellation-policy"
           className="font-medium text-brand hover:underline"
           target="_blank"
         >
-          Cancellation Policy
+          {t("footer.cancellation")}
         </Link>
       </span>
     </Label>

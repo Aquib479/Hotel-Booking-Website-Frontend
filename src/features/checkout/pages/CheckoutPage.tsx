@@ -1,12 +1,27 @@
 import { useCallback, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
+import { formatPrice } from "@/lib/currency/format";
+import type { CurrencyCode } from "@/lib/currency/types";
+import { CURRENCIES } from "@/lib/currency/types";
 import { useAuth } from "@/features/auth/context/AuthProvider";
+import { saveCardFromPayment } from "@/features/account/lib/saveCard";
+import { Button } from "@/components/ui/button";
 import { confirmBooking, releaseBooking as releaseBookingHold } from "../api";
+import { useCheckoutCurrencyReprice } from "../hooks/useCheckoutCurrencyReprice";
 import { useCheckoutDraft } from "../hooks/useCheckoutDraft";
 import { useCheckoutForm } from "../hooks/useCheckoutForm";
-import type { PaymentMethod } from "../types";
+import type {
+  CheckoutDraft,
+  CheckoutStep,
+  ConfirmedCheckoutSnapshot,
+  GuestDetailsValues,
+  PaymentMethod,
+} from "../types";
 import { CheckoutLayout } from "../components/CheckoutLayout";
+import { CheckoutStepIndicator } from "../components/CheckoutStepIndicator";
+import { CheckoutConfirmed } from "../components/CheckoutConfirmed";
 import { BookingSummaryCard } from "../components/BookingSummaryCard";
 import { GuestDetailsForm } from "../components/GuestDetailsForm";
 import { PaymentSection } from "../components/PaymentSection";
@@ -16,8 +31,14 @@ import { CheckoutCTA } from "../components/CheckoutCTA";
 import { NoActiveDraftState } from "../components/NoActiveDraftState";
 import { GuestCheckoutPrompt } from "../components/GuestCheckoutPrompt";
 import { usePaymentMethodSelection } from "../components/DirectPaymentMethods";
+import { useLanguage } from "@/context/LanguageContext";
 
 const GUEST_CHECKOUT_KEY = "resthalf-checkout-guest-mode";
+
+function toCurrencyCode(code: string | undefined): CurrencyCode {
+  const upper = (code || "USD").toUpperCase();
+  return CURRENCIES.some((c) => c.code === upper) ? (upper as CurrencyCode) : "USD";
+}
 
 function readGuestMode(): boolean {
   try {
@@ -27,11 +48,43 @@ function readGuestMode(): boolean {
   }
 }
 
+function buildConfirmedSnapshot(
+  draft: CheckoutDraft,
+  guest: GuestDetailsValues,
+  bookingId: string,
+  confirmationCode: string | undefined,
+  hotelFallback: string
+): ConfirmedCheckoutSnapshot {
+  return {
+    bookingId,
+    confirmationCode,
+    hotelName: draft.hotelMeta?.name ?? hotelFallback,
+    hotelImageUrl: draft.hotelMeta?.imageUrl || draft.roomImageUrl || undefined,
+    mode: draft.mode,
+    checkIn: draft.checkIn,
+    checkOut: draft.checkOut,
+    nights: draft.nights,
+    slotDate: draft.slotDate,
+    slotWindow: draft.slotWindow,
+    guestsLabel: draft.guestsLabel,
+    roomName: draft.roomName,
+    totalPrice: draft.totalPrice ?? 0,
+    currency: toCurrencyCode(draft.currency),
+    guestName: guest.fullName.trim(),
+    guestEmail: guest.email.trim(),
+  };
+}
+
 export function CheckoutPage() {
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const { isAuthenticated, user } = useAuth();
-  const { draft, isExpired, clearDraft } = useCheckoutDraft();
-  const { format: formatCurrency } = useCurrency();
+  const { currency } = useCurrency();
+  const { draft, isExpired, clearDraft, saveDraft } = useCheckoutDraft();
+  const { isRefreshingPrice, priceRefreshError } = useCheckoutCurrencyReprice(
+    draft,
+    saveDraft
+  );
   const form = useCheckoutForm(
     user
       ? {
@@ -42,26 +95,50 @@ export function CheckoutPage() {
         }
       : undefined
   );
-  const { selectedMethod, setSelectedMethod } = usePaymentMethodSelection();
+  const {
+    selectedMethod,
+    setSelectedMethod,
+    cardForm,
+    upiForm,
+    isPaymentDetailsValid,
+    validatePaymentDetails,
+  } = usePaymentMethodSelection();
 
-  const navigate = useNavigate();
+  const [step, setStep] = useState<CheckoutStep>(1);
+  const [confirmed, setConfirmed] = useState<ConfirmedCheckoutSnapshot | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [holdExpired, setHoldExpired] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [guestMode, setGuestMode] = useState(() => readGuestMode() || isAuthenticated);
 
-  const totalPrice = draft?.totalPrice ?? 0;
-  const payAmountLabel = formatCurrency(totalPrice);
+  const draftCurrency = toCurrencyCode(draft?.currency);
+  const totalPrice =
+    draft?.totalPrice != null && draft.totalPrice > 0 ? draft.totalPrice : 0;
+  const payAmountLabel = formatPrice(totalPrice, draftCurrency);
 
-  const disabledReason = useMemo(() => {
-    if (!termsAccepted) return "Accept the terms to continue";
-    if (!form.isValid) return "Fill in your details to continue";
-    if (draft?.lane === "direct" && !selectedMethod) return "Select a payment method";
+  const step1DisabledReason = useMemo(() => {
+    if (!form.isValid) return t("checkout.fillDetails");
     return undefined;
-  }, [termsAccepted, form.isValid, draft?.lane, selectedMethod]);
+  }, [form.isValid, t]);
 
-  const isActionDisabled = Boolean(disabledReason) || isSubmitting;
+  const step2DisabledReason = useMemo(() => {
+    if (isRefreshingPrice) return t("checkout.updatingPrice");
+    if (!termsAccepted) return t("checkout.acceptTerms");
+    if (!form.isValid) return t("checkout.fillDetails");
+    if (!selectedMethod) return t("checkout.selectPay");
+    if (!isPaymentDetailsValid) {
+      return selectedMethod === "upi" ? t("checkout.validUpi") : t("checkout.validCard");
+    }
+    return undefined;
+  }, [
+    isRefreshingPrice,
+    termsAccepted,
+    form.isValid,
+    selectedMethod,
+    isPaymentDetailsValid,
+    t,
+  ]);
 
   const handleHoldExpire = useCallback(() => {
     if (draft?.bookingId) {
@@ -71,20 +148,132 @@ export function CheckoutPage() {
     clearDraft();
   }, [clearDraft, draft?.bookingId]);
 
+  const finishConfirmed = useCallback(
+    (bookingId: string, confirmationCode?: string) => {
+      if (!draft) return;
+      const snapshot = buildConfirmedSnapshot(
+        draft,
+        form.values,
+        bookingId,
+        confirmationCode,
+        t("checkout.yourBooking")
+      );
+      clearDraft();
+      setConfirmed(snapshot);
+      setStep(3);
+    },
+    [clearDraft, draft, form.values, t]
+  );
+
+  const persistCardIfNeeded = useCallback(
+    async (method: PaymentMethod) => {
+      if (method !== "card" || !user) return;
+      try {
+        await saveCardFromPayment(user.id, {
+          cardNumber: cardForm.values.cardNumber,
+          expiry: cardForm.values.expiry,
+          holderName: cardForm.values.holderName,
+        });
+      } catch {
+        /* saving card must not block checkout confirmation */
+      }
+    },
+    [user, cardForm.values.cardNumber, cardForm.values.expiry, cardForm.values.holderName]
+  );
+
   const handleSubmitPayment = useCallback(
-    async (_method: PaymentMethod) => {
+    async (method: PaymentMethod) => {
       if (!form.validateForm() || !termsAccepted || !draft) return;
+      if (!validatePaymentDetails()) return;
       setIsSubmitting(true);
       setPaymentError(null);
       try {
+        if (draft.source === "zentrumhub") {
+          const { useBookingStore, useHotelStore } = await import("@/store");
+          const booking = useBookingStore.getState();
+
+          const priced = await booking.runPricing();
+          if (!priced && useBookingStore.getState().status === "error") {
+            setPaymentError(useBookingStore.getState().error ?? t("checkout.pricingFailed"));
+            return;
+          }
+
+          const [firstName, ...rest] = form.values.fullName.trim().split(/\s+/);
+          const lastName = rest.join(" ") || firstName;
+          const guest = {
+            type: "Adult",
+            firstName,
+            lastName,
+            email: form.values.email,
+            contactNumber: `${form.values.phoneCountryCode}${form.values.phoneNumber}`,
+          };
+
+          const roomId =
+            draft.roomId || useHotelStore.getState().selected?.roomId || "";
+          if (!roomId) {
+            setPaymentError(t("checkout.missingRoom"));
+            return;
+          }
+
+          const rateId =
+            draft.rateIds?.[0] || useHotelStore.getState().selected?.rateIds?.[0];
+          if (!rateId) {
+            setPaymentError(t("checkout.missingRate"));
+            return;
+          }
+
+          const bookBody = {
+            rateIds: draft.rateIds ?? [rateId],
+            roomsAllocations: [
+              {
+                roomId,
+                rateId,
+                guests: [guest],
+              },
+            ],
+            billingContact: guest,
+            totalRate: useBookingStore.getState().price?.totalRate ?? draft.totalPrice ?? 0,
+            loggedInUserEmail: form.values.email,
+            guestNames: form.values.fullName,
+            specialRequests: form.values.specialRequests
+              ? [form.values.specialRequests]
+              : undefined,
+            travelPurpose: "Leisure" as const,
+          };
+
+          await booking.runBookInit(bookBody);
+          const confirmation = await booking.runBook(bookBody);
+          const bookingId =
+            confirmation?.bookingId ||
+            useBookingStore.getState().details?.bookingId ||
+            useBookingStore.getState().hold?.bookingId;
+
+          if (!bookingId) {
+            setPaymentError(
+              useBookingStore.getState().error ?? t("checkout.payFailedShort")
+            );
+            return;
+          }
+
+          await persistCardIfNeeded(method);
+          finishConfirmed(
+            bookingId,
+            confirmation?.hotelConfirmationNumber ||
+              confirmation?.providerConfirmationNumber ||
+              undefined
+          );
+          return;
+        }
+
         if (!draft.bookingId) {
-          setPaymentError("No active booking hold. Please go back and try again.");
+          setPaymentError(t("checkout.noHold"));
           return;
         }
 
         const result = await confirmBooking(draft.bookingId);
 
         if (result.redirectUrl) {
+          await persistCardIfNeeded(method);
           window.location.href = result.redirectUrl;
         } else if (result.snapToken) {
           const snap = (window as unknown as Record<string, unknown>).snap as
@@ -93,50 +282,79 @@ export function CheckoutPage() {
           if (snap) {
             snap.pay(result.snapToken, {
               onSuccess: () => {
-                clearDraft();
-                navigate(`/bookings/${draft.bookingId}`);
+                void persistCardIfNeeded(method).then(() =>
+                  finishConfirmed(draft.bookingId!)
+                );
               },
               onPending: () => {
-                navigate(`/bookings/${draft.bookingId}`);
+                void persistCardIfNeeded(method).then(() =>
+                  finishConfirmed(draft.bookingId!)
+                );
               },
               onError: () => {
-                setPaymentError("Payment failed. Please try again.");
+                setPaymentError(t("checkout.payFailed"));
               },
               onClose: () => {
-                setPaymentError("Payment window closed. You can try again before the hold expires.");
+                setPaymentError(t("checkout.payClosed"));
               },
             });
-          } else {
+          } else if (result.redirectUrl) {
+            await persistCardIfNeeded(method);
             window.location.href = result.redirectUrl;
+          } else {
+            setPaymentError(t("checkout.payUnavailable"));
           }
+        } else {
+          await persistCardIfNeeded(method);
+          finishConfirmed(draft.bookingId);
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Payment failed";
+        const message = err instanceof Error ? err.message : t("checkout.payFailedShort");
         setPaymentError(message);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [draft, form, termsAccepted, clearDraft, navigate]
+    [
+      draft,
+      form,
+      termsAccepted,
+      finishConfirmed,
+      validatePaymentDetails,
+      persistCardIfNeeded,
+      t,
+    ]
   );
 
-  const handleWholesaleContinue = useCallback(async () => {
-    if (!form.validateForm() || !termsAccepted || !draft) return;
-    setIsSubmitting(true);
-    try {
-      await new Promise((r) => setTimeout(r, 800));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [draft, form, termsAccepted]);
+  const handleContinueToPayment = useCallback(() => {
+    if (!form.validateForm()) return;
+    setPaymentError(null);
+    setStep(2);
+  }, [form]);
+
+  const handleBackToCustomer = useCallback(() => {
+    setPaymentError(null);
+    setStep(1);
+  }, []);
 
   const handleCtaClick = useCallback(() => {
-    if (draft?.lane === "direct" && selectedMethod) {
-      void handleSubmitPayment(selectedMethod);
-    } else if (draft?.lane === "wholesale") {
-      void handleWholesaleContinue();
+    if (step === 1) {
+      handleContinueToPayment();
+      return;
     }
-  }, [draft?.lane, selectedMethod, handleSubmitPayment, handleWholesaleContinue]);
+    if (step === 2 && selectedMethod) {
+      void handleSubmitPayment(selectedMethod);
+    }
+  }, [step, selectedMethod, handleContinueToPayment, handleSubmitPayment]);
+
+  if (confirmed && step === 3) {
+    return (
+      <CheckoutLayout confirmed title={t("checkout.title")}>
+        <CheckoutStepIndicator current={3} />
+        <CheckoutConfirmed snapshot={confirmed} />
+      </CheckoutLayout>
+    );
+  }
 
   if (!draft) {
     return <NoActiveDraftState reason="missing" />;
@@ -153,24 +371,37 @@ export function CheckoutPage() {
   };
 
   const showGuestPrompt = !isAuthenticated && !guestMode;
+  const supplierName = draft.hotelMeta?.name;
 
   const ctaLabel =
-    draft.lane === "direct" ? `Pay ${payAmountLabel} now` : "Continue to complete booking";
+    step === 1 ? t("checkout.continuePayment") : t("checkout.payNow", { amount: payAmountLabel });
+  const disabledReason = step === 1 ? step1DisabledReason : step2DisabledReason;
+  const isActionDisabled =
+    Boolean(disabledReason) ||
+    isSubmitting ||
+    (step === 2 && isRefreshingPrice);
 
-  const supplierName = draft.hotelMeta?.name;
+  const summary = (
+    <BookingSummaryCard
+      draft={draft}
+      onHoldExpire={handleHoldExpire}
+      onDraftChange={saveDraft}
+      isRefreshingPrice={isRefreshingPrice}
+    />
+  );
 
   return (
     <CheckoutLayout
-      summary={<BookingSummaryCard draft={draft} onHoldExpire={handleHoldExpire} />}
+      summary={summary}
       stickyCta={
         showGuestPrompt ? undefined : (
-        <CheckoutCTA
-          label={ctaLabel}
-          onClick={handleCtaClick}
-          disabled={isActionDisabled}
-          disabledReason={disabledReason}
-          isLoading={isSubmitting}
-        />
+          <CheckoutCTA
+            label={ctaLabel}
+            onClick={handleCtaClick}
+            disabled={isActionDisabled}
+            disabledReason={disabledReason}
+            isLoading={isSubmitting || (step === 2 && isRefreshingPrice)}
+          />
         )
       }
     >
@@ -178,36 +409,88 @@ export function CheckoutPage() {
         <GuestCheckoutPrompt onContinueAsGuest={handleContinueAsGuest} />
       ) : (
         <>
-      {paymentError && (
-        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {paymentError}
-        </div>
-      )}
+          <CheckoutStepIndicator current={step} />
 
-      <GuestDetailsForm
-        values={form.values}
-        errors={form.errors}
-        touched={form.touched}
-        onChange={form.handleChange}
-        onBlur={form.handleBlur}
-      />
+          {(paymentError || priceRefreshError) && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {paymentError || priceRefreshError}
+            </div>
+          )}
 
-      <PaymentSection
-        lane={draft.lane}
-        supplierName={supplierName}
-        payAmountLabel={payAmountLabel}
-        selectedMethod={selectedMethod}
-        onSelectMethod={setSelectedMethod}
-        onSubmitPayment={handleSubmitPayment}
-        onWholesaleContinue={handleWholesaleContinue}
-        isSubmitting={isSubmitting}
-        disabled={!termsAccepted || !form.isValid}
-        disabledReason={disabledReason}
-      />
+          {isRefreshingPrice ? (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin text-brand" />
+              {t("checkout.updatingFor", { currency })}
+            </div>
+          ) : null}
 
-      <CancellationPolicySummary lane={draft.lane} supplierName={supplierName} />
+          {step === 1 && (
+            <>
+              <GuestDetailsForm
+                values={form.values}
+                errors={form.errors}
+                touched={form.touched}
+                onChange={form.handleChange}
+                onBlur={form.handleBlur}
+              />
+              <div className="hidden lg:block">
+                <CheckoutCTA
+                  label={ctaLabel}
+                  onClick={handleCtaClick}
+                  disabled={isActionDisabled}
+                  disabledReason={disabledReason}
+                  isLoading={false}
+                />
+              </div>
+            </>
+          )}
 
-      <TermsAcceptance checked={termsAccepted} onChange={setTermsAccepted} />
+          {step === 2 && (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleBackToCustomer}
+                className="-mt-2 w-fit gap-1 px-0 text-muted-foreground hover:text-foreground"
+              >
+                <ChevronLeft className="size-4" />
+                {t("checkout.backCustomer")}
+              </Button>
+
+              <PaymentSection
+                payAmountLabel={payAmountLabel}
+                selectedMethod={selectedMethod}
+                onSelectMethod={setSelectedMethod}
+                onSubmitPayment={handleSubmitPayment}
+                isSubmitting={isSubmitting || isRefreshingPrice}
+                disabled={
+                  !termsAccepted ||
+                  !form.isValid ||
+                  isRefreshingPrice ||
+                  !isPaymentDetailsValid
+                }
+                disabledReason={disabledReason}
+                showSubmitButton={false}
+                cardForm={cardForm}
+                upiForm={upiForm}
+              />
+
+              <CancellationPolicySummary lane={draft.lane} supplierName={supplierName} />
+
+              <TermsAcceptance checked={termsAccepted} onChange={setTermsAccepted} />
+
+              <div className="hidden lg:block">
+                <CheckoutCTA
+                  label={ctaLabel}
+                  onClick={handleCtaClick}
+                  disabled={isActionDisabled}
+                  disabledReason={disabledReason}
+                  isLoading={isSubmitting || isRefreshingPrice}
+                />
+              </div>
+            </>
+          )}
         </>
       )}
     </CheckoutLayout>

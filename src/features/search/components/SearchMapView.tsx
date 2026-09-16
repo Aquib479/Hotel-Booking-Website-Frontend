@@ -6,19 +6,20 @@ import { ExternalLink, Heart, MapPin, Star, X, Zap } from "lucide-react";
 import { LaneBadge } from "@/components/common/LaneBadge";
 import { PriceDisplay } from "@/components/common/PriceDisplay";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useFavoritesStore } from "@/store";
 import { cn } from "@/lib/utils";
 import { resolvePropertyCoordinates } from "../map-coordinates";
 import { buildPropertyDetailUrl } from "../property-detail-url";
 import type { Property } from "../types";
 import "leaflet/dist/leaflet.css";
+import { useLanguage } from "@/context/LanguageContext";
+import { hasMessage } from "@/lib/i18n/messages";
 
 interface SearchMapViewProps {
   properties: Property[];
   searchParams: string;
   mode: "rest" | "stay";
   nights: number;
-  favorites: Set<string>;
-  onToggleFavorite: (id: string) => void;
 }
 
 interface MappedProperty extends Property {
@@ -32,9 +33,12 @@ const VIEW_PADDING = 12;
 
 function FitBounds({ positions }: { positions: L.LatLngExpression[] }) {
   const map = useMap();
+  const hasFitted = useRef(false);
 
   useEffect(() => {
-    if (positions.length === 0) return;
+    if (positions.length === 0 || hasFitted.current) return;
+    hasFitted.current = true;
+
     if (positions.length === 1) {
       map.setView(positions[0], 13);
       return;
@@ -103,7 +107,7 @@ function escapeHtml(value: string) {
 function createPriceIcon(label: string, selected: boolean) {
   const bg = selected ? "#7c3aed" : "#ffffff";
   const color = selected ? "#ffffff" : "#111827";
-  const scale = selected ? "scale(1.08)" : "scale(1)";
+  const scaleVal = selected ? "scale(1.08)" : "scale(1)";
   const shadow = selected
     ? "0 6px 16px rgba(124, 58, 237, 0.35)"
     : "0 2px 10px rgba(15, 23, 42, 0.18)";
@@ -111,7 +115,7 @@ function createPriceIcon(label: string, selected: boolean) {
   return L.divIcon({
     className: "rh-price-marker",
     html: `<div style="
-      transform:${scale};
+      transform:translate(-50%,-50%) ${scaleVal};
       background:${bg};
       color:${color};
       border-radius:999px;
@@ -124,9 +128,10 @@ function createPriceIcon(label: string, selected: boolean) {
       box-shadow:${shadow};
       border:1px solid ${selected ? "#7c3aed" : "rgba(15,23,42,0.08)"};
       transition: transform 120ms ease, box-shadow 120ms ease;
+      width:max-content;
     ">${escapeHtml(label)}</div>`,
-    iconSize: [80, 32],
-    iconAnchor: [40, 16],
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
   });
 }
 
@@ -134,52 +139,52 @@ function MapHotelCard({
   property,
   mode,
   nights,
-  isFavorite,
   searchParams,
   onClose,
-  onToggleFavorite,
 }: {
   property: MappedProperty;
   mode: "rest" | "stay";
   nights: number;
-  isFavorite: boolean;
   searchParams: string;
   onClose: () => void;
-  onToggleFavorite: (id: string) => void;
 }) {
+  const { t } = useLanguage();
+  const isFavorite = useFavoritesStore((s) => Boolean(s.items[property.id]));
+  const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const isDirect = property.lane === "direct";
   const detailUrl = buildPropertyDetailUrl(property, searchParams);
   const hasFreeCancellation = property.amenities.includes("Free cancellation");
-  const roomLabel = property.roomType.charAt(0).toUpperCase() + property.roomType.slice(1);
+  const roomKey = `search.room.${property.roomType}`;
+  const roomLabel = hasMessage(roomKey) ? t(roomKey) : property.roomType;
   const stayLabel =
     mode === "rest"
-      ? `${property.slotDuration} slot`
+      ? t("search.slotN", { n: property.slotDuration })
       : nights > 1
-        ? `${nights} nights`
-        : "1 night";
+        ? t("search.nights", { n: nights })
+        : t("search.nightOne");
 
   const specs = [
-    `${property.starRating}-star`,
+    t("search.starClass", { n: property.starRating }),
     roomLabel,
-    `Sleeps ${property.maxOccupancy}`,
+    t("search.sleeps", { n: property.maxOccupancy }),
     property.distanceFromAirportKm > 0 && property.distanceFromAirportKm <= 15
-      ? `${property.distanceFromAirportKm} km to airport`
+      ? t("search.kmAirport", { n: property.distanceFromAirportKm })
       : null,
   ].filter(Boolean);
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl bg-white text-left shadow-[0_16px_40px_rgba(15,23,42,0.22)]"
+      className="relative overflow-hidden rounded-md bg-white text-left shadow-[0_16px_40px_rgba(15,23,42,0.22)]"
       style={{ width: CARD_WIDTH }}
     >
       <div className="absolute right-2.5 top-2.5 z-20 flex items-center gap-1.5">
         <button
           type="button"
-          aria-label={isFavorite ? "Remove from wishlist" : "Add to wishlist"}
+          aria-label={isFavorite ? t("search.removeFav") : t("search.addFav")}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            onToggleFavorite(property.id);
+            toggleFavorite(property);
           }}
           className="flex size-8 items-center justify-center rounded-full bg-white/95 text-foreground shadow-[0_2px_8px_rgba(15,23,42,0.12)] backdrop-blur-sm transition hover:scale-105 hover:bg-white"
         >
@@ -192,7 +197,7 @@ function MapHotelCard({
         </button>
         <button
           type="button"
-          aria-label="Close hotel card"
+          aria-label={t("search.closeCard")}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -254,29 +259,31 @@ function MapHotelCard({
               priceUsd={property.priceUsd}
               priceIdr={property.priceIdr}
               wholesalePricing={property.wholesalePricing}
+              priceAmount={property.priceAmount}
+              priceCurrency={property.priceCurrency}
               mode={mode}
               slotDuration={property.slotDuration}
               showUnit={false}
               amountClassName="text-sm font-semibold tracking-tight"
             />
-            <span className="text-xs text-muted-foreground">for {stayLabel}</span>
+            <span className="text-xs text-muted-foreground">{t("search.forStay", { label: stayLabel })}</span>
           </div>
 
           <div className="flex flex-wrap gap-1 pt-0.5">
             {hasFreeCancellation && (
               <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                Free cancellation
+                {t("search.amenity.Free cancellation")}
               </span>
             )}
             {isDirect ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-medium text-brand">
                 <Zap className="size-2.5" />
-                Instant confirm
+                {t("search.instant")}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                 <ExternalLink className="size-2.5" />
-                Via {property.supplierName ?? "partner"}
+                {t("search.viaPartner", { name: property.supplierName ?? t("search.partner") })}
               </span>
             )}
           </div>
@@ -324,9 +331,8 @@ export function SearchMapView({
   searchParams,
   mode,
   nights,
-  favorites,
-  onToggleFavorite,
 }: SearchMapViewProps) {
+  const { t } = useLanguage();
   const { formatLanePrice } = useCurrency();
   const [selectedId, setSelectedId] = useState<string>("");
   const [markerPoint, setMarkerPoint] = useState<{ x: number; y: number } | null>(null);
@@ -403,12 +409,11 @@ export function SearchMapView({
 
   if (mappedProperties.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-white py-24 text-center">
+      <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border bg-white py-24 text-center">
         <MapPin className="mb-4 size-10 text-muted-foreground/40" />
-        <p className="text-lg font-semibold text-foreground">No map data available</p>
+        <p className="text-lg font-semibold text-foreground">{t("search.noMap")}</p>
         <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-          Hotels in your search don&apos;t have location coordinates yet. Switch to Card View to browse
-          them.
+          {t("search.noMapHint")}
         </p>
       </div>
     );
@@ -420,10 +425,11 @@ export function SearchMapView({
     <div
       ref={shellRef}
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-border bg-white",
+        "relative touch-none overflow-hidden rounded-md border border-border bg-white",
         "[&_.leaflet-container]:h-[min(70vh,560px)] [&_.leaflet-container]:w-full [&_.leaflet-container]:bg-[#e8eef5]",
         "[&_.rh-price-marker]:border-0 [&_.rh-price-marker]:bg-transparent"
       )}
+      onWheel={(e) => e.stopPropagation()}
     >
       <MapContainer center={center} zoom={12} scrollWheelZoom className="z-0">
         <TileLayer
@@ -462,10 +468,8 @@ export function SearchMapView({
             property={selectedProperty}
             mode={mode}
             nights={nights}
-            isFavorite={favorites.has(selectedProperty.id)}
             searchParams={searchParams}
             onClose={() => setSelectedId("")}
-            onToggleFavorite={onToggleFavorite}
           />
         </div>
       ) : null}

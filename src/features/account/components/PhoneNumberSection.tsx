@@ -4,6 +4,7 @@ import { PhoneInput } from "@/features/auth/components/PhoneInput";
 import { OtpVerificationModal } from "@/features/auth/components/OtpVerificationModal";
 import { getDefaultPhoneCountryCode } from "@/lib/phone/constants";
 import { toE164 } from "@/lib/phone/validation";
+import { useLanguage } from "@/context/LanguageContext";
 import { SectionCard } from "@/components/common/SectionCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,10 +32,10 @@ const STATUS_VARIANT: Record<
   unverified: "outline",
 };
 
-const STATUS_LABELS: Record<PhoneVerificationStatus, string> = {
-  verified: "Verified",
-  pending: "Verification pending",
-  unverified: "Not verified",
+const STATUS_KEYS: Record<PhoneVerificationStatus, string> = {
+  verified: "account.phoneVerified",
+  pending: "account.phonePending",
+  unverified: "account.phoneUnverified",
 };
 
 interface PhoneNumberSectionProps {
@@ -50,6 +51,7 @@ export function PhoneNumberSection({
   onConfirmChange,
   onCancelChange,
 }: PhoneNumberSectionProps) {
+  const { t } = useLanguage();
   const [showPhone, setShowPhone] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [countryCode, setCountryCode] = useState(
@@ -74,11 +76,11 @@ export function PhoneNumberSection({
 
   return (
     <SectionCard
-      title="Phone number"
-      description="Used for WhatsApp booking updates"
+      title={t("account.phone")}
+      description={t("account.phoneHint")}
       action={
         <Badge variant={STATUS_VARIANT[status]} className="uppercase">
-          {STATUS_LABELS[status]}
+          {t(STATUS_KEYS[status])}
         </Badge>
       }
     >
@@ -91,13 +93,13 @@ export function PhoneNumberSection({
               variant="ghost"
               size="icon-sm"
               onClick={() => setShowPhone((v) => !v)}
-              aria-label={showPhone ? "Hide phone" : "Show phone"}
+              aria-label={showPhone ? t("account.hidePhone") : t("account.showPhone")}
             >
               {showPhone ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </Button>
           </p>
           <Button type="button" variant="link" className="h-auto p-0" onClick={() => setIsEditing(true)}>
-            Change number
+            {t("account.changeNumber")}
           </Button>
         </div>
       ) : (
@@ -110,10 +112,10 @@ export function PhoneNumberSection({
           />
           <div className="flex gap-2">
             <Button type="button" variant="brand" onClick={handleRequestChange}>
-              Verify new number
+              {t("account.verifyNewNumber")}
             </Button>
             <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </div>

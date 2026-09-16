@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface CheckoutCTAProps {
   label: string;
@@ -19,6 +20,7 @@ export function CheckoutCTA({
   isLoading,
   className,
 }: CheckoutCTAProps) {
+  const { t } = useLanguage();
   return (
     <Button
       type="button"
@@ -30,7 +32,7 @@ export function CheckoutCTA({
       className={cn("h-12 w-full text-base", className)}
     >
       {isLoading && <Loader2 className="animate-spin" />}
-      {isLoading ? "Processing…" : label}
+      {isLoading ? t("checkout.processing") : label}
     </Button>
   );
 }

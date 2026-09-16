@@ -1,52 +1,92 @@
-import { useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useLanguage } from "@/context/LanguageContext";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useLockBodyScroll } from "@/lib/hooks/useLockBodyScroll";
 import { cn } from "@/lib/utils";
 import { searchLocations } from "./location-api";
 import type { LocationSuggestion, SearchPanelVariant } from "./types";
 
 interface LocationSearchFieldProps {
-  value: LocationSuggestion;
+  value: LocationSuggestion | null;
   onChange: (location: LocationSuggestion) => void;
   variant?: SearchPanelVariant;
   label?: string;
+  /** Freeze page scroll while the location list is open. */
+  lockPage?: boolean;
 }
 
 const fieldStyles: Record<SearchPanelVariant, string> = {
-  hero: "rounded-2xl px-4 py-3 hover:bg-black/5 sm:px-5",
+  hero: "rounded-md px-4 py-3 hover:bg-black/5 sm:px-5",
   page: "px-4 py-3 hover:bg-muted/50 sm:px-5",
-  landing:
-    "w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-left hover:border-brand/30",
+  landing: "w-full rounded-xl px-0 py-1 text-left",
 };
+
+const MIN_QUERY_LENGTH = 3;
 
 export function LocationSearchField({
   value,
   onChange,
   variant = "hero",
-  label = "Location",
+  label,
+  lockPage = false,
 }: LocationSearchFieldProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
+  useLockBodyScroll(lockPage && open);
   const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debouncedQuery = useDebounce(query, 350);
+  const resolvedLabel = label === undefined ? t("common.location") : label;
 
-  const { data: suggestions = [], isFetching } = useQuery({
-    queryKey: ["destinations-autocomplete", debouncedQuery],
-    queryFn: () => searchLocations(debouncedQuery),
-    enabled: open && debouncedQuery.trim().length >= 2,
-    staleTime: 60_000,
-  });
+  useEffect(() => {
+    if (!open) return;
+
+    if (debouncedQuery.trim().length < MIN_QUERY_LENGTH) {
+      setSuggestions([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    searchLocations(debouncedQuery)
+      .then((results) => {
+        if (!cancelled) {
+          setSuggestions(results);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setSuggestions([]);
+          setLoading(false);
+          setError(err instanceof Error ? err.message : t("common.locationFail"));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedQuery, open, t]);
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (next) {
       setQuery("");
+      setSuggestions([]);
+      setError(null);
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   };
@@ -55,36 +95,55 @@ export function LocationSearchField({
     onChange(location);
     setOpen(false);
     setQuery("");
+    setSuggestions([]);
+    setError(null);
   };
 
-  const subtitle = [value.state, value.country].filter(Boolean).join(", ");
+  const trimmedQuery = query.trim();
+  const showLabel = Boolean(resolvedLabel);
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover modal={lockPage} open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"
           className={cn(
-            "flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left transition-colors",
+            "flex min-w-0 w-full max-w-full overflow-hidden text-left transition-colors",
+            showLabel ? "flex-col items-start gap-0.5" : "flex-row items-center gap-2",
+            variant !== "landing" && "flex-1",
             fieldStyles[variant],
           )}
         >
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="size-3.5" />
-            {label}
-          </span>
+          {showLabel ? (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="size-3.5 shrink-0" />
+              {resolvedLabel}
+            </span>
+          ) : (
+            <MapPin className="size-4 shrink-0 text-muted-foreground" />
+          )}
           <span
             className={cn(
-              "truncate font-semibold text-foreground",
+              "min-w-0 flex-1 truncate",
               variant === "hero" ? "text-sm sm:text-base" : "text-sm",
+              value?.city || value?.label
+                ? "font-semibold text-foreground"
+                : "font-medium text-muted-foreground"
             )}
           >
-            {value.city}
+            {value?.label || value?.city || t("common.whereTo")}
           </span>
         </button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-80 p-0" align="start">
+      <PopoverContent
+        className={cn("w-80 p-0", lockPage && "z-40")}
+        data-scroll-lock-allow=""
+        align="start"
+        side="bottom"
+        sideOffset={12}
+        collisionPadding={{ top: 88, bottom: 16, left: 12, right: 12 }}
+      >
         <div className="border-b border-border p-3">
           <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
             <MapPin className="size-4 shrink-0 text-muted-foreground" />
@@ -93,27 +152,32 @@ export function LocationSearchField({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search city or country..."
+              placeholder={t("common.locationHint")}
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
-            {isFetching && (
+            {loading && (
               <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
             )}
           </div>
         </div>
 
         <ul className="max-h-64 overflow-y-auto p-1">
-          {query.trim().length < 2 && (
+          {trimmedQuery.length < MIN_QUERY_LENGTH && (
             <li className="p-3 text-center text-sm text-muted-foreground">
-              Type at least 2 characters to search destinations.
+              {t("common.locationMinChars", { n: MIN_QUERY_LENGTH })}
             </li>
           )}
 
-          {query.trim().length >= 2 &&
-            !isFetching &&
+          {error && (
+            <li className="px-3 py-6 text-center text-sm text-red-600">{error}</li>
+          )}
+
+          {!error &&
+            trimmedQuery.length >= MIN_QUERY_LENGTH &&
+            !loading &&
             suggestions.length === 0 && (
               <li className="px-3 py-6 text-center text-sm text-muted-foreground">
-                No destinations found. Try a different spelling.
+                {t("common.noLocations")}
               </li>
             )}
 
@@ -124,23 +188,19 @@ export function LocationSearchField({
                 onClick={() => handleSelect(item)}
                 className={cn(
                   "flex w-full flex-col items-start rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted",
-                  value.destinationId === item.destinationId && "bg-muted",
+                  value?.id === item.id && "bg-muted",
                 )}
               >
                 <span className="text-sm font-medium text-foreground">
-                  {item.city}
+                  {item.label || item.city}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {item.country}
+                  {[item.type, item.state, item.country].filter(Boolean).join(" · ")}
                 </span>
               </button>
             </li>
           ))}
         </ul>
-
-        {subtitle ? (
-          <p className="sr-only">Current selection: {value.label}</p>
-        ) : null}
       </PopoverContent>
     </Popover>
   );

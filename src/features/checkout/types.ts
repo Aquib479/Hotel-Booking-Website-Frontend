@@ -15,6 +15,8 @@ export interface CheckoutHotelMeta {
   country: string;
   imageUrl: string;
   starRating: number;
+  rating?: number;
+  reviewCount?: number;
 }
 
 export interface CheckoutDraft {
@@ -37,6 +39,21 @@ export interface CheckoutDraft {
   totalPrice?: number;
   hotelMeta?: CheckoutHotelMeta;
   createdAt: string;
+  /** ZentrumHub booking session */
+  source?: "resthalf" | "zentrumhub";
+  recommendationId?: string;
+  rateIds?: string[];
+  roomName?: string;
+  boardBasis?: string | null;
+  refundable?: boolean | null;
+  cancellationText?: string | null;
+  bedSummary?: string | null;
+  maxGuests?: number | null;
+  roomTypeLabel?: string | null;
+  /** Number of rooms booked (1–9). */
+  rooms?: number;
+  roomFacilities?: string[];
+  roomImageUrl?: string | null;
 }
 
 export interface GuestDetailsValues {
@@ -47,9 +64,43 @@ export interface GuestDetailsValues {
   specialRequests: string;
 }
 
-export type PaymentMethod = "ewallet" | "virtual_account" | "card";
+export type PaymentMethod = "card" | "upi";
+
+export interface CardPaymentValues {
+  holderName: string;
+  cardNumber: string;
+  expiry: string;
+  cvv: string;
+}
+
+export interface UpiPaymentValues {
+  vpa: string;
+}
+
+/** Checkout stepper: customer info → payment → confirmed */
+export type CheckoutStep = 1 | 2 | 3;
 
 export type NoDraftReason = "missing" | "expired";
+
+/** Snapshot shown on step 3 after payment succeeds (draft may be cleared). */
+export interface ConfirmedCheckoutSnapshot {
+  bookingId: string;
+  confirmationCode?: string;
+  hotelName: string;
+  hotelImageUrl?: string;
+  mode: BookingMode;
+  checkIn?: string;
+  checkOut?: string;
+  nights?: number;
+  slotDate?: string;
+  slotWindow?: RestSlot;
+  guestsLabel: string;
+  roomName?: string;
+  totalPrice: number;
+  currency: SupportedCurrency;
+  guestName: string;
+  guestEmail: string;
+}
 
 export interface CheckoutFormState {
   values: GuestDetailsValues;

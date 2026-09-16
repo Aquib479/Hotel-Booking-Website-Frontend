@@ -26,18 +26,51 @@ export interface Property {
   city: string;
   country: string;
   image: string;
+  /** Guest review score (from content reviews). */
   rating: number;
+  /** Guest review count. */
+  reviewCount: number;
+  /** Official hotel star class (may be fractional). */
   starRating: number;
   lane: BookingLane;
-  /** Cached guest USD rate; wholesale values are derived from supplier quote + markup */
+  /**
+   * Nightly (or slot) amount in `priceCurrency` when set by the supplier/API.
+   * For ZentrumHub wholesale, this is the live amount in the search currency — do not FX-convert for display.
+   */
+  priceAmount?: number;
+  /** ISO currency for `priceAmount` (from ZentrumHub / supplier). */
+  priceCurrency?: string;
+  /** Full-stay total in `priceCurrency` (ZentrumHub `rate.totalRate`). */
+  totalStayAmount?: number;
+  /** Published/list rate for the stay when higher than total (strikethrough). */
+  publishedStayAmount?: number;
+  /** Rate components for the stay total (ZentrumHub `rate.*`). */
+  priceBreakdown?: {
+    baseRate?: number;
+    taxes?: number;
+    fees?: number;
+    discounts?: number;
+    publishedRate?: number;
+    totalRate: number;
+  };
+  /** Legacy/cached USD estimate — used for RestHalf-direct fallbacks and older paths */
   priceUsd: number;
   /** Direct slot rate in IDR (12h base) */
   priceIdr: number;
-  /** Supplier quote used to derive wholesale guest price (FX → markup → display) */
+  /** Supplier quote used to derive wholesale guest price (FX → markup → display) — prefer priceAmount when present */
   wholesalePricing?: WholesaleQuote;
   roomType: RoomType;
   maxOccupancy: number;
   amenities: AmenityFilter[];
+  /** Short amenity labels shown as pills on the card. */
+  amenityPills: string[];
+  freeBreakfast?: boolean;
+  freeCancellation?: boolean;
+  refundable?: boolean;
+  payAtHotel?: boolean;
+  boardBasisLabel?: string;
+  offerLabel?: string;
+  highlightAttributes: string[];
   category: string;
   latitude: number | null;
   longitude: number | null;
@@ -55,20 +88,33 @@ export interface SearchQuery {
   location: string;
   /** Local destination master id for bedbank code resolution */
   destinationId?: string;
-  country?: string;
   mode: BookingMode;
   checkIn?: Date;
   checkOut?: Date;
   restDate?: Date;
   slot?: RestSlot;
   guests: string;
+  rooms?: number;
+  adults?: number;
+  children?: number;
+  /** ZentrumHub destination metadata from URL */
+  locationId?: string;
+  locationType?: string;
+  referenceId?: string;
+  lat?: number;
+  lng?: number;
+  country?: string;
+  state?: string;
 }
 
 export interface FilterState {
   priceMin: number;
   priceMax: number;
   lane: LaneFilter;
-  starRating: CountFilter;
+  /** Empty = any. Multi-select OR of exact star counts (2–5). */
+  starRatings: number[];
+  /** Minimum guest review score; "any" = no filter. */
+  guestRatingMin: number | "any";
   roomType: RoomType | "any";
   maxOccupancy: CountFilter;
   amenities: AmenityFilter[];

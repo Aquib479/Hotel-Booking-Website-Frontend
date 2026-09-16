@@ -1,16 +1,18 @@
 import { cn } from "@/lib/utils";
 import type { CancelFlowStep } from "../types";
 import { DIRECT_CANCEL_FLOW_STEPS } from "../constants";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface CancelStepIndicatorProps {
   current: CancelFlowStep;
 }
 
 export function CancelStepIndicator({ current }: CancelStepIndicatorProps) {
+  const { t } = useLanguage();
   const currentIndex = DIRECT_CANCEL_FLOW_STEPS.findIndex((s) => s.id === current);
 
   return (
-    <ol className="mb-8 flex items-center justify-between" aria-label="Cancellation progress">
+    <ol className="mb-8 flex items-center justify-between" aria-label={t("bookings.cancelProgress")}>
       {DIRECT_CANCEL_FLOW_STEPS.map((step, i) => {
         const isActive = i === currentIndex;
         const isComplete = i < currentIndex;
@@ -33,7 +35,7 @@ export function CancelStepIndicator({ current }: CancelStepIndicatorProps) {
                 isActive ? "text-foreground" : "text-muted-foreground"
               )}
             >
-              {step.label}
+              {t(step.labelKey)}
             </span>
           </li>
         );

@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { BookingTabStatus } from "../types";
 import { BOOKING_STATUS_TABS } from "../constants";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface BookingStatusTabsProps {
   active: BookingTabStatus;
@@ -10,6 +11,7 @@ interface BookingStatusTabsProps {
 }
 
 export function BookingStatusTabs({ active, counts, onChange }: BookingStatusTabsProps) {
+  const { t } = useLanguage();
   return (
     <Tabs value={active} onValueChange={(v) => onChange(v as BookingTabStatus)}>
       <TabsList
@@ -21,7 +23,7 @@ export function BookingStatusTabs({ active, counts, onChange }: BookingStatusTab
 
           return (
             <TabsTrigger key={tab.id} value={tab.id} className="shrink-0">
-              {tab.label}
+              {t(tab.labelKey)}
               {count > 0 && (
                 <span
                   className={cn(

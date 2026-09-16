@@ -3,8 +3,10 @@ import { useHotelRooms } from "../hooks/useHotelRooms";
 import { RoomCard } from "./RoomCard";
 import { useState } from "react";
 import { Star } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function HotelCard({ hotel }: { hotel: Hotel }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const { data: rooms, isLoading } = useHotelRooms(
     expanded ? hotel.id : undefined
@@ -41,7 +43,7 @@ export function HotelCard({ hotel }: { hotel: Hotel }) {
 
         {hotel.source !== "direct" ? (
           <span className="mt-1.5 inline-block rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-            via {hotel.source.toUpperCase()}
+            {t("hotels.via", { source: hotel.source.toUpperCase() })}
           </span>
         ) : null}
 
@@ -50,16 +52,16 @@ export function HotelCard({ hotel }: { hotel: Hotel }) {
           onClick={() => setExpanded((v) => !v)}
           className="mt-2 block text-sm font-medium text-primary hover:underline"
         >
-          {expanded ? "Hide rooms" : "View rooms"}
+          {expanded ? t("hotels.hideRooms") : t("hotels.viewRooms")}
         </button>
 
         {expanded && (
           <div className="mt-3 space-y-2">
             {isLoading ? (
-              <p className="text-sm text-muted-foreground">Loading rooms...</p>
+              <p className="text-sm text-muted-foreground">{t("hotels.loadingRooms")}</p>
             ) : rooms.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No rooms available.
+                {t("hotels.noRooms")}
               </p>
             ) : (
               rooms.map((room) => <RoomCard key={room.id} room={room} />)

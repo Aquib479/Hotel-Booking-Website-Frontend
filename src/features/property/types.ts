@@ -18,13 +18,28 @@ export interface HotelInfo {
   supplierName?: string;
 }
 
+export interface ReviewManagementResponse {
+  text: string;
+  date: string;
+}
+
 export interface Review {
   id: string;
   author: string;
-  avatar: string;
+  avatar?: string;
   date: string;
   rating: number;
+  /** Combined body for simple fallbacks */
   comment: string;
+  title?: string;
+  summary?: string;
+  /** Paragraphs from guestReviews.text[] */
+  paragraphs?: string[];
+  source?: string;
+  country?: string;
+  travelPurpose?: string;
+  travelerType?: string;
+  managementResponses?: ReviewManagementResponse[];
 }
 
 export interface PropertyDetail extends Property {

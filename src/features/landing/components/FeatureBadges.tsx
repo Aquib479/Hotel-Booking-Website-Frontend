@@ -1,6 +1,9 @@
+import { useLanguage } from "@/context/LanguageContext";
 import { FEATURE_BADGES } from "../constants";
 
 export function FeatureBadges() {
+  const { t } = useLanguage();
+
   return (
     <div className="pointer-events-none absolute left-6 top-1/2 z-10 hidden -translate-y-1/2 flex-col gap-4 lg:left-14 lg:flex">
       {FEATURE_BADGES.map((badge) => (
@@ -12,7 +15,7 @@ export function FeatureBadges() {
             aria-hidden
             className="absolute -left-1.5 top-1/2 size-3 -translate-y-1/2 rotate-45 border-b border-l border-white/40 bg-white/15"
           />
-          {badge}
+          {t(badge)}
         </div>
       ))}
     </div>

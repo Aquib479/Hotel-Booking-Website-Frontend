@@ -1,8 +1,9 @@
-import type { NotificationPreferences, SavedPaymentMethod } from "./types";
-import { DEFAULT_NOTIFICATION_PREFERENCES } from "./constants";
+import type { MemberProfileDetails, NotificationPreferences, SavedPaymentMethod } from "./types";
+import { DEFAULT_MEMBER_PROFILE, DEFAULT_NOTIFICATION_PREFERENCES } from "./constants";
 
 const NOTIFICATIONS_KEY = "resthalf-notification-prefs";
 const PAYMENT_METHODS_KEY = "resthalf-saved-payment-methods";
+const MEMBER_PROFILE_KEY = "resthalf-member-profile";
 
 export function readNotificationPrefs(userId: string): NotificationPreferences {
   try {
@@ -16,6 +17,20 @@ export function readNotificationPrefs(userId: string): NotificationPreferences {
 
 export function writeNotificationPrefs(userId: string, prefs: NotificationPreferences) {
   localStorage.setItem(`${NOTIFICATIONS_KEY}-${userId}`, JSON.stringify(prefs));
+}
+
+export function readMemberProfile(userId: string): MemberProfileDetails {
+  try {
+    const raw = localStorage.getItem(`${MEMBER_PROFILE_KEY}-${userId}`);
+    if (raw) return { ...DEFAULT_MEMBER_PROFILE, ...(JSON.parse(raw) as MemberProfileDetails) };
+  } catch {
+    /* ignore */
+  }
+  return { ...DEFAULT_MEMBER_PROFILE };
+}
+
+export function writeMemberProfile(userId: string, details: MemberProfileDetails) {
+  localStorage.setItem(`${MEMBER_PROFILE_KEY}-${userId}`, JSON.stringify(details));
 }
 
 export async function fetchSavedPaymentMethods(userId: string): Promise<SavedPaymentMethod[]> {

@@ -1,86 +1,230 @@
+import { useState } from "react";
 import {
+  BadgeCheck,
+  Bath,
+  Coffee,
+  ConciergeBell,
+  Dumbbell,
   MapPin,
   Maximize2,
+  ParkingSquare,
   PawPrint,
   Sparkles,
   Sun,
   Utensils,
+  Waves,
+  Wifi,
+  Wind,
+  type LucideIcon,
 } from "lucide-react";
 import type { Amenity, PropertyDetail, Review } from "../types";
+import { iconForAmenityLabel } from "./PropertyHighlights";
+import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
+import { hasMessage, translateStored } from "@/lib/i18n/messages";
 
-const ICONS = {
+const ICONS: Record<string, LucideIcon> = {
   "map-pin": MapPin,
   maximize: Maximize2,
   sun: Sun,
   sparkles: Sparkles,
   paw: PawPrint,
   utensils: Utensils,
-} as const;
+  wifi: Wifi,
+  waves: Waves,
+  pool: Waves,
+  dumbbell: Dumbbell,
+  parking: ParkingSquare,
+  wind: Wind,
+  coffee: Coffee,
+  bath: Bath,
+  concierge: ConciergeBell,
+};
+
+function amenityIcon(amenity: Amenity): LucideIcon {
+  if (ICONS[amenity.icon]) return ICONS[amenity.icon];
+  return iconForAmenityLabel(amenity.label);
+}
+
+function ratingLabelKey(rating: number) {
+  if (rating >= 9) return "search.excellent";
+  if (rating >= 8) return "search.veryGood";
+  if (rating >= 7) return "search.good";
+  if (rating > 0) return "hotel.guestScore";
+  return null;
+}
 
 interface PropertyDetailsContentProps {
   property: PropertyDetail;
+  onViewReviews?: () => void;
 }
 
-export function PropertyDetailsContent({ property }: PropertyDetailsContentProps) {
+export function PropertyDetailsContent({
+  property,
+  onViewReviews,
+}: PropertyDetailsContentProps) {
+  const { t, language } = useLanguage();
+  const [showAllAmenities, setShowAllAmenities] = useState(false);
+  const labelKey = ratingLabelKey(property.rating);
+  const snippet =
+    property.reviews[0]?.comment ||
+    (property.highlights[0]
+      ? translateStored(language, property.highlights[0])
+      : t("hotel.guestLove"));
+
+  const amenities = property.detailAmenities;
+  const visibleAmenities = showAllAmenities ? amenities : amenities.slice(0, 8);
+
   return (
-    <div className="space-y-10 py-8">
-      <section>
-        <h2 className="text-lg font-semibold text-foreground">Description</h2>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {property.description}
-        </p>
-        <ul className="mt-4 space-y-2">
-          {property.highlights.map((item) => (
-            <li key={item} className="flex gap-2 text-sm text-foreground">
-              <span className="text-brand">•</span>
-              {item}
-            </li>
-          ))}
-        </ul>
+    <div className="space-y-8">
+      {property.rating > 0 ? (
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="flex size-12 items-center justify-center rounded-xl bg-brand text-lg font-bold text-white">
+              {property.rating.toFixed(1)}
+            </span>
+            <div>
+              <p className="font-semibold text-foreground">
+                {labelKey ? t(labelKey) : t("search.guestRating")}
+              </p>
+              <button
+                type="button"
+                onClick={onViewReviews}
+                className="text-sm text-brand hover:underline"
+              >
+                {property.reviewCount > 0
+                  ? t("hotel.allReviews", { n: property.reviewCount.toLocaleString() })
+                  : t("hotel.seeFeedback")}
+              </button>
+            </div>
+          </div>
+          <p className="flex-1 text-sm leading-relaxed text-muted-foreground sm:border-l sm:border-border sm:pl-6">
+            “{snippet}”
+          </p>
+        </section>
+      ) : null}
+
+      {property.highlights.length > 0 ? (
+        <section>
+          <h2 className="text-base font-semibold text-foreground">{t("hotel.highlights")}</h2>
+          <div className="mt-3 grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
+            {property.highlights.map((item) => (
+              <div key={item} className="flex items-start gap-2.5 text-sm text-foreground">
+                <Sparkles className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.75} />
+                <span>{translateStored(language, item)}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section id="hotel-amenities" className="scroll-mt-28">
+        <h2 className="text-base font-semibold text-foreground">{t("hotel.amenities")}</h2>
+        {amenities.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            {t("hotel.amenitiesSoon")}
+          </p>
+        ) : (
+          <>
+            <div className="mt-3 grid gap-x-4 gap-y-3 sm:grid-cols-2">
+              {visibleAmenities.map((amenity) => (
+                <AmenityItem key={amenity.label} amenity={amenity} />
+              ))}
+            </div>
+            {amenities.length > 8 ? (
+              <button
+                type="button"
+                onClick={() => setShowAllAmenities((v) => !v)}
+                className="mt-3 text-sm font-medium text-brand hover:underline"
+              >
+                {showAllAmenities
+                  ? t("hotel.showFewerAmenities")
+                  : t("hotel.allAmenities", { n: amenities.length })}
+              </button>
+            ) : null}
+          </>
+        )}
       </section>
 
-      <section>
-        <h2 className="text-lg font-semibold text-foreground">What this place offers?</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {property.detailAmenities.map((amenity) => (
-            <AmenityItem key={amenity.label} amenity={amenity} />
-          ))}
-        </div>
-      </section>
-
-      <section className="grid gap-2 sm:grid-cols-3">
-        {property.images.slice(0, 3).map((image) => (
-          <img
-            key={image}
-            src={image}
-            alt=""
-            className="aspect-[4/3] w-full rounded-2xl object-cover"
-          />
-        ))}
-      </section>
+      {property.description ? (
+        <section>
+          <h2 className="text-base font-semibold text-foreground">{t("hotel.about")}</h2>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            {translateStored(language, property.description, { name: property.title })}
+          </p>
+        </section>
+      ) : null}
     </div>
   );
 }
 
 function AmenityItem({ amenity }: { amenity: Amenity }) {
-  const Icon = ICONS[amenity.icon as keyof typeof ICONS] ?? Sparkles;
+  const { t } = useLanguage();
+  const Icon = amenityIcon(amenity);
+  const key = `search.amenity.${amenity.label}`;
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border bg-white px-4 py-3">
-      <Icon className="size-5 text-muted-foreground" />
-      <span className="text-sm font-medium text-foreground">{amenity.label}</span>
+    <div className="flex items-center gap-2.5 text-sm text-foreground">
+      <Icon className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+      <span className="truncate">
+        {hasMessage(key) ? t(key) : amenity.label}
+      </span>
     </div>
   );
 }
 
-export function PoliciesContent({ policies }: { policies: string[] }) {
+export function PoliciesContent({
+  policies,
+  ratePolicies,
+}: {
+  policies: string[] | Array<{ type: string; text: string }>;
+  /** Rich policies from rooms/rates when available (Zentrum). */
+  ratePolicies?: Array<{ type: string; text: string }>;
+}) {
+  const { t, language } = useLanguage();
+  const structured =
+    ratePolicies?.length
+      ? ratePolicies
+      : policies.every((p) => typeof p === "object" && p && "text" in p)
+        ? (policies as Array<{ type: string; text: string }>)
+        : null;
+
+  if (structured?.length) {
+    return (
+      <div className="space-y-5 py-2">
+        <h2 className="text-base font-semibold text-foreground">
+          {t("hotel.houseRules")}
+        </h2>
+        <div className="space-y-4">
+          {structured.map((policy) => (
+            <section
+              key={policy.type}
+              className="rounded-md border border-border bg-white p-4"
+            >
+              <h3 className="text-sm font-semibold text-foreground">
+                {policy.type}
+              </h3>
+              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                {policy.text}
+              </p>
+            </section>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const plain = policies.map((p) =>
+    typeof p === "string" ? p : `${p.type}: ${p.text}`,
+  );
+
   return (
-    <div className="space-y-4 py-8">
-      <h2 className="text-lg font-semibold text-foreground">House rules & policies</h2>
-      <ul className="space-y-3">
-        {policies.map((policy) => (
-          <li key={policy} className="flex gap-2 text-sm text-muted-foreground">
-            <span className="text-brand">•</span>
-            {policy}
+    <div className="space-y-4 py-2">
+      <h2 className="text-base font-semibold text-foreground">{t("hotel.houseRules")}</h2>
+      <ul className="space-y-2.5">
+        {plain.map((policy) => (
+          <li key={policy} className="flex gap-2.5 text-sm text-muted-foreground">
+            <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-brand" />
+            {translateStored(language, policy)}
           </li>
         ))}
       </ul>
@@ -88,47 +232,186 @@ export function PoliciesContent({ policies }: { policies: string[] }) {
   );
 }
 
-export function ReviewsContent({ reviews, rating, reviewCount }: { reviews: Review[]; rating: number; reviewCount: number }) {
+export function ReviewsContent({
+  reviews,
+  rating,
+  reviewCount,
+}: {
+  reviews: Review[];
+  rating: number;
+  reviewCount: number;
+}) {
+  const { t } = useLanguage();
+  const labelKey = ratingLabelKey(rating);
+  const shownCount = reviewCount > 0 ? reviewCount : reviews.length;
+
   return (
-    <div className="space-y-6 py-8">
-      <div className="flex items-center gap-3">
-        <span className="text-3xl font-bold text-foreground">{rating}</span>
-        <div>
-          <p className="font-semibold text-foreground">{reviewCount} reviews</p>
-          <p className="text-sm text-muted-foreground">Guest favorite</p>
+    <div id="hotel-reviews" className="scroll-mt-28 space-y-6 py-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex size-14 items-center justify-center rounded-xl bg-brand text-xl font-bold text-white">
+            {rating > 0 ? rating.toFixed(1) : "—"}
+          </span>
+          <div>
+            <p className="font-semibold text-foreground">
+              {labelKey ? t(labelKey) : t("hotel.reviews")}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {shownCount > 0
+                ? t("hotel.verifiedReviews", { n: shownCount.toLocaleString() })
+                : t("hotel.whatGuestsSaying")}
+            </p>
+          </div>
         </div>
       </div>
-      <div className="space-y-6">
-        {reviews.map((review) => (
-          <article key={review.id} className="border-b border-border pb-6 last:border-0">
-            <div className="flex items-center gap-3">
-              <img src={review.avatar} alt="" className="size-10 rounded-full object-cover" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">{review.author}</p>
-                <p className="text-xs text-muted-foreground">{review.date}</p>
-              </div>
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{review.comment}</p>
-          </article>
-        ))}
-      </div>
+
+      {reviews.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
+          <p className="text-sm text-muted-foreground">
+            {reviewCount > 0
+              ? t("hotel.noComments")
+              : t("hotel.reviewsSoon")}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {reviews.map((review) => (
+            <GuestReviewCard key={review.id} review={review} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-export function MessagesContent() {
+function scoreTone(score: number) {
+  if (score >= 9) return "bg-emerald-600 text-white";
+  if (score >= 7) return "bg-brand text-white";
+  if (score >= 5) return "bg-amber-500 text-white";
+  if (score > 0) return "bg-orange-500 text-white";
+  return "bg-muted text-muted-foreground";
+}
+
+function GuestReviewCard({ review }: { review: Review }) {
+  const { t, language } = useLanguage();
+  const authorLabel = translateStored(language, review.author);
+  const meta = [
+    review.travelerType,
+    review.travelPurpose,
+    review.country,
+  ].filter(Boolean);
+
+  const bodyParagraphs =
+    review.paragraphs?.length
+      ? review.paragraphs
+      : review.comment
+        ? [review.comment]
+        : [];
+
   return (
-    <div className="py-8">
-      <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-12 text-center">
-        <p className="font-semibold text-foreground">2 unread messages</p>
+    <article className="rounded-md border border-border bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand">
+            {authorLabel.slice(0, 1).toUpperCase()}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {authorLabel}
+            </p>
+            {meta.length > 0 ? (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {meta.join(" · ")}
+              </p>
+            ) : null}
+            <p className="mt-1 text-xs text-muted-foreground">
+              {translateStored(language, review.date)}
+            </p>
+          </div>
+        </div>
+
+        {review.rating > 0 ? (
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center justify-center rounded-lg px-2.5 py-1 text-sm font-bold tabular-nums",
+              scoreTone(review.rating),
+            )}
+          >
+            {Number.isInteger(review.rating)
+              ? review.rating
+              : review.rating.toFixed(1)}
+          </span>
+        ) : null}
+      </div>
+
+      {review.source ? (
+        <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+          <BadgeCheck className="size-3.5" />
+          {t("hotel.verified", { source: review.source })}
+        </p>
+      ) : null}
+
+      {review.title ? (
+        <h3 className="mt-3 text-base font-semibold text-foreground">
+          {review.title}
+        </h3>
+      ) : null}
+
+      {review.summary ? (
+        <p className="mt-2 text-sm italic leading-relaxed text-muted-foreground">
+          {review.summary}
+        </p>
+      ) : null}
+
+      {bodyParagraphs.length > 0 ? (
+        <div className="mt-3 space-y-2.5">
+          {bodyParagraphs.map((paragraph, index) => (
+            <p
+              key={`${review.id}-p-${index}`}
+              className="text-sm leading-relaxed text-foreground/90"
+            >
+              {paragraph}
+            </p>
+          ))}
+        </div>
+      ) : null}
+
+      {review.managementResponses?.length ? (
+        <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
+          {review.managementResponses.map((response, index) => (
+            <div
+              key={`${review.id}-mgmt-${index}`}
+              className="rounded-xl bg-muted/40 px-4 py-3"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("hotel.responseFromProperty")}
+                {response.date ? ` · ${response.date}` : ""}
+              </p>
+              <p className="mt-1.5 text-sm leading-relaxed text-foreground/90">
+                {response.text}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+export function MessagesContent() {
+  const { t } = useLanguage();
+  return (
+    <div className="py-2">
+      <div className="rounded-md border border-dashed border-border bg-muted/30 px-6 py-12 text-center">
+        <p className="font-semibold text-foreground">{t("hotel.needHelp")}</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Contact RestHalf support for help with your booking or hotel questions.
+          {t("hotel.needHelpHint")}
         </p>
         <button
           type="button"
-          className="mt-4 rounded-full border border-brand px-5 py-2 text-sm font-medium text-brand hover:bg-brand/5"
+          className="mt-4 rounded-full border border-brand px-5 py-2 text-sm font-medium text-brand transition hover:bg-brand/5"
         >
-          Open messages
+          {t("hotel.openSupport")}
         </button>
       </div>
     </div>

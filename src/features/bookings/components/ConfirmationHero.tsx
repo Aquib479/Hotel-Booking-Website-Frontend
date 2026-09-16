@@ -3,13 +3,14 @@ import { CheckCircle, Copy, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useLanguage } from "@/context/LanguageContext";
 import type { BookingDetail } from "../types";
 import type { ConfirmationPhase } from "../hooks/useBookingConfirmation";
 
-function getHeadline(booking: BookingDetail): string {
-  if (booking.lane === "wholesale") return "Your stay is confirmed.";
-  if (booking.mode === "rest") return "Your rest slot is booked.";
-  return "Your stay is booked.";
+function getHeadline(booking: BookingDetail, t: (key: string) => string): string {
+  if (booking.lane === "wholesale") return t("bookings.confirmedStay");
+  if (booking.mode === "rest") return t("bookings.confirmedSlot");
+  return t("bookings.confirmedStayBooked");
 }
 
 interface ConfirmationHeroProps {
@@ -18,6 +19,7 @@ interface ConfirmationHeroProps {
 }
 
 export function ConfirmationHero({ booking, phase }: ConfirmationHeroProps) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const isPending = phase === "confirming_payment";
 
@@ -47,21 +49,18 @@ export function ConfirmationHero({ booking, phase }: ConfirmationHeroProps) {
       </div>
 
       <h1 className="mt-5 text-2xl font-bold text-foreground sm:text-3xl">
-        {isPending ? "Confirming your payment…" : "You're all set!"}
+        {isPending ? t("bookings.confirmingPay") : t("bookings.allSet")}
       </h1>
 
       {!isPending && (
-        <p className="mt-2 text-base text-muted-foreground">{getHeadline(booking)}</p>
+        <p className="mt-2 text-base text-muted-foreground">{getHeadline(booking, t)}</p>
       )}
 
       {isPending ? (
-        <p className="mt-2 text-sm text-muted-foreground">
-          This usually takes a few seconds. Please don&apos;t close this page.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("bookings.dontClose")}</p>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">
-          We&apos;ve sent the details to your WhatsApp
-          {booking.guest.email ? " and email" : ""}.
+          {booking.guest.email ? t("bookings.sentWhatsAppEmail") : t("bookings.sentWhatsApp")}
         </p>
       )}
 
@@ -69,7 +68,7 @@ export function ConfirmationHero({ booking, phase }: ConfirmationHeroProps) {
         <CardContent className="flex items-center gap-2">
           <div className="min-w-0 flex-1 text-left">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Booking reference
+              {t("bookings.reference")}
             </p>
             <p className="font-mono text-lg font-semibold text-foreground">
               {booking.confirmationCode}
@@ -81,7 +80,7 @@ export function ConfirmationHero({ booking, phase }: ConfirmationHeroProps) {
             size="icon"
             onClick={() => void handleCopy()}
             disabled={isPending}
-            aria-label={copied ? "Copied" : "Copy booking reference"}
+            aria-label={copied ? t("common.copied") : t("bookings.copyRef")}
           >
             {copied ? (
               <Check className="size-4 text-emerald-600" />

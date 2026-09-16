@@ -1,17 +1,18 @@
 import { formatPrice } from "@/lib/currency/format";
 import { cn } from "@/lib/utils";
 import { SectionCard } from "@/components/common/SectionCard";
-import { REFUND_TIMELINE_TEXT } from "../constants";
+import { REFUND_TIMELINE_KEY } from "../constants";
 import type { BookingRefundInfo } from "../types";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface RefundStatusTrackerProps {
   refund: BookingRefundInfo;
 }
 
-const STEPS: { id: BookingRefundInfo["currentStep"]; label: string }[] = [
-  { id: "requested", label: "Requested" },
-  { id: "processing", label: "Processing" },
-  { id: "refunded", label: "Refunded" },
+const STEP_KEYS: { id: BookingRefundInfo["currentStep"]; labelKey: string }[] = [
+  { id: "requested", labelKey: "bookings.refundRequested" },
+  { id: "processing", labelKey: "bookings.refundProcessing" },
+  { id: "refunded", labelKey: "bookings.refunded" },
 ];
 
 function stepIndex(step: BookingRefundInfo["currentStep"]): number {
@@ -21,14 +22,15 @@ function stepIndex(step: BookingRefundInfo["currentStep"]): number {
 }
 
 export function RefundStatusTracker({ refund }: RefundStatusTrackerProps) {
+  const { t } = useLanguage();
   const active = stepIndex(refund.currentStep);
   const showPartial =
     refund.refundAmount !== undefined && refund.refundAmount < refund.originalAmount;
 
   return (
-    <SectionCard title="Refund status" size="sm">
+    <SectionCard title={t("bookings.refundStatus")} size="sm">
       <ol className="flex items-center gap-2">
-        {STEPS.map((step, i) => (
+        {STEP_KEYS.map((step, i) => (
           <li key={step.id} className="flex flex-1 items-center gap-2">
             <div className="flex flex-col items-center gap-1">
               <span
@@ -39,9 +41,9 @@ export function RefundStatusTracker({ refund }: RefundStatusTrackerProps) {
               >
                 {i + 1}
               </span>
-              <span className="text-[10px] font-medium text-muted-foreground">{step.label}</span>
+              <span className="text-[10px] font-medium text-muted-foreground">{t(step.labelKey)}</span>
             </div>
-            {i < STEPS.length - 1 && (
+            {i < STEP_KEYS.length - 1 && (
               <div
                 className={cn("mb-4 h-0.5 flex-1", i < active ? "bg-brand" : "bg-muted")}
                 aria-hidden
@@ -54,16 +56,16 @@ export function RefundStatusTracker({ refund }: RefundStatusTrackerProps) {
       <div className="mt-4 space-y-1 text-sm">
         {refund.refundAmount !== undefined && (
           <p className="font-semibold text-foreground">
-            Refund amount: {formatPrice(refund.refundAmount, refund.currency)}
+            {t("bookings.refundAmount", { amount: formatPrice(refund.refundAmount, refund.currency) })}
           </p>
         )}
         {showPartial && (
           <p className="text-muted-foreground">
-            Original paid: {formatPrice(refund.originalAmount, refund.currency)}
+            {t("bookings.originalPaid", { amount: formatPrice(refund.originalAmount, refund.currency) })}
             {refund.partialReason && ` — ${refund.partialReason}`}
           </p>
         )}
-        <p className="text-xs text-muted-foreground">{REFUND_TIMELINE_TEXT}</p>
+        <p className="text-xs text-muted-foreground">{t(REFUND_TIMELINE_KEY)}</p>
       </div>
     </SectionCard>
   );

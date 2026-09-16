@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/LanguageContext";
 import {
   Accordion,
   AccordionContent,
@@ -13,6 +14,7 @@ interface FaqAccordionItemProps {
 }
 
 export function FaqAccordionItem({ item, defaultOpen = false }: FaqAccordionItemProps) {
+  const { t } = useLanguage();
   return (
     <Accordion
       type="single"
@@ -32,7 +34,7 @@ export function FaqAccordionItem({ item, defaultOpen = false }: FaqAccordionItem
               {item.laneAnswers.direct && (
                 <div>
                   <Badge variant="brand" className="mb-1">
-                    RestHalf Exclusive
+                    {t("common.exclusive")}
                   </Badge>
                   <p className="text-sm">{item.laneAnswers.direct}</p>
                 </div>
@@ -40,7 +42,7 @@ export function FaqAccordionItem({ item, defaultOpen = false }: FaqAccordionItem
               {item.laneAnswers.wholesale && (
                 <div>
                   <Badge variant="secondary" className="mb-1">
-                    Partner rate
+                    {t("common.partnerRate")}
                   </Badge>
                   <p className="text-sm">{item.laneAnswers.wholesale}</p>
                 </div>

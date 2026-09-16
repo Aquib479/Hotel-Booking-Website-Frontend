@@ -1,5 +1,6 @@
 import { ToggleField } from "@/components/common/ToggleField";
 import { SectionCard } from "@/components/common/SectionCard";
+import { useLanguage } from "@/context/LanguageContext";
 import type { NotificationPreferences } from "../types";
 
 interface NotificationPreferencesSectionProps {
@@ -11,27 +12,29 @@ export function NotificationPreferencesSection({
   preferences,
   onChange,
 }: NotificationPreferencesSectionProps) {
+  const { t } = useLanguage();
+
   return (
     <SectionCard
-      title="Notifications"
-      description="Control how we reach you — transactional messages may be required for active bookings"
+      title={t("account.section.notifications")}
+      description={t("account.notifHint")}
     >
       <div className="space-y-6">
         <div>
-          <h3 className="mb-2 text-sm font-semibold">WhatsApp</h3>
+          <h3 className="mb-2 text-sm font-semibold">{t("account.whatsapp")}</h3>
           <div className="space-y-2">
             <ToggleField
               id="whatsapp-transactional"
-              label="Booking updates"
-              description="Confirmations, reminders, and cancellation notices"
+              label={t("account.bookingUpdates")}
+              description={t("account.whatsappBookingHint")}
               checked={preferences.whatsappTransactional}
               disabled
               onChange={(v) => onChange({ whatsappTransactional: v })}
             />
             <ToggleField
               id="whatsapp-promotional"
-              label="Promotions & offers"
-              description="Deals and travel tips via WhatsApp"
+              label={t("account.promotions")}
+              description={t("account.whatsappPromoHint")}
               checked={preferences.whatsappPromotional}
               onChange={(v) => onChange({ whatsappPromotional: v })}
             />
@@ -39,20 +42,20 @@ export function NotificationPreferencesSection({
         </div>
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold">Email</h3>
+          <h3 className="mb-2 text-sm font-semibold">{t("account.emailChannel")}</h3>
           <div className="space-y-2">
             <ToggleField
               id="email-transactional"
-              label="Booking updates"
-              description="Receipts, itinerary changes, and account security"
+              label={t("account.bookingUpdates")}
+              description={t("account.emailBookingHint")}
               checked={preferences.emailTransactional}
               disabled
               onChange={(v) => onChange({ emailTransactional: v })}
             />
             <ToggleField
               id="email-promotional"
-              label="Newsletter & promotions"
-              description="RestHalf news and partner offers"
+              label={t("account.newsletter")}
+              description={t("account.newsletterHint")}
               checked={preferences.emailPromotional}
               onChange={(v) => onChange({ emailPromotional: v })}
             />
