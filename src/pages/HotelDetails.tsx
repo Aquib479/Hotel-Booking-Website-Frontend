@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { parseISO } from "date-fns";
 import type { RestSlot } from "@/lib/booking/types";
 import { supportsStayMode } from "@/lib/booking/availability";
+import { normalizeStayDates } from "@/lib/booking/stayDates";
 import { usePropertyDetail } from "@/features/property/hooks/usePropertyDetail";
 import { ImageGallery } from "@/features/property/components/ImageGallery";
 import { PropertyInfoHeader } from "@/features/property/components/PropertyInfoHeader";
@@ -29,7 +30,14 @@ function parseDateParam(value: string | null): Date | undefined {
 export default function HotelDetails() {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { property, isLoading, error } = usePropertyDetail(id);
+  const nightlyAmountRaw = searchParams.get("nightlyAmount");
+  const nightlyAmount = nightlyAmountRaw ? Number(nightlyAmountRaw) : undefined;
+  const { property, isLoading, error } = usePropertyDetail(id, {
+    nightlyAmount:
+      nightlyAmount && Number.isFinite(nightlyAmount) ? nightlyAmount : undefined,
+    nightlyCurrency: searchParams.get("nightlyCurrency"),
+    supplierName: searchParams.get("supplier"),
+  });
 
   const [activeTab, setActiveTab] = useState<DetailTab>("details");
   const [isSaved, setIsSaved] = useState(false);
@@ -77,9 +85,14 @@ export default function HotelDetails() {
     );
   };
 
+  const stay = normalizeStayDates(
+    parseDateParam(searchParams.get("checkIn")),
+    parseDateParam(searchParams.get("checkOut")),
+  );
+
   const initialBooking = {
-    checkIn: parseDateParam(searchParams.get("checkIn")),
-    checkOut: parseDateParam(searchParams.get("checkOut")),
+    checkIn: stay.checkIn,
+    checkOut: stay.checkOut,
     restDate: parseDateParam(searchParams.get("restDate")),
     slot: (searchParams.get("slot") as RestSlot) ?? undefined,
     guests: searchParams.get("guests") ?? undefined,

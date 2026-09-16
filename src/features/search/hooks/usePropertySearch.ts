@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { differenceInDays, format, parseISO } from "date-fns";
 import type { AmenityFilter, RestSlot } from "@/lib/booking/types";
 import { supportsRestMode, supportsStayMode } from "@/lib/booking/availability";
+import { normalizeStayDates } from "@/lib/booking/stayDates";
 import { convertFromIdr, getWholesaleGuestPriceUsdRounded } from "@/lib/currency/format";
 import { api } from "@/services/api";
 import {
@@ -11,6 +12,7 @@ import {
   DEFAULT_PRICE_MIN,
 } from "../constants";
 import { resolvePropertyCoordinates } from "../map-coordinates";
+import { useBedbankSearch } from "./useBedbankSearch";
 import type {
   CountFilter,
   FilterState,
@@ -113,10 +115,20 @@ function matchesCountFilter(value: number, filter: CountFilter): boolean {
 function matchesLocation(property: Property, location: string): boolean {
   const query = location.toLowerCase();
   if (!query) return true;
+  // Bedbank hotels are already scoped by destinationId; city/address may be empty.
+  if (
+    property.lane === "wholesale" &&
+    !property.city &&
+    !property.country &&
+    !property.address
+  ) {
+    return true;
+  }
   return (
     property.city.toLowerCase().includes(query) ||
     property.country.toLowerCase().includes(query) ||
-    property.address.toLowerCase().includes(query)
+    property.address.toLowerCase().includes(query) ||
+    property.title.toLowerCase().includes(query)
   );
 }
 
@@ -124,7 +136,9 @@ function getPropertyPriceUsd(property: Property): number {
   if (property.lane === "wholesale" && property.wholesalePricing) {
     return getWholesaleGuestPriceUsdRounded(property.wholesalePricing);
   }
-  if (property.lane === "wholesale") return property.priceUsd;
+  if (property.lane === "wholesale") {
+    return property.priceUsd || convertFromIdr(property.priceIdr, "USD");
+  }
   return property.priceUsd || convertFromIdr(property.priceIdr, "USD");
 }
 
@@ -159,19 +173,51 @@ export function usePropertySearch() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const query: SearchQuery = useMemo(
-    () => ({
-      location: searchParams.get("location") ?? "Jakarta",
-      destinationId: searchParams.get("destinationId") ?? undefined,
-      country: searchParams.get("country") ?? undefined,
-      mode: (searchParams.get("mode") as SearchQuery["mode"]) ?? "stay",
-      checkIn: parseDate(searchParams.get("checkIn")),
-      checkOut: parseDate(searchParams.get("checkOut")),
-      restDate: parseDate(searchParams.get("restDate")),
-      slot: (searchParams.get("slot") as RestSlot) ?? "12-24",
-      guests: searchParams.get("guests") ?? "2 travellers",
-    }),
+    () => {
+      const rawCheckIn = parseDate(searchParams.get("checkIn"));
+      const rawCheckOut = parseDate(searchParams.get("checkOut"));
+      const stay =
+        searchParams.get("mode") !== "rest"
+          ? normalizeStayDates(rawCheckIn, rawCheckOut)
+          : null;
+
+      return {
+        location: searchParams.get("location") ?? "Jakarta",
+        destinationId: searchParams.get("destinationId") ?? undefined,
+        country: searchParams.get("country") ?? undefined,
+        mode: (searchParams.get("mode") as SearchQuery["mode"]) ?? "stay",
+        checkIn: stay?.checkIn ?? rawCheckIn,
+        checkOut: stay?.checkOut ?? rawCheckOut,
+        restDate: parseDate(searchParams.get("restDate")),
+        slot: (searchParams.get("slot") as RestSlot) ?? "12-24",
+        guests: searchParams.get("guests") ?? "2 travellers",
+      };
+    },
     [searchParams]
   );
+
+  // Keep URL stay dates from drifting into the past (or same-day checkout).
+  useEffect(() => {
+    if (query.mode === "rest" || !query.checkIn || !query.checkOut) return;
+
+    const rawIn = searchParams.get("checkIn");
+    const rawOut = searchParams.get("checkOut");
+    if (!rawIn && !rawOut) return;
+
+    const nextIn = query.checkIn.toISOString();
+    const nextOut = query.checkOut.toISOString();
+    if (rawIn === nextIn && rawOut === nextOut) return;
+
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.set("checkIn", nextIn);
+        params.set("checkOut", nextOut);
+        return params;
+      },
+      { replace: true },
+    );
+  }, [query.mode, query.checkIn, query.checkOut, searchParams, setSearchParams]);
 
   const [filters, setFilters] = useState<FilterState>(() => ({
     ...getDefaultFilters(),
@@ -185,11 +231,12 @@ export function usePropertySearch() {
 
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-  const [apiProperties, setApiProperties] = useState<Property[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [directProperties, setDirectProperties] = useState<Property[]>([]);
+  const [directLoading, setDirectLoading] = useState(true);
+  const [directError, setDirectError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
+  // --- Direct inventory search (own Postgres hotels) ---
   useEffect(() => {
     let cancelled = false;
 
@@ -215,22 +262,22 @@ export function usePropertySearch() {
       params.set("q", query.location.trim());
     }
 
-    setIsLoading(true);
-    setError(null);
+    setDirectLoading(true);
+    setDirectError(null);
 
     api
       .get<SearchApiResponse>(`/search?${params.toString()}`)
       .then((res) => {
         if (cancelled) return;
         const mapped = res.results.map((r) => mapApiResultToProperty(r, res.slotType));
-        setApiProperties(mapped);
-        setIsLoading(false);
+        setDirectProperties(mapped);
+        setDirectLoading(false);
       })
       .catch(() => {
         if (cancelled) return;
-        setApiProperties([]);
-        setError("Failed to load hotels. Please try again.");
-        setIsLoading(false);
+        setDirectProperties([]);
+        setDirectError("Failed to load hotels. Please try again.");
+        setDirectLoading(false);
       });
 
     return () => {
@@ -245,6 +292,35 @@ export function usePropertySearch() {
     query.guests,
     reloadKey,
   ]);
+
+  // --- Wholesale (bedbank) search via React Query ---
+  const bedbankParams = query.destinationId && query.mode === "stay"
+    ? {
+        destinationId: query.destinationId,
+        checkIn: query.checkIn,
+        checkOut: query.checkOut,
+        guests: query.guests,
+        city: query.location,
+        country: query.country,
+      }
+    : null;
+
+  const {
+    data: bedbankProperties = [],
+    isLoading: bedbankLoading,
+    error: bedbankError,
+  } = useBedbankSearch(bedbankParams);
+
+  // --- Merged state ---
+  const apiProperties = useMemo(() => {
+    const deduped = new Map<string, Property>();
+    for (const p of bedbankProperties) deduped.set(p.id, p);
+    for (const p of directProperties) deduped.set(p.id, p);
+    return Array.from(deduped.values());
+  }, [directProperties, bedbankProperties]);
+
+  const isLoading = directLoading || bedbankLoading;
+  const error = directError || (bedbankError ? "Wholesale search failed." : null);
 
   const nights = useMemo(() => {
     if (query.mode === "rest") return 1;

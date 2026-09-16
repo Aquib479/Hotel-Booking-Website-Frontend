@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { Property } from "../types";
+import { buildPropertyDetailUrl } from "../property-detail-url";
 
 interface PropertyCardProps {
   property: Property;
@@ -25,7 +26,7 @@ export function PropertyCard({
   searchParams,
 }: PropertyCardProps) {
   const isDirect = property.lane === "direct";
-  const detailUrl = `/properties/${property.id}${searchParams ? `?${searchParams}` : ""}`;
+  const detailUrl = buildPropertyDetailUrl(property, searchParams);
 
   return (
     <Card padding="none" className="group relative transition-shadow hover:shadow-md">
@@ -46,15 +47,16 @@ export function PropertyCard({
             </div>
           </div>
           <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
-            {[0, 1, 2, 3, 4].map((dot) => (
-              <span
-                key={dot}
-                className={cn(
-                  "size-1.5 rounded-full",
-                  dot === 0 ? "bg-white" : "bg-white/50"
-                )}
-              />
-            ))}
+            {isDirect &&
+              [0, 1, 2, 3, 4].map((dot) => (
+                <span
+                  key={dot}
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    dot === 0 ? "bg-white" : "bg-white/50"
+                  )}
+                />
+              ))}
           </div>
         </div>
 
@@ -85,7 +87,8 @@ export function PropertyCard({
           </div>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            {property.distanceFromAirportKm <= 15 && (
+            {property.distanceFromAirportKm > 0 &&
+              property.distanceFromAirportKm <= 15 && (
               <span className="flex items-center gap-1">
                 <Plane className="size-3" />
                 {property.distanceFromAirportKm} km from airport

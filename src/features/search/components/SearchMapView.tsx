@@ -8,6 +8,7 @@ import { PriceDisplay } from "@/components/common/PriceDisplay";
 import { useCurrency } from "@/context/CurrencyContext";
 import { cn } from "@/lib/utils";
 import { resolvePropertyCoordinates } from "../map-coordinates";
+import { buildPropertyDetailUrl } from "../property-detail-url";
 import type { Property } from "../types";
 import "leaflet/dist/leaflet.css";
 
@@ -147,7 +148,7 @@ function MapHotelCard({
   onToggleFavorite: (id: string) => void;
 }) {
   const isDirect = property.lane === "direct";
-  const detailUrl = `/properties/${property.id}${searchParams ? `?${searchParams}` : ""}`;
+  const detailUrl = buildPropertyDetailUrl(property, searchParams);
   const hasFreeCancellation = property.amenities.includes("Free cancellation");
   const roomLabel = property.roomType.charAt(0).toUpperCase() + property.roomType.slice(1);
   const stayLabel =

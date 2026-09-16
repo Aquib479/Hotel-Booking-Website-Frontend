@@ -21,7 +21,9 @@ export function getDisplayAmount(
     return roundForDisplay(convertFromIdrPrecise(priceIdr, currency));
   }
 
-  const guestUsd = wholesaleQuote ? getWholesaleGuestPriceUsd(wholesaleQuote) : priceUsd;
+  const guestUsd = wholesaleQuote
+    ? getWholesaleGuestPriceUsd(wholesaleQuote)
+    : priceUsd || convertToUsd(priceIdr, "IDR");
   return roundForDisplay(convertFromUsdPrecise(guestUsd, currency));
 }
 

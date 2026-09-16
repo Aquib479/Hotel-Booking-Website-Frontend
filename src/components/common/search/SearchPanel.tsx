@@ -13,6 +13,12 @@ import {
 } from "@/lib/booking/availability";
 import type { BookingMode, RestSlot } from "@/lib/booking/types";
 import { getTimezoneForCity, getEarliestSelectableRestDate } from "@/lib/booking/timezone";
+import {
+  defaultStayDates,
+  getEarliestCheckoutDate,
+  getTodayStart,
+  normalizeStayDates,
+} from "@/lib/booking/stayDates";
 import { cn } from "@/lib/utils";
 import { LocationSearchField } from "./LocationSearchField";
 import {
@@ -161,12 +167,14 @@ export function SearchPanel({
     resolveLocation(initialLocation)
   );
   const [mode, setMode] = useState<BookingMode>(initialMode ?? "stay");
-  const [checkIn, setCheckIn] = useState<Date | undefined>(
-    initialCheckIn ?? new Date(2025, 11, 19)
-  );
-  const [checkOut, setCheckOut] = useState<Date | undefined>(
-    initialCheckOut ?? new Date(2026, 0, 2)
-  );
+  const [checkIn, setCheckIn] = useState<Date | undefined>(() => {
+    const defaults = defaultStayDates();
+    return normalizeStayDates(initialCheckIn, initialCheckOut).checkIn ?? defaults.checkIn;
+  });
+  const [checkOut, setCheckOut] = useState<Date | undefined>(() => {
+    const defaults = defaultStayDates();
+    return normalizeStayDates(initialCheckIn, initialCheckOut).checkOut ?? defaults.checkOut;
+  });
   const [restDate, setRestDate] = useState<Date | undefined>(
     initialRestDate ?? new Date()
   );
@@ -191,8 +199,11 @@ export function SearchPanel({
   useEffect(() => {
     setLocation(resolveLocation(initialLocation));
     if (initialMode) setMode(initialMode);
-    if (initialCheckIn) setCheckIn(initialCheckIn);
-    if (initialCheckOut) setCheckOut(initialCheckOut);
+    if (initialCheckIn || initialCheckOut) {
+      const normalized = normalizeStayDates(initialCheckIn, initialCheckOut);
+      setCheckIn(normalized.checkIn);
+      setCheckOut(normalized.checkOut);
+    }
     if (initialRestDate) setRestDate(initialRestDate);
     if (initialSlot) setSlot(initialSlot);
     if (initialGuests) setGuests(initialGuests);
@@ -205,6 +216,26 @@ export function SearchPanel({
     initialSlot,
     initialGuests,
   ]);
+
+  const handleCheckInSelect = (date: Date | undefined) => {
+    if (!date) {
+      setCheckIn(undefined);
+      return;
+    }
+    const normalized = normalizeStayDates(date, checkOut);
+    setCheckIn(normalized.checkIn);
+    setCheckOut(normalized.checkOut);
+  };
+
+  const handleCheckOutSelect = (date: Date | undefined) => {
+    if (!date) {
+      setCheckOut(undefined);
+      return;
+    }
+    const normalized = normalizeStayDates(checkIn ?? getTodayStart(), date);
+    setCheckIn(normalized.checkIn);
+    setCheckOut(normalized.checkOut);
+  };
 
   const formatDate = (date?: Date) =>
     date
@@ -233,6 +264,11 @@ export function SearchPanel({
     setIsLoading(true);
 
     try {
+      const stay =
+        isRest || !checkIn
+          ? null
+          : normalizeStayDates(checkIn, checkOut);
+
       await Promise.resolve(
         onSubmit({
           location,
@@ -240,7 +276,10 @@ export function SearchPanel({
           guests,
           ...(isRest
             ? { restDate, slot: resolveSlotSelection(slot, restDate!, searchTimezone) ?? slot }
-            : { checkIn, checkOut }),
+            : {
+                checkIn: stay?.checkIn ?? checkIn,
+                checkOut: stay?.checkOut ?? checkOut,
+              }),
         })
       );
     } finally {
@@ -304,15 +343,20 @@ export function SearchPanel({
                   label="Check-in"
                   value={formatDate(checkIn)}
                   selected={checkIn}
-                  onSelect={setCheckIn}
+                  onSelect={handleCheckInSelect}
+                  disabled={{ before: getTodayStart() }}
                   variant={variant}
                 />
                 <DateField
                   label="Check-out"
                   value={formatDate(checkOut)}
                   selected={checkOut}
-                  onSelect={setCheckOut}
-                  disabled={{ before: checkIn ?? new Date() }}
+                  onSelect={handleCheckOutSelect}
+                  disabled={{
+                    before: checkIn
+                      ? getEarliestCheckoutDate(checkIn)
+                      : getEarliestCheckoutDate(getTodayStart()),
+                  }}
                   variant={variant}
                 />
               </div>
@@ -373,7 +417,8 @@ export function SearchPanel({
               label={isHero ? "Check in" : "Check-in"}
               value={formatDate(checkIn)}
               selected={checkIn}
-              onSelect={setCheckIn}
+              onSelect={handleCheckInSelect}
+              disabled={{ before: getTodayStart() }}
               variant={variant}
             />
 
@@ -385,8 +430,12 @@ export function SearchPanel({
               label={isHero ? "Check out" : "Check-out"}
               value={formatDate(checkOut)}
               selected={checkOut}
-              onSelect={setCheckOut}
-              disabled={{ before: checkIn ?? new Date() }}
+              onSelect={handleCheckOutSelect}
+              disabled={{
+                before: checkIn
+                  ? getEarliestCheckoutDate(checkIn)
+                  : getEarliestCheckoutDate(getTodayStart()),
+              }}
               variant={variant}
             />
           </>

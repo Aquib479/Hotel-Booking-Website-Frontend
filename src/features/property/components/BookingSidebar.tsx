@@ -21,6 +21,12 @@ import {
   resolveSlotSelection,
 } from "@/lib/booking/availability";
 import { getEarliestSelectableRestDate } from "@/lib/booking/timezone";
+import {
+  defaultStayDates,
+  getEarliestCheckoutDate,
+  getTodayStart,
+  normalizeStayDates,
+} from "@/lib/booking/stayDates";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useAuth } from "@/features/auth/context/AuthProvider";
 import { buildCheckoutDraft, saveCheckoutDraftToStorage } from "@/features/checkout";
@@ -49,12 +55,19 @@ export function BookingSidebar({
   const isDirect = lane === "direct";
   const isDualMode = isDirect && slotDuration === "24h";
 
-  const [booking, setBooking] = useState({
-    checkIn: initialBooking?.checkIn ?? new Date(),
-    checkOut: initialBooking?.checkOut ?? new Date(Date.now() + 86400000),
-    restDate: initialBooking?.restDate ?? new Date(),
-    slot: initialBooking?.slot ?? "12-24",
-    guests: initialBooking?.guests ?? DEFAULT_GUESTS_LABEL,
+  const [booking, setBooking] = useState(() => {
+    const stay = normalizeStayDates(
+      initialBooking?.checkIn,
+      initialBooking?.checkOut,
+    );
+    const defaults = defaultStayDates();
+    return {
+      checkIn: stay.checkIn ?? defaults.checkIn,
+      checkOut: stay.checkOut ?? defaults.checkOut,
+      restDate: initialBooking?.restDate ?? new Date(),
+      slot: initialBooking?.slot ?? "12-24",
+      guests: initialBooking?.guests ?? DEFAULT_GUESTS_LABEL,
+    };
   });
 
   const { isAuthenticated } = useAuth();
@@ -238,17 +251,30 @@ export function BookingSidebar({
             value={formatDate(booking.checkIn)}
             selected={booking.checkIn}
             onSelect={(checkIn) => {
-              if (checkIn) setBooking((b) => ({ ...b, checkIn }));
+              if (!checkIn) return;
+              const stay = normalizeStayDates(checkIn, booking.checkOut);
+              setBooking((b) => ({
+                ...b,
+                checkIn: stay.checkIn,
+                checkOut: stay.checkOut,
+              }));
             }}
+            disabledBefore={getTodayStart()}
           />
           <DateField
             label="Check-out"
             value={formatDate(booking.checkOut)}
             selected={booking.checkOut}
             onSelect={(checkOut) => {
-              if (checkOut) setBooking((b) => ({ ...b, checkOut }));
+              if (!checkOut) return;
+              const stay = normalizeStayDates(booking.checkIn, checkOut);
+              setBooking((b) => ({
+                ...b,
+                checkIn: stay.checkIn,
+                checkOut: stay.checkOut,
+              }));
             }}
-            disabledBefore={booking.checkIn}
+            disabledBefore={getEarliestCheckoutDate(booking.checkIn)}
             className="border-l border-border"
           />
         </div>
